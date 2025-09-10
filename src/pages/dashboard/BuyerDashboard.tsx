@@ -14,11 +14,10 @@ import {
 } from "lucide-react";
 
 // Import individual tab components
-import BrowseAuctionsTab from "@/components/dashboard/buyer/BrowseAuctionsTab";
 import MyBidsTab from "@/components/dashboard/buyer/MyBidsTab";
 import WatchlistTab from "@/components/dashboard/buyer/WatchlistTab";
 import WonAuctionsTab from "@/components/dashboard/buyer/WonAuctionsTab";
-import ProfileTab from "@/components/dashboard/buyer/ProfileTab";
+import BrowseAuctionsContent from "@/components/dashboard/BrowseAuctionsContent";
 
 const BuyerDashboard = () => {
   const location = useLocation();
@@ -27,10 +26,10 @@ const BuyerDashboard = () => {
   // Determine active tab based on current URL
   const getActiveTab = () => {
     const path = location.pathname;
+    if (path.includes('/dashboard/browse')) return 'browse';
     if (path.includes('/dashboard/bids')) return 'bids';
     if (path.includes('/dashboard/watchlist')) return 'watchlist';
     if (path.includes('/dashboard/won')) return 'won';
-    if (path.includes('/dashboard/profile')) return 'profile';
     return 'browse'; // Default to browse
   };
 
@@ -57,9 +56,6 @@ const BuyerDashboard = () => {
         break;
       case 'won':
         newPath = '/dashboard/won';
-        break;
-      case 'profile':
-        newPath = '/dashboard/profile';
         break;
       default:
         newPath = '/dashboard/browse';
@@ -117,7 +113,7 @@ const BuyerDashboard = () => {
 
         {/* Main Content Tabs */}
         <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
-          <TabsList className="grid w-full grid-cols-5">
+          <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="browse" className="flex items-center space-x-2">
               <Search className="w-4 h-4" />
               <span>Browse</span>
@@ -134,14 +130,10 @@ const BuyerDashboard = () => {
               <Trophy className="w-4 h-4" />
               <span>Won</span>
             </TabsTrigger>
-            <TabsTrigger value="profile" className="flex items-center space-x-2">
-              <User className="w-4 h-4" />
-              <span>Profile</span>
-            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="browse" className="mt-6">
-            <BrowseAuctionsTab />
+            <BrowseAuctionsContent />
           </TabsContent>
 
           <TabsContent value="bids" className="mt-6">
@@ -154,10 +146,6 @@ const BuyerDashboard = () => {
 
           <TabsContent value="won" className="mt-6">
             <WonAuctionsTab />
-          </TabsContent>
-
-          <TabsContent value="profile" className="mt-6">
-            <ProfileTab />
           </TabsContent>
         </Tabs>
       </div>

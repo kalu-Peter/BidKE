@@ -10,10 +10,10 @@ import OverviewTab from "@/components/dashboard/seller/OverviewTab";
 import PostItemTab from "@/components/dashboard/seller/PostItemTab";
 import ListingsTab from "@/components/dashboard/seller/ListingsTab";
 import SalesTab from "@/components/dashboard/seller/SalesTab";
-import BrowseAuctionsTab from "@/components/dashboard/seller/BrowseAuctionsTab";
 import MyBidsTab from "@/components/dashboard/seller/MyBidsTab";
 import WatchlistTab from "@/components/dashboard/seller/WatchlistTab";
 import WonAuctionsTab from "@/components/dashboard/seller/WonAuctionsTab";
+import BrowseAuctionsContent from "@/components/dashboard/BrowseAuctionsContent";
 
 const SellerDashboard = () => {
   const location = useLocation();
@@ -26,7 +26,7 @@ const SellerDashboard = () => {
     if (path.includes('/dashboard/listings')) return 'listings';
     if (path.includes('/dashboard/sales')) return 'sales';
     if (path.includes('/dashboard/payouts')) return 'sales'; // Payouts is part of sales tab
-    if (path.includes('/dashboard/company')) return 'overview'; // Company profile in overview
+    // Company profile moved to dedicated seller profile page
     if (path.includes('/dashboard/seller-browse')) return 'browse';
     if (path.includes('/dashboard/seller-bids')) return 'my-bids';
     if (path.includes('/dashboard/seller-watchlist')) return 'watchlist';
@@ -153,7 +153,7 @@ const SellerDashboard = () => {
           </TabsContent>
 
           <TabsContent value="browse">
-            <BrowseAuctionsTab />
+            <BrowseAuctionsContent />
           </TabsContent>
 
           <TabsContent value="my-bids">

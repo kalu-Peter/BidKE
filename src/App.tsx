@@ -22,6 +22,8 @@ import AuctionDetails from "./pages/AuctionDetails";
 import HowItWorks from "./pages/HowItWorks";
 import TrustSecurity from "./pages/TrustSecurity";
 import Contact from "./pages/Contact";
+import BuyerProfile from "./pages/profile/BuyerProfile";
+import SellerProfile from "./pages/profile/SellerProfile";
 
 const queryClient = new QueryClient();
 
@@ -56,7 +58,11 @@ const App = () => (
             />
             <Route 
               path="/dashboard/browse" 
-              element={<Navigate to="/browse-auctions" replace />} 
+              element={
+                <ProtectedRoute>
+                  <BuyerDashboard />
+                </ProtectedRoute>
+              } 
             />
             <Route 
               path="/dashboard/bids" 
@@ -86,7 +92,25 @@ const App = () => (
               path="/dashboard/profile" 
               element={
                 <ProtectedRoute>
-                  <BuyerDashboard />
+                  <BuyerProfile />
+                </ProtectedRoute>
+              } 
+            />
+            
+            {/* Profile Routes */}
+            <Route 
+              path="/profile/buyer" 
+              element={
+                <ProtectedRoute>
+                  <BuyerProfile />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/profile/seller" 
+              element={
+                <ProtectedRoute requiredRole="seller">
+                  <SellerProfile />
                 </ProtectedRoute>
               } 
             />
@@ -134,13 +158,17 @@ const App = () => (
               path="/dashboard/company" 
               element={
                 <ProtectedRoute requiredRole="seller">
-                  <SellerDashboard />
+                  <SellerProfile />
                 </ProtectedRoute>
               } 
             />
             <Route 
               path="/dashboard/seller-browse" 
-              element={<Navigate to="/browse-auctions" replace />} 
+              element={
+                <ProtectedRoute requiredRole="seller">
+                  <SellerDashboard />
+                </ProtectedRoute>
+              } 
             />
             <Route 
               path="/dashboard/seller-bids" 

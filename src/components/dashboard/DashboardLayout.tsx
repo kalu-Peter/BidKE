@@ -56,7 +56,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({
     { icon: FileText, label: "My Listings", path: "/dashboard/listings", section: "selling" },
     { icon: BarChart3, label: "Sales Reports", path: "/dashboard/sales", section: "selling" },
     { icon: DollarSign, label: "Payouts", path: "/dashboard/payouts", section: "selling" },
-    { icon: Building2, label: "Company Profile", path: "/dashboard/company", section: "selling" },
+    { icon: User, label: "Profile & Verification", path: "/dashboard/company", section: "selling" },
     // Buyer Functions (Seller-specific routes)
     { icon: Home, label: "Browse Auctions", path: "/dashboard/seller-browse", section: "buying" },
     { icon: Gavel, label: "My Bids", path: "/dashboard/seller-bids", section: "buying" },
