@@ -11,9 +11,11 @@ const Footer = () => {
           {/* Company Info */}
           <div>
             <div className="flex items-center space-x-2 mb-6">
-              <div className="w-10 h-10 bg-accent rounded-lg flex items-center justify-center">
-                <Gavel className="w-6 h-6 text-accent-foreground" />
-              </div>
+              <img 
+                src="/logo.png" 
+                alt="BidLode Logo" 
+                className="w-10 h-10 object-contain"
+              />
               <span className="text-xl font-bold">BidLode</span>
             </div>
             <p className="text-primary-foreground/80 mb-6">

@@ -128,9 +128,11 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center space-x-4">
               <Link to={getDashboardUrl()} className="flex items-center space-x-2">
-                <div className="w-8 h-8 bg-gradient-primary rounded-lg flex items-center justify-center">
-                  <Gavel className="w-5 h-5 text-white" />
-                </div>
+                <img 
+                  src="/logo.png" 
+                  alt="BidLode Logo" 
+                  className="w-8 h-8 object-contain"
+                />
                 <span className="text-xl font-bold text-gray-900">BidLode</span>
               </Link>
               <Badge variant="outline" className="text-xs">Dashboard</Badge>
