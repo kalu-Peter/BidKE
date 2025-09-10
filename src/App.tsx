@@ -17,7 +17,7 @@ import Login from "./pages/auth/Login";
 import BuyerDashboard from "./pages/dashboard/BuyerDashboard";
 import SellerDashboard from "./pages/dashboard/SellerDashboard";
 import AdminDashboard from "./pages/dashboard/AdminDashboard";
-import BrowseCategories from "./pages/BrowseCategories";
+import BrowseAuctions from "./pages/BrowseAuctions";
 import HowItWorks from "./pages/HowItWorks";
 import TrustSecurity from "./pages/TrustSecurity";
 import Contact from "./pages/Contact";
@@ -36,7 +36,9 @@ const App = () => (
             <Route path="/motorbikes" element={<Motorbikes />} />
             <Route path="/cars" element={<Cars />} />
             <Route path="/electronics" element={<Electronics />} />
-            <Route path="/browse-categories" element={<BrowseCategories />} />
+            <Route path="/browse-auctions" element={<BrowseAuctions />} />
+            {/* Redirect old browse-categories route to new browse-auctions route */}
+            <Route path="/browse-categories" element={<Navigate to="/browse-auctions" replace />} />
             <Route path="/how-it-works" element={<HowItWorks />} />
             <Route path="/trust-security" element={<TrustSecurity />} />
             <Route path="/contact" element={<Contact />} />
@@ -52,11 +54,7 @@ const App = () => (
             />
             <Route 
               path="/dashboard/browse" 
-              element={
-                <ProtectedRoute>
-                  <BuyerDashboard />
-                </ProtectedRoute>
-              } 
+              element={<Navigate to="/browse-auctions" replace />} 
             />
             <Route 
               path="/dashboard/bids" 
@@ -140,11 +138,7 @@ const App = () => (
             />
             <Route 
               path="/dashboard/seller-browse" 
-              element={
-                <ProtectedRoute requiredRole="seller">
-                  <SellerDashboard />
-                </ProtectedRoute>
-              } 
+              element={<Navigate to="/browse-auctions" replace />} 
             />
             <Route 
               path="/dashboard/seller-bids" 

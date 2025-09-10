@@ -51,8 +51,8 @@ const Footer = () => {
           <div>
             <h3 className="text-lg font-semibold mb-6">Quick Links</h3>
             <div className="space-y-3">
-              <Link to="/browse-categories" className="block text-primary-foreground/80 hover:text-accent transition-colors">
-                Browse Categories
+              <Link to="/browse-auctions" className="block text-primary-foreground/80 hover:text-accent transition-colors">
+                Browse Auctions
               </Link>
               <Link to="/how-it-works" className="block text-primary-foreground/80 hover:text-accent transition-colors">
                 How It Works

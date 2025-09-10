@@ -85,8 +85,8 @@ const Header = () => {
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem asChild>
-                  <Link to="/browse-categories">
-                    <Eye className="w-4 h-4 mr-2 text-primary" /> Browse All Categories
+                  <Link to="/browse-auctions">
+                    <Eye className="w-4 h-4 mr-2 text-primary" /> Browse All Auctions
                   </Link>
                 </DropdownMenuItem>
               </DropdownMenuContent>
