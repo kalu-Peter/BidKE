@@ -2,11 +2,20 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Gavel, Mail, Phone, MapPin, Facebook, Twitter, Instagram, Linkedin } from "lucide-react";
 import { Link } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
+import BusinessModelSection from "@/components/BusinessModelSection";
 
 const Footer = () => {
+  const { user } = useAuth();
+  const isAdmin = user?.role === 'admin';
+
   return (
-    <footer className="bg-primary text-primary-foreground">
-      <div className="container mx-auto px-4 py-16">
+    <>
+      {/* Admin-only Business Model Section */}
+      {isAdmin && <BusinessModelSection />}
+      
+      <footer className="bg-primary text-primary-foreground">
+        <div className="container mx-auto px-4 py-16">
         <div className="grid md:grid-cols-2 lg:grid-cols-5 gap-8">
           {/* Company Info */}
           <div>
@@ -174,6 +183,7 @@ const Footer = () => {
         </div>
       </div>
     </footer>
+    </>
   );
 };
 
