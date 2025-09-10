@@ -18,6 +18,7 @@ import BuyerDashboard from "./pages/dashboard/BuyerDashboard";
 import SellerDashboard from "./pages/dashboard/SellerDashboard";
 import AdminDashboard from "./pages/dashboard/AdminDashboard";
 import BrowseAuctions from "./pages/BrowseAuctions";
+import AuctionDetails from "./pages/AuctionDetails";
 import HowItWorks from "./pages/HowItWorks";
 import TrustSecurity from "./pages/TrustSecurity";
 import Contact from "./pages/Contact";
@@ -37,6 +38,7 @@ const App = () => (
             <Route path="/cars" element={<Cars />} />
             <Route path="/electronics" element={<Electronics />} />
             <Route path="/browse-auctions" element={<BrowseAuctions />} />
+            <Route path="/auction/:id" element={<AuctionDetails />} />
             {/* Redirect old browse-categories route to new browse-auctions route */}
             <Route path="/browse-categories" element={<Navigate to="/browse-auctions" replace />} />
             <Route path="/how-it-works" element={<HowItWorks />} />

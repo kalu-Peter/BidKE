@@ -23,11 +23,12 @@ import {
   Heart,
   Clock
 } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 
 const BrowseAuctions = () => {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState("");
   const [category, setCategory] = useState("all");
   const [priceRange, setPriceRange] = useState("all");
@@ -265,7 +266,7 @@ const BrowseAuctions = () => {
 
   const handleViewDetails = (auctionId: number) => {
     // Navigate to auction detail page
-    console.log(`Viewing details for auction ${auctionId}`);
+    navigate(`/auction/${auctionId}`);
   };
 
   return (
@@ -421,7 +422,10 @@ const BrowseAuctions = () => {
                         </span>
                       </div>
                     </div>
-                    <h3 className="font-semibold text-lg mb-1 group-hover:text-primary transition-colors">
+                    <h3 
+                      className="font-semibold text-lg mb-1 group-hover:text-primary transition-colors cursor-pointer"
+                      onClick={() => handleViewDetails(auction.id)}
+                    >
                       {auction.title}
                     </h3>
                     <p className="text-sm text-gray-500 mb-3">by {auction.seller}</p>
