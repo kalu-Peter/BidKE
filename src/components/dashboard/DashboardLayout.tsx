@@ -84,9 +84,9 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({
 
   const getRoleDisplay = () => {
     const roles = {
-      buyer: { label: "Buyer", color: "bg-blue-100 text-blue-800" },
-      seller: { label: "Seller", color: "bg-purple-100 text-purple-800" },
-      admin: { label: "Admin", color: "bg-red-100 text-red-800" }
+      buyer: { label: "Buyer", color: "bg-secondary/10 text-secondary" },
+      seller: { label: "Seller", color: "bg-primary/10 text-primary" },
+      admin: { label: "Admin", color: "bg-accent/10 text-accent" }
     };
     return roles[userRole];
   };
