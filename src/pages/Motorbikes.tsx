@@ -1,139 +1,248 @@
-import React from "react";
+import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
-import SearchBar from "@/components/bidding/SearchBar";
-import FilterGroup from "@/components/bidding/FilterGroup";
-import CountdownTimer from "@/components/bidding/CountdownTimer";
-import ReserveIndicator from "@/components/bidding/ReserveIndicator";
-import WatchlistButton from "@/components/bidding/WatchlistButton";
-
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Heart } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
 
 const mockBikes = [
   {
     id: 1,
-    image: "https://images.unsplash.com/photo-1518655048521-f130df041f66?auto=format&fit=crop&w=400&q=80",
-    title: "Bajaj Boxer 150cc, 2022",
-    highestBid: 68000,
-    reserveMet: true,
-    timeLeft: 9900,
-    category: "Boda Boda",
-    condition: "Used",
-    watched: false,
+    title: "Honda CBR 1000RR",
+    category: "Sports Bikes",
+    currentBid: 850000,
+    reservePrice: 1200000,
+    timeLeft: "1d 8h",
+    bids: 15,
+    seller: "Moto Elite",
+    image: "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?auto=format&fit=crop&w=500&q=80",
+    featured: true,
+    isWatched: false,
+    brand: "Honda",
+    year: "2020",
+    condition: "Used"
   },
   {
     id: 2,
-    image: "https://images.unsplash.com/photo-1503736334956-4c8f8e92946d?auto=format&fit=crop&w=400&q=80",
-    title: "TVS HLX 125, 2021",
-    highestBid: 54000,
-    reserveMet: false,
-    timeLeft: 7200,
-    category: "Scooters",
-    condition: "New Repo",
-    watched: true,
+    title: "TVS HLX 125 2021",
+    category: "Boda Boda",
+    currentBid: 54000,
+    reservePrice: 75000,
+    timeLeft: "5h 20m",
+    bids: 12,
+    seller: "Bike World",
+    image: "https://images.unsplash.com/photo-1558618047-3c8c76ca7d13?auto=format&fit=crop&w=500&q=80",
+    featured: false,
+    isWatched: false,
+    brand: "TVS",
+    year: "2021",
+    condition: "Like New"
   },
   {
     id: 3,
-    image: "https://images.unsplash.com/photo-1465156799763-2c087c332922?auto=format&fit=crop&w=400&q=80",
-    title: "Yamaha R15, 2020",
-    highestBid: 120000,
-    reserveMet: true,
-    timeLeft: 3600,
+    title: "Yamaha R15 V3",
     category: "Sports Bikes",
-    condition: "Accident",
-    watched: false,
+    currentBid: 85000,
+    reservePrice: 110000,
+    timeLeft: "4h 45m",
+    bids: 18,
+    seller: "Moto Elite",
+    image: "https://images.unsplash.com/photo-1558618847-3f0c2cf36c38?auto=format&fit=crop&w=500&q=80",
+    featured: false,
+    isWatched: false,
+    brand: "Yamaha",
+    year: "2020",
+    condition: "Used"
   },
+  {
+    id: 4,
+    title: "Bajaj Boxer 150cc 2022",
+    category: "Boda Boda",
+    currentBid: 68000,
+    reservePrice: 85000,
+    timeLeft: "2d 10h",
+    bids: 9,
+    seller: "City Bikes",
+    image: "https://images.unsplash.com/photo-1518655048521-f130df041f66?auto=format&fit=crop&w=500&q=80",
+    featured: false,
+    isWatched: true,
+    brand: "Bajaj",
+    year: "2022",
+    condition: "Excellent"
+  }
 ];
 
-const categories = [
-  { label: "All", value: "" },
-  { label: "Scooters", value: "Scooters" },
-  { label: "Boda Boda", value: "Boda Boda" },
-  { label: "Sports Bikes", value: "Sports Bikes" },
-];
-const conditions = [
-  { label: "All", value: "" },
-  { label: "Used", value: "Used" },
-  { label: "Accident", value: "Accident" },
-  { label: "New Repo", value: "New Repo" },
-];
-const brands = [
-  { label: "All", value: "" },
-  { label: "Bajaj", value: "Bajaj" },
-  { label: "TVS", value: "TVS" },
-  { label: "Yamaha", value: "Yamaha" },
-];
-const years = [
-  { label: "All", value: "" },
-  { label: "2022", value: "2022" },
-  { label: "2021", value: "2021" },
-  { label: "2020", value: "2020" },
-];
+export default function Motorbikes() {
+  const navigate = useNavigate();
+  const { user } = useAuth();
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedBrand, setSelectedBrand] = useState("all");
 
-const MotorbikesPage = () => {
-  const [search, setSearch] = React.useState("");
-  const [category, setCategory] = React.useState("");
-  const [condition, setCondition] = React.useState("");
-  const [brand, setBrand] = React.useState("");
-  const [year, setYear] = React.useState("");
-  const [watched, setWatched] = React.useState<{ [id: number]: boolean }>({});
+  const brands = ["Honda", "Yamaha", "TVS", "Bajaj"];
 
-  // Filter logic (mock)
-  const filtered = mockBikes.filter(bike =>
-    (category ? bike.category === category : true) &&
-    (condition ? bike.condition === condition : true) &&
-    (brand ? bike.title.includes(brand) : true) &&
-    (year ? bike.title.includes(year) : true) &&
-    (search ? bike.title.toLowerCase().includes(search.toLowerCase()) : true)
-  );
-
-  const handleWatch = (id: number) => {
-    setWatched(w => ({ ...w, [id]: !w[id] }));
-  };
+  const filteredBikes = mockBikes.filter((bike) => {
+    return (
+      bike.title.toLowerCase().includes(searchTerm.toLowerCase()) &&
+      (selectedBrand === "all" || bike.brand === selectedBrand)
+    );
+  });
 
   return (
     <>
       <Header />
-      <div className="container mx-auto px-4 py-16 pt-24">
-        <h1 className="text-3xl font-bold mb-4 flex items-center">🏍️ Motorbike Bidding</h1>
-        <div className="flex flex-col md:flex-row gap-8">
-          {/* Sidebar */}
-          <aside className="md:w-64 w-full md:sticky top-24">
-            <div className="mb-6">
-              <SearchBar placeholder="Search by model, year…" onSearch={setSearch} />
+      <div className="min-h-screen bg-background">
+        {/* Hero Section */}
+        <div className="bg-gradient-to-r from-primary via-primary to-secondary text-white py-16">
+        <div className="container mx-auto px-4">
+          <div className="text-center mb-8">
+            <h1 className="text-4xl md:text-5xl font-bold mb-4">Motorbikes</h1>
+            <p className="text-xl opacity-90 max-w-2xl mx-auto">
+              Find your next ride from sport bikes to reliable boda bodas
+            </p>
+          </div>
+          
+          {/* Search Section */}
+          <div className="max-w-2xl mx-auto">
+            <div className="flex flex-col sm:flex-row gap-4">
+              <div className="flex-1">
+                <Input
+                  type="text"
+                  placeholder="Search motorbikes..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full bg-white/10 border-white/20 text-white placeholder:text-white/70"
+                />
+              </div>
+              <Select value={selectedBrand} onValueChange={setSelectedBrand}>
+                <SelectTrigger className="w-full sm:w-48 bg-white/10 border-white/20 text-white">
+                  <SelectValue placeholder="All Brands" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Brands</SelectItem>
+                  {brands.map((brand) => (
+                    <SelectItem key={brand} value={brand}>
+                      {brand}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
-            <FilterGroup label="Category" options={categories} selected={category} onChange={setCategory} />
-            <FilterGroup label="Condition" options={conditions} selected={condition} onChange={setCondition} />
-            <FilterGroup label="Brand" options={brands} selected={brand} onChange={setBrand} />
-            <FilterGroup label="Year" options={years} selected={year} onChange={setYear} />
-          </aside>
-          {/* Main Section */}
-          <main className="flex-1">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {filtered.map(bike => (
-                <div key={bike.id} className="bg-white rounded shadow p-4 flex flex-col">
-                  <img src={bike.image} alt={bike.title} className="h-40 w-full object-cover rounded mb-3" />
-                  <div className="flex-1">
-                    <h2 className="font-semibold text-lg mb-1">{bike.title}</h2>
-                    <div className="mb-1 text-sm text-gray-500">Current highest bid: <span className="font-bold text-primary">Ksh {bike.highestBid.toLocaleString()}</span></div>
-                    <div className="mb-1 flex items-center gap-2">
-                      <CountdownTimer seconds={bike.timeLeft} />
-                      <ReserveIndicator met={bike.reserveMet} />
-                    </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Main Content */}
+      <div className="container mx-auto px-4 py-12">
+        <div className="flex justify-between items-center mb-8">
+          <h2 className="text-3xl font-bold">
+            {filteredBikes.length} Motorbikes Available
+          </h2>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          {filteredBikes.map((bike) => (
+            <Card key={bike.id} className="group hover:shadow-lg transition-all duration-300 cursor-pointer overflow-hidden" onClick={() => navigate(`/auction/${bike.id}`)}>
+              <div className="relative">
+                <img
+                  src={bike.image}
+                  alt={bike.title}
+                  className="w-full h-48 object-cover group-hover:scale-105 transition-transform duration-300"
+                />
+                {bike.featured && (
+                  <Badge className="absolute top-2 left-2 bg-accent text-white">
+                    Featured
+                  </Badge>
+                )}
+                <div className="absolute top-2 right-2">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className={`h-8 w-8 p-0 rounded-full ${bike.isWatched ? 'bg-accent text-white' : 'bg-white/90 text-muted-foreground hover:bg-white'}`}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      // Handle watchlist toggle
+                    }}
+                  >
+                    <Heart className={`h-4 w-4 ${bike.isWatched ? 'fill-current' : ''}`} />
+                  </Button>
+                </div>
+                <div className="absolute bottom-2 left-2">
+                  <Badge variant="secondary" className="bg-black/70 text-white">
+                    {bike.timeLeft}
+                  </Badge>
+                </div>
+              </div>
+              
+              <CardContent className="p-4">
+                <h3 className="font-semibold text-lg mb-2 group-hover:text-primary transition-colors">
+                  {bike.title}
+                </h3>
+                
+                <div className="flex items-center gap-2 mb-3">
+                  <Badge variant="outline" className="text-xs">
+                    {bike.category}
+                  </Badge>
+                  <Badge variant="secondary" className="text-xs">
+                    {bike.condition}
+                  </Badge>
+                </div>
+                
+                <div className="space-y-2 mb-4">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-muted-foreground">Current Bid</span>
+                    <span className="font-semibold text-primary">
+                      KSh {bike.currentBid.toLocaleString()}
+                    </span>
                   </div>
-                  <div className="mt-2 flex items-center">
-                    <button className="bg-primary text-white px-3 py-1 rounded mr-2">Place Bid</button>
-                    <WatchlistButton watched={watched[bike.id] ?? bike.watched} onToggle={() => handleWatch(bike.id)} />
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-muted-foreground">Bids</span>
+                    <span className="text-sm font-medium">{bike.bids}</span>
                   </div>
                 </div>
-              ))}
-              {filtered.length === 0 && <div className="col-span-full text-center text-muted-foreground">No motorbikes found.</div>}
-            </div>
-          </main>
+                
+                <div className="flex gap-2">
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="flex-1"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      navigate(`/auction/${bike.id}`);
+                    }}
+                  >
+                    View Details
+                  </Button>
+                  {user && (
+                    <Button 
+                      size="sm" 
+                      className="flex-1"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        // Handle bid placement
+                      }}
+                    >
+                      Place Bid
+                    </Button>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          ))}
         </div>
+
+        {filteredBikes.length === 0 && (
+          <div className="text-center py-12">
+            <p className="text-muted-foreground text-lg">No motorbikes found matching your criteria</p>
+          </div>
+        )}
+      </div>
       </div>
       <Footer />
     </>
   );
-};
-
-export default MotorbikesPage;
+}
