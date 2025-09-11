@@ -1,116 +1,138 @@
 <?php
-session_start();
-header('Content-Type: application/json');
-header('Access-Control-Allow-Origin: http://localhost:5173');
-header('Access-Control-Allow-Methods: POST, OPTIONS');
-header('Access-Control-Allow-Headers: Content-Type');
-header('Access-Control-Allow-Credentials: true');
+// Enhanced CORS headers for development - Allow both ports
+$allowed_origins = ['http://localhost:8080', 'http://localhost:8081'];
+$origin = $_SERVER['HTTP_ORIGIN'] ?? '';
 
+if (in_array($origin, $allowed_origins)) {
+    header("Access-Control-Allow-Origin: $origin");
+} else {
+    header("Access-Control-Allow-Origin: http://localhost:8081"); // Default fallback
+}
+
+header("Access-Control-Allow-Methods: POST, GET, OPTIONS, PUT, DELETE");
+header("Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With");
+header("Access-Control-Allow-Credentials: true");
+header("Access-Control-Max-Age: 86400"); // 24 hours
+header("Content-Type: application/json; charset=UTF-8");
+
+// Handle preflight OPTIONS requests
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
-    exit(0);
+    http_response_code(200);
+    exit();
 }
 
 require_once '../config/connect.php';
+require_once '../models/User.php';
+require_once '../models/Auth.php';
 
+/**
+ * User Login Endpoint
+ * Handles username-based login with JWT tokens
+ */
+
+// Only allow POST requests
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-    http_response_code(405);
-    echo json_encode(['success' => false, 'error' => 'Method not allowed']);
-    exit;
+    sendError('Method not allowed', 405);
+}
+
+// Get and validate JSON input
+$json = file_get_contents('php://input');
+$data = json_decode($json, true);
+
+if (!$data) {
+    sendError('Invalid JSON data', 400);
+}
+
+// Log the received data for debugging (without password)
+$debug_data = $data;
+unset($debug_data['password']);
+error_log("Login attempt: " . print_r($debug_data, true));
+
+// Validate required fields
+$required_fields = ['username', 'password'];
+$missing_fields = [];
+
+foreach ($required_fields as $field) {
+    if (empty($data[$field])) {
+        $missing_fields[] = $field;
+    }
+}
+
+if (!empty($missing_fields)) {
+    sendError('Missing required fields: ' . implode(', ', $missing_fields), 400, [
+        'missing_fields' => $missing_fields
+    ]);
+}
+
+// Sanitize input
+$username = Auth::sanitizeInput($data['username']);
+$password = $data['password']; // Don't sanitize password
+
+// Rate limiting
+$client_ip = Auth::getClientIP();
+if (!Auth::checkRateLimit('login_' . $client_ip, 5, 300)) {
+    sendError('Too many login attempts. Please try again later.', 429);
 }
 
 try {
-    $input = json_decode(file_get_contents('php://input'), true);
-    
-    // Validate required fields
-    if (empty($input['email']) || empty($input['password'])) {
-        throw new Exception('Email and password are required');
+    // Initialize user model
+    $user = new User();
+
+    // Find user by username
+    if (!$user->findByUsername($username)) {
+        sendError('Invalid username or password', 401);
     }
-    
-    $email = filter_var($input['email'], FILTER_SANITIZE_EMAIL);
-    $password = $input['password'];
-    
-    // Validate email format
-    if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-        throw new Exception('Invalid email format');
+
+    // Check if user account is not suspended or banned
+    if ($user->status === 'suspended' || $user->status === 'banned') {
+        sendError('Account is ' . $user->status . '. Please contact support.', 403, [
+            'status' => $user->status
+        ]);
     }
-    
-    // Connect to database
-    $db = Database::getInstance();
-    $pdo = $db->getConnection();
-    
-    // Get user with profile data
-    $stmt = $pdo->prepare("
-        SELECT u.*, 
-               CASE 
-                   WHEN u.role = 'buyer' THEN bp.national_id
-                   WHEN u.role = 'seller' THEN sp.business_name
-                   ELSE NULL
-               END as profile_data
-        FROM users u
-        LEFT JOIN buyer_profiles bp ON u.id = bp.user_id AND u.role = 'buyer'
-        LEFT JOIN seller_profiles sp ON u.id = sp.user_id AND u.role = 'seller'
-        WHERE u.email = ?
-    ");
-    $stmt->execute([$email]);
-    $user = $stmt->fetch(PDO::FETCH_ASSOC);
-    
-    if (!$user || !password_verify($password, $user['password_hash'])) {
-        throw new Exception('Invalid email or password');
+
+    // Verify password
+    if (!password_verify($password, $user->password_hash)) {
+        sendError('Invalid username or password', 401);
     }
+
+    // Get user roles
+    $roles = $user->getLoginRoles();
     
-    // Check if account is suspended
-    if ($user['status'] === 'suspended') {
-        throw new Exception('Your account has been suspended. Please contact support.');
+    if (empty($roles)) {
+        sendError('User has no assigned roles. Please contact support.', 403);
     }
-    
-    // Generate session token
-    $session_token = bin2hex(random_bytes(32));
-    $expires_at = date('Y-m-d H:i:s', strtotime('+30 days'));
-    
-    // Save session to database
-    $stmt = $pdo->prepare("
-        INSERT INTO user_sessions (user_id, session_token, expires_at, created_at) 
-        VALUES (?, ?, ?, NOW())
-        ON DUPLICATE KEY UPDATE 
-        session_token = VALUES(session_token), 
-        expires_at = VALUES(expires_at), 
-        updated_at = NOW()
-    ");
-    $stmt->execute([$user['id'], $session_token, $expires_at]);
-    
-    // Set session variables
-    $_SESSION['user_id'] = $user['id'];
-    $_SESSION['session_token'] = $session_token;
-    $_SESSION['user_role'] = $user['role'];
-    
-    // Update last login
-    $stmt = $pdo->prepare("UPDATE users SET last_login = NOW() WHERE id = ?");
-    $stmt->execute([$user['id']]);
-    
-    // Prepare user data for response
-    $user_data = [
-        'id' => $user['id'],
-        'email' => $user['email'],
-        'role' => $user['role'],
-        'full_name' => $user['full_name'],
-        'phone' => $user['phone'],
-        'status' => $user['status'],
-        'is_verified' => (bool)$user['is_verified'],
-        'created_at' => $user['created_at']
+
+    // For multi-role users, use the first role as login role
+    $login_role = $roles[0];
+    $login_role_name = $login_role['role_name'];
+
+    // Generate JWT token using the correct method
+    $jwt_token = Auth::generateToken($user->id, $user->username, $login_role_name);
+
+    // Log successful login
+    $user->logLogin($login_role_name, $jwt_token, $client_ip, $_SERVER['HTTP_USER_AGENT'] ?? 'Unknown');
+
+    // Prepare response data
+    $response_data = [
+        'user' => [
+            'id' => $user->id,
+            'username' => $user->username,
+            'email' => $user->email,
+            'phone' => $user->phone,
+            'status' => $user->status,
+            'is_verified' => $user->is_verified,
+            'created_at' => $user->created_at,
+            'last_login_at' => $user->last_login_at
+        ],
+        'roles' => $roles,
+        'token' => $jwt_token,
+        'expires_at' => date('c', time() + 86400) // ISO 8601 format, 24 hours
     ];
-    
-    echo json_encode([
-        'success' => true,
-        'message' => 'Login successful',
-        'user' => $user_data,
-        'session_token' => $session_token
-    ]);
-    
+
+    sendSuccess($response_data, 'Login successful');
+
 } catch (Exception $e) {
-    http_response_code(400);
-    echo json_encode([
-        'success' => false,
-        'error' => $e->getMessage()
-    ]);
+    error_log("Login error: " . $e->getMessage());
+    sendError('Login failed. Please try again.', 500);
 }
 ?>

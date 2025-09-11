@@ -12,9 +12,8 @@ interface ApiResponse<T = any> {
 
 interface User {
   id: number;
+  username: string;
   email: string;
-  role: 'buyer' | 'seller' | 'admin';
-  full_name: string;
   phone: string;
   status: string;
   is_verified: boolean;
@@ -23,26 +22,15 @@ interface User {
 
 interface LoginResponse {
   user: User;
-  session_token: string;
+  token: string;
+  roles: string[];
 }
 
 interface RegisterData {
+  username: string;
   email: string;
   password: string;
-  role: 'buyer' | 'seller';
-  full_name: string;
-  phone: string;
-  // Optional buyer fields
-  national_id?: string;
-  date_of_birth?: string;
-  address?: string;
-  // Optional seller fields
-  business_name?: string;
-  business_type?: string;
-  business_registration?: string;
-  tax_pin?: string;
-  business_address?: string;
-  business_phone?: string;
+  phone?: string;
 }
 
 interface Auction {
@@ -141,21 +129,21 @@ class ApiService {
    * User Authentication Methods
    */
 
-  async register(data: RegisterData): Promise<ApiResponse<{ user_id: number; verification_code: string }>> {
+  async register(data: RegisterData): Promise<ApiResponse<{ user: User; roles: string[]; verification_code: string }>> {
     return this.makeRequest('/auth/register.php', {
       method: 'POST',
       body: JSON.stringify(data)
     });
   }
 
-  async login(email: string, password: string): Promise<ApiResponse<LoginResponse>> {
+  async login(username: string, password: string): Promise<ApiResponse<LoginResponse>> {
     const result = await this.makeRequest<LoginResponse>('/auth/login.php', {
       method: 'POST',
-      body: JSON.stringify({ email, password })
+      body: JSON.stringify({ username, password })
     });
 
     if (result.success && result.data) {
-      this.setSessionToken(result.data.session_token);
+      this.setSessionToken(result.data.token);
       localStorage.setItem('bidlode_user', JSON.stringify(result.data.user));
     }
 
@@ -264,6 +252,43 @@ class ApiService {
 
   async updateProfile(data: Partial<User>): Promise<ApiResponse> {
     return this.makeRequest('/auth/profile.php', {
+      method: 'PUT',
+      body: JSON.stringify(data)
+    });
+  }
+
+  /**
+   * Buyer Profile Methods
+   */
+
+  async getBuyerProfile(): Promise<ApiResponse<{
+    user: User;
+    profile: any;
+    stats: {
+      activeBids: number;
+      watchlistItems: number;
+      wonAuctions: number;
+      totalSpent: number;
+    };
+  }>> {
+    return this.makeRequest('/auth/buyer-profile.php');
+  }
+
+  async updateBuyerProfile(data: {
+    first_name?: string;
+    last_name?: string;
+    date_of_birth?: string;
+    address?: string;
+    city?: string;
+    state?: string;
+    postal_code?: string;
+    country?: string;
+    phone?: string;
+    preferred_payment_method?: string;
+    kyc_status?: string;
+    kyc_documents?: string;
+  }): Promise<ApiResponse> {
+    return this.makeRequest('/auth/buyer-profile.php', {
       method: 'PUT',
       body: JSON.stringify(data)
     });

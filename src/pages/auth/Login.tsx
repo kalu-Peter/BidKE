@@ -16,8 +16,9 @@ const LoginPage = () => {
   const { login, user } = useAuth();
   
   const [formData, setFormData] = useState({
-    email: "",
+    username: "",
     password: "",
+    loginAs: "buyer", // Default to buyer
   });
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
   const [isLoading, setIsLoading] = useState(false);
@@ -38,10 +39,8 @@ const LoginPage = () => {
   const validateForm = () => {
     const newErrors: { [key: string]: string } = {};
     
-    if (!formData.email) {
-      newErrors.email = "Email is required";
-    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
-      newErrors.email = "Please enter a valid email address";
+    if (!formData.username) {
+      newErrors.username = "Username is required";
     }
     
     if (!formData.password) {
@@ -61,44 +60,34 @@ const LoginPage = () => {
     setLoginAttempted(true);
 
     try {
-      await login(formData.email, formData.password);
-      setLoginSuccess(true);
+      const result = await login(formData.username, formData.password);
       
-      // Get user data from localStorage to determine redirect path
-      const savedUser = localStorage.getItem('bidlode_user');
-      let redirectPath: string;
-      
-      if (from && from !== '/login') {
-        // Redirect to intended destination
-        redirectPath = from;
-      } else if (savedUser) {
-        // Parse user data and redirect to role-appropriate dashboard
-        const userData = JSON.parse(savedUser);
-        redirectPath = getDashboardPath(userData.role, userData.status);
-      } else {
-        // Fallback redirection based on email
-        if (formData.email === "buyer@test.com") {
-          redirectPath = getDashboardPath('buyer', 'email_verified');
-        } else if (formData.email === "buyer.approved@test.com") {
-          redirectPath = getDashboardPath('buyer', 'approved');
-        } else if (formData.email === "seller@test.com") {
-          redirectPath = getDashboardPath('seller', 'email_verified');
-        } else if (formData.email === "seller.approved@test.com") {
-          redirectPath = getDashboardPath('seller', 'approved');
-        } else if (formData.email === "admin@bidlode.com") {
-          redirectPath = getDashboardPath('admin', 'approved');
+      if (result.success && result.user) {
+        setLoginSuccess(true);
+        
+        // Get the user's actual role from the response
+        const userRole = result.user.role || 'buyer';
+        
+        // Determine redirect path based on user's actual role and status
+        let redirectPath: string;
+        
+        if (from && from !== '/login') {
+          redirectPath = from;
         } else {
-          redirectPath = '/dashboard/browse'; // Default fallback
+          // Use the user's actual role for dashboard redirection
+          redirectPath = getDashboardPath(userRole, result.user.status);
         }
+
+        // Show success message briefly, then redirect
+        setTimeout(() => {
+          navigate(redirectPath, { replace: true });
+        }, 2000);
+      } else {
+        throw new Error(result.error || 'Login failed');
       }
 
-      // Show success message briefly, then redirect
-      setTimeout(() => {
-        navigate(redirectPath, { replace: true });
-      }, 2000);
-
     } catch (error: any) {
-      setErrors({ submit: error.message || "Invalid email or password. Please try again." });
+      setErrors({ submit: error.message || "Invalid username or password. Please try again." });
       setLoginAttempted(false);
     } finally {
       setIsLoading(false);
@@ -246,14 +235,47 @@ const LoginPage = () => {
                   </div>
                 ) : (
                   <form onSubmit={handleSubmit} className="space-y-6">
+                    {/* Role Selection */}
+                    <div className="space-y-3">
+                      <label className="block text-sm font-medium text-gray-700">
+                        Login as <span className="text-red-500">*</span>
+                      </label>
+                      <div className="grid grid-cols-2 gap-3">
+                        <button
+                          type="button"
+                          onClick={() => updateField("loginAs", "buyer")}
+                          className={`p-4 border-2 rounded-lg text-center transition-all ${
+                            formData.loginAs === "buyer"
+                              ? "border-primary bg-primary/5 text-primary"
+                              : "border-gray-200 hover:border-gray-300 text-gray-700"
+                          }`}
+                        >
+                          <div className="font-medium">🛒 Buyer</div>
+                          <div className="text-xs mt-1 opacity-75">Bid on auctions</div>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => updateField("loginAs", "seller")}
+                          className={`p-4 border-2 rounded-lg text-center transition-all ${
+                            formData.loginAs === "seller"
+                              ? "border-primary bg-primary/5 text-primary"
+                              : "border-gray-200 hover:border-gray-300 text-gray-700"
+                          }`}
+                        >
+                          <div className="font-medium">🏪 Seller</div>
+                          <div className="text-xs mt-1 opacity-75">List items for auction</div>
+                        </button>
+                      </div>
+                    </div>
+
                     <FormField
-                      label="Email Address"
-                      type="email"
-                      value={formData.email}
-                      onChange={(value) => updateField("email", value)}
+                      label="Username"
+                      type="text"
+                      value={formData.username}
+                      onChange={(value) => updateField("username", value)}
                       required
-                      error={errors.email}
-                      placeholder="Enter your email address"
+                      error={errors.username}
+                      placeholder="Enter your username"
                     />
                     
                     <div className="space-y-2">
@@ -314,7 +336,10 @@ const LoginPage = () => {
                       size="lg"
                       disabled={isLoading}
                     >
-                      {isLoading ? "Signing in..." : "Sign In"}
+                      {isLoading 
+                        ? "Signing in..." 
+                        : `Sign In as ${formData.loginAs === "buyer" ? "Buyer" : "Seller"}`
+                      }
                     </Button>
                   </form>
                 )}
@@ -322,12 +347,15 @@ const LoginPage = () => {
                 {!loginSuccess && (
                   <>
                     <div className="mt-6 pt-6 border-t border-gray-200">
-                      <div className="text-center">
+                      <div className="text-center space-y-2">
                         <p className="text-sm text-gray-600">
                           Don't have an account?{" "}
                           <Link to="/signup" className="text-primary hover:underline font-medium">
                             Sign up here
                           </Link>
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          Note: If you have both buyer and seller roles, you can choose which role to login as.
                         </p>
                       </div>
                     </div>
@@ -335,11 +363,8 @@ const LoginPage = () => {
                     <div className="mt-6 p-4 bg-blue-50 rounded-lg">
                       <h4 className="font-semibold text-blue-800 mb-2">Demo Accounts:</h4>
                       <div className="text-sm text-blue-700 space-y-1">
-                        <p><strong>Buyer (Email Verified):</strong> buyer@test.com / password</p>
-                        <p><strong>Buyer (Fully Approved):</strong> buyer.approved@test.com / password</p>
-                        <p><strong>Seller (Pending):</strong> seller@test.com / password</p>
-                        <p><strong>Seller (Approved):</strong> seller.approved@test.com / password</p>
-                        <p><strong>Admin:</strong> admin@bidlode.com / password</p>
+                        <p><strong>Test User:</strong> testuser789 / password123</p>
+                        <p className="text-xs italic">Use the username and password from your registration</p>
                       </div>
                     </div>
                   </>

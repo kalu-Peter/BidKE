@@ -10,9 +10,7 @@ import NotFound from "./pages/NotFound";
 import Motorbikes from "./pages/Motorbikes";
 import Cars from "./pages/Cars";
 import Electronics from "./pages/Electronics";
-import SignUpChoice from "./pages/auth/SignUpChoice";
-import BuyerSignUp from "./pages/auth/BuyerSignUp";
-import SellerSignUp from "./pages/auth/SellerSignUp";
+import SignUp from "./pages/auth/SignUp";
 import Login from "./pages/auth/Login";
 import BuyerDashboard from "./pages/dashboard/BuyerDashboard";
 import SellerDashboard from "./pages/dashboard/SellerDashboard";
@@ -22,7 +20,7 @@ import AuctionDetails from "./pages/AuctionDetails";
 import HowItWorks from "./pages/HowItWorks";
 import TrustSecurity from "./pages/TrustSecurity";
 import Contact from "./pages/Contact";
-import BuyerProfile from "./pages/profile/BuyerProfile";
+import BuyerProfile from "./pages/dashboard/BuyerProfile";
 import SellerProfile from "./pages/profile/SellerProfile";
 
 const queryClient = new QueryClient();
@@ -46,9 +44,10 @@ const App = () => (
             <Route path="/how-it-works" element={<HowItWorks />} />
             <Route path="/trust-security" element={<TrustSecurity />} />
             <Route path="/contact" element={<Contact />} />
-            <Route path="/signup" element={<SignUpChoice />} />
-            <Route path="/signup/buyer" element={<BuyerSignUp />} />
-            <Route path="/signup/seller" element={<SellerSignUp />} />
+            <Route path="/signup" element={<SignUp />} />
+            {/* Redirect old signup routes to new unified signup */}
+            <Route path="/signup/buyer" element={<Navigate to="/signup" replace />} />
+            <Route path="/signup/seller" element={<Navigate to="/signup" replace />} />
             <Route path="/login" element={<Login />} />
             
             {/* Dashboard Routes */}

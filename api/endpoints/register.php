@@ -1,21 +1,10 @@
 <?php
-// Enhanced CORS headers for development - Allow both ports
-$allowed_origins = ['http://localhost:8080', 'http://localhost:8081'];
-$origin = $_SERVER['HTTP_ORIGIN'] ?? '';
-
-if (in_array($origin, $allowed_origins)) {
-    header("Access-Control-Allow-Origin: $origin");
-} else {
-    header("Access-Control-Allow-Origin: http://localhost:8081"); // Default fallback
-}
-
-header("Access-Control-Allow-Methods: POST, GET, OPTIONS, PUT, DELETE");
-header("Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With");
-header("Access-Control-Allow-Credentials: true");
-header("Access-Control-Max-Age: 86400"); // 24 hours
+header("Access-Control-Allow-Origin: http://localhost:5173");
+header("Access-Control-Allow-Methods: POST, OPTIONS");
+header("Access-Control-Allow-Headers: Content-Type, Authorization");
 header("Content-Type: application/json; charset=UTF-8");
 
-// Handle preflight OPTIONS requests
+// Handle preflight requests
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     http_response_code(200);
     exit();
@@ -30,21 +19,17 @@ require_once '../models/Auth.php';
  * Handles unified signup with username
  */
 
-// Only allow POST requests
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-    sendError('Method not allowed', 405);
+    Auth::error('Method not allowed', 405);
 }
 
-// Get and validate JSON input
+// Get posted data
 $json = file_get_contents('php://input');
 $data = json_decode($json, true);
 
 if (!$data) {
-    sendError('Invalid JSON data', 400);
+    Auth::error('Invalid JSON data');
 }
-
-// Log the received data for debugging
-error_log("Registration attempt: " . print_r($data, true));
 
 // Validate required fields
 $required_fields = ['username', 'email', 'password'];
@@ -57,7 +42,7 @@ foreach ($required_fields as $field) {
 }
 
 if (!empty($missing_fields)) {
-    sendError('Missing required fields: ' . implode(', ', $missing_fields), 400, [
+    Auth::error('Missing required fields: ' . implode(', ', $missing_fields), 400, [
         'missing_fields' => $missing_fields
     ]);
 }
@@ -88,13 +73,13 @@ if (!Auth::validatePassword($password)) {
 }
 
 if (!empty($validation_errors)) {
-    sendError('Validation failed', 400, ['validation_errors' => $validation_errors]);
+    Auth::error('Validation failed', 400, ['validation_errors' => $validation_errors]);
 }
 
 // Rate limiting
 $client_ip = Auth::getClientIP();
 if (!Auth::checkRateLimit('signup_' . $client_ip, 3, 300)) {
-    sendError('Too many signup attempts. Please try again later.', 429);
+    Auth::error('Too many signup attempts. Please try again later.', 429);
 }
 
 try {
@@ -103,12 +88,12 @@ try {
 
     // Check if username already exists
     if ($user->usernameExists($username)) {
-        sendError('Username already exists', 409, ['field' => 'username']);
+        Auth::error('Username already exists', 409, ['field' => 'username']);
     }
 
     // Check if email already exists
     if ($user->emailExists($email)) {
-        sendError('Email already exists', 409, ['field' => 'email']);
+        Auth::error('Email already exists', 409, ['field' => 'email']);
     }
 
     // Hash password
@@ -149,14 +134,14 @@ try {
             'verification_code' => $verification_code // In production, send via email
         ];
 
-        sendSuccess($response_data, 'User registered successfully. Please verify your email.');
+        Auth::response($response_data, 'User registered successfully. Please verify your email.', 201);
 
     } else {
-        sendError('Failed to create user account', 500);
+        Auth::error('Failed to create user account', 500);
     }
 
 } catch (Exception $e) {
     error_log("Registration error: " . $e->getMessage());
-    sendError('Registration failed. Please try again.', 500);
+    Auth::error('Registration failed. Please try again.', 500);
 }
 ?>

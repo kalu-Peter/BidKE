@@ -76,7 +76,7 @@ const Footer = () => {
           <div>
             <h3 className="text-lg font-semibold mb-6">For Business</h3>
             <div className="space-y-3">
-              <Link to="/signup/seller" className="block text-primary-foreground/80 hover:text-accent transition-colors">
+              <Link to="/signup" className="block text-primary-foreground/80 hover:text-accent transition-colors">
                 Seller Registration
               </Link>
               <Link to="/login" className="block text-primary-foreground/80 hover:text-accent transition-colors">
@@ -107,7 +107,7 @@ const Footer = () => {
               <Link to="/login" className="block text-primary-foreground/80 hover:text-accent transition-colors">
                 Sign In
               </Link>
-              <Link to="/signup/buyer" className="block text-primary-foreground/80 hover:text-accent transition-colors">
+              <Link to="/signup" className="block text-primary-foreground/80 hover:text-accent transition-colors">
                 Buyer Registration
               </Link>
               <a href="#" className="block text-primary-foreground/80 hover:text-accent transition-colors">

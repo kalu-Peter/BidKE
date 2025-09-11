@@ -1,8 +1,12 @@
 import React, { useState, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
+import { apiService } from "@/services/api";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import StatsCard from "@/components/dashboard/StatsCard";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
 import { 
   Search, 
   Heart, 
@@ -10,7 +14,9 @@ import {
   DollarSign, 
   Trophy,
   User,
-  Gavel
+  Gavel,
+  AlertCircle,
+  Loader2
 } from "lucide-react";
 
 // Import individual tab components
@@ -19,9 +25,35 @@ import WatchlistTab from "@/components/dashboard/buyer/WatchlistTab";
 import WonAuctionsTab from "@/components/dashboard/buyer/WonAuctionsTab";
 import BrowseAuctionsContent from "@/components/dashboard/BrowseAuctionsContent";
 
+interface BuyerStats {
+  activeBids: number;
+  watchlistItems: number;
+  wonAuctions: number;
+  totalSpent: number;
+}
+
+interface BuyerProfileData {
+  user: {
+    id: number;
+    username: string;
+    email: string;
+    phone: string;
+    status: string;
+    is_verified: boolean;
+    created_at: string;
+  };
+  profile: any;
+  stats: BuyerStats;
+}
+
 const BuyerDashboard = () => {
   const location = useLocation();
   const navigate = useNavigate();
+  const { user } = useAuth();
+  
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [profileData, setProfileData] = useState<BuyerProfileData | null>(null);
 
   // Determine active tab based on current URL
   const getActiveTab = () => {
@@ -35,10 +67,34 @@ const BuyerDashboard = () => {
 
   const [activeTab, setActiveTab] = useState(getActiveTab());
 
+  // Fetch buyer data on component mount
+  useEffect(() => {
+    fetchBuyerData();
+  }, []);
+
   // Update tab when URL changes
   useEffect(() => {
     setActiveTab(getActiveTab());
   }, [location.pathname]);
+
+  const fetchBuyerData = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const result = await apiService.getBuyerProfile();
+      
+      if (result.success && result.data) {
+        setProfileData(result.data);
+      } else {
+        setError(result.error || 'Failed to fetch buyer data');
+      }
+    } catch (err) {
+      setError('Failed to load dashboard data');
+      console.error('Dashboard error:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Handle tab changes with navigation
   const handleTabChange = (tab: string) => {
@@ -64,13 +120,45 @@ const BuyerDashboard = () => {
     navigate(newPath);
   };
 
-  // Mock data for dashboard stats
-  const stats = {
-    activeBids: 3,
-    watchlistItems: 12,
-    wonAuctions: 5,
-    totalSpent: 450000
+  // Get stats from fetched data or use defaults
+  const stats = profileData?.stats || {
+    activeBids: 0,
+    watchlistItems: 0,
+    wonAuctions: 0,
+    totalSpent: 0
   };
+
+  if (loading) {
+    return (
+      <DashboardLayout>
+        <div className="flex items-center justify-center h-64">
+          <Loader2 className="w-8 h-8 animate-spin" />
+          <span className="ml-2">Loading dashboard...</span>
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  if (error) {
+    return (
+      <DashboardLayout>
+        <Alert className="mb-6">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>
+            {error}
+            <Button 
+              variant="outline" 
+              size="sm" 
+              className="ml-4"
+              onClick={fetchBuyerData}
+            >
+              Retry
+            </Button>
+          </AlertDescription>
+        </Alert>
+      </DashboardLayout>
+    );
+  }
 
   return (
     <DashboardLayout userRole="buyer" userStatus="approved" userName="John Doe">

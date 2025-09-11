@@ -97,7 +97,7 @@ const Header = () => {
             <Link to="/trust-security" className="text-muted-foreground hover:text-foreground transition-colors">
               Trust & Security
             </Link>
-            <Link to="/signup/seller" className="text-muted-foreground hover:text-foreground transition-colors">
+            <Link to="/signup" className="text-muted-foreground hover:text-foreground transition-colors">
               For Business
             </Link>
           </nav>
@@ -186,7 +186,7 @@ const Header = () => {
                 Trust & Security
               </a>
               <Link 
-                to="/signup/seller" 
+                to="/signup" 
                 className="block text-muted-foreground hover:text-foreground transition-colors"
                 onClick={toggleMenu}
               >

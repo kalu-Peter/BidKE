@@ -1,134 +1,57 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Test Authentication</title>
-    <style>
-        body { font-family: Arial, sans-serif; margin: 20px; }
-        .form-group { margin: 10px 0; }
-        label { display: inline-block; width: 120px; }
-        input, select { width: 200px; padding: 5px; }
-        button { padding: 10px 20px; margin: 5px; }
-        .result { margin: 20px 0; padding: 10px; background: #f0f0f0; }
-        .error { background: #ffebee; }
-        .success { background: #e8f5e8; }
-    </style>
+    <title>CORS Test</title>
 </head>
 <body>
-    <h1>BidLode API Test</h1>
-    
-    <h2>Register User</h2>
-    <form id="registerForm">
-        <div class="form-group">
-            <label>Email:</label>
-            <input type="email" name="email" required>
-        </div>
-        <div class="form-group">
-            <label>Password:</label>
-            <input type="password" name="password" required>
-        </div>
-        <div class="form-group">
-            <label>Full Name:</label>
-            <input type="text" name="full_name" required>
-        </div>
-        <div class="form-group">
-            <label>Phone:</label>
-            <input type="tel" name="phone" required>
-        </div>
-        <div class="form-group">
-            <label>Role:</label>
-            <select name="role" required>
-                <option value="buyer">Buyer</option>
-                <option value="seller">Seller</option>
-            </select>
-        </div>
-        <button type="submit">Register</button>
-    </form>
-    
-    <h2>Login User</h2>
-    <form id="loginForm">
-        <div class="form-group">
-            <label>Email:</label>
-            <input type="email" name="email" required>
-        </div>
-        <div class="form-group">
-            <label>Password:</label>
-            <input type="password" name="password" required>
-        </div>
-        <button type="submit">Login</button>
-    </form>
-    
-    <h2>Verify Email</h2>
-    <form id="verifyForm">
-        <div class="form-group">
-            <label>Email:</label>
-            <input type="email" name="email" required>
-        </div>
-        <div class="form-group">
-            <label>Code:</label>
-            <input type="text" name="verification_code" required>
-        </div>
-        <button type="submit">Verify</button>
-    </form>
-    
-    <div id="result" class="result"></div>
+    <h1>API CORS Test</h1>
+    <button onclick="testRegister()">Test Register API</button>
+    <button onclick="testLogin()">Test Login API</button>
+    <div id="result"></div>
 
     <script>
-        const API_BASE = 'http://localhost:8000';
-        
-        async function makeRequest(endpoint, method = 'GET', data = null) {
+        async function testRegister() {
+            const result = document.getElementById('result');
             try {
-                const options = {
-                    method,
+                const response = await fetch('http://localhost:8000/auth/register.php', {
+                    method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                    }
-                };
+                    },
+                    body: JSON.stringify({
+                        username: 'testuser' + Math.random().toString(36).substr(2, 5),
+                        email: 'test' + Math.random().toString(36).substr(2, 5) + '@example.com',
+                        password: 'password123'
+                    })
+                });
                 
-                if (data) {
-                    options.body = JSON.stringify(data);
-                }
-                
-                const response = await fetch(`${API_BASE}${endpoint}`, options);
-                const result = await response.json();
-                
-                return result;
+                const data = await response.json();
+                result.innerHTML = '<h3>Register Response:</h3><pre>' + JSON.stringify(data, null, 2) + '</pre>';
             } catch (error) {
-                return { success: false, error: error.message };
+                result.innerHTML = '<h3>Register Error:</h3><pre>' + error.message + '</pre>';
             }
         }
-        
-        function showResult(result) {
-            const resultDiv = document.getElementById('result');
-            resultDiv.className = `result ${result.success ? 'success' : 'error'}`;
-            resultDiv.innerHTML = `<pre>${JSON.stringify(result, null, 2)}</pre>`;
+
+        async function testLogin() {
+            const result = document.getElementById('result');
+            try {
+                const response = await fetch('http://localhost:8000/auth/login.php', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        username: 'testuser123',
+                        password: 'password123'
+                    })
+                });
+                
+                const data = await response.json();
+                result.innerHTML = '<h3>Login Response:</h3><pre>' + JSON.stringify(data, null, 2) + '</pre>';
+            } catch (error) {
+                result.innerHTML = '<h3>Login Error:</h3><pre>' + error.message + '</pre>';
+            }
         }
-        
-        document.getElementById('registerForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const formData = new FormData(e.target);
-            const data = Object.fromEntries(formData.entries());
-            
-            const result = await makeRequest('/auth/register.php', 'POST', data);
-            showResult(result);
-        });
-        
-        document.getElementById('loginForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const formData = new FormData(e.target);
-            const data = Object.fromEntries(formData.entries());
-            
-            const result = await makeRequest('/auth/login.php', 'POST', data);
-            showResult(result);
-        });
-        
-        document.getElementById('verifyForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const formData = new FormData(e.target);
-            const data = Object.fromEntries(formData.entries());
-            
-            const result = await makeRequest('/auth/verify.php', 'POST', data);
-            showResult(result);
-        });
     </script>
 </body>
 </html>
