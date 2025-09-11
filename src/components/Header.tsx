@@ -143,6 +143,11 @@ const Header = () => {
                     Get Started
                   </Button>
                 </Link>
+                <Link to="/admin-signup">
+                  <Button variant="outline" size="sm" className="border-red-200 text-red-600 hover:bg-red-50">
+                    Admin
+                  </Button>
+                </Link>
               </>
             )}
           </div>
@@ -222,6 +227,11 @@ const Header = () => {
                     <Link to="/signup">
                       <Button variant="hero" className="w-full">
                         Get Started
+                      </Button>
+                    </Link>
+                    <Link to="/admin-signup">
+                      <Button variant="outline" className="w-full border-red-200 text-red-600 hover:bg-red-50">
+                        Admin Registration
                       </Button>
                     </Link>
                   </>

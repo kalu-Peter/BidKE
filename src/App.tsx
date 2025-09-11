@@ -12,6 +12,7 @@ import Cars from "./pages/Cars";
 import Electronics from "./pages/Electronics";
 import SignUp from "./pages/auth/SignUp";
 import Login from "./pages/auth/Login";
+import AdminSignUp from "./pages/auth/AdminSignUp";
 import BuyerDashboard from "./pages/dashboard/BuyerDashboard";
 import SellerDashboard from "./pages/dashboard/SellerDashboard";
 import AdminDashboard from "./pages/dashboard/AdminDashboard";
@@ -45,6 +46,7 @@ const App = () => (
             <Route path="/trust-security" element={<TrustSecurity />} />
             <Route path="/contact" element={<Contact />} />
             <Route path="/signup" element={<SignUp />} />
+            <Route path="/admin-signup" element={<AdminSignUp />} />
             {/* Redirect old signup routes to new unified signup */}
             <Route path="/signup/buyer" element={<Navigate to="/signup" replace />} />
             <Route path="/signup/seller" element={<Navigate to="/signup" replace />} />
