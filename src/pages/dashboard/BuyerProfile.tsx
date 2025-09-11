@@ -35,19 +35,33 @@ interface BuyerProfileData {
     status: string;
     is_verified: boolean;
     created_at: string;
-  };
-  profile: {
-    first_name?: string;
-    last_name?: string;
+    full_name?: string;
     date_of_birth?: string;
     address?: string;
     city?: string;
     state?: string;
     postal_code?: string;
     country?: string;
-    preferred_payment_method?: string;
-    kyc_status?: string;
-    kyc_documents?: string;
+  };
+  profile: {
+    id?: number;
+    user_id?: number;
+    national_id?: string;
+    national_id_verified?: boolean;
+    preferred_categories?: string[];
+    max_bid_limit?: number;
+    auto_bid_enabled?: boolean;
+    default_shipping_address?: string;
+    preferred_payment_methods?: string[];
+    total_bids?: number;
+    successful_bids?: number;
+    total_spent?: number;
+    won_auctions?: number;
+    buyer_rating?: number;
+    bid_notifications?: boolean;
+    outbid_notifications?: boolean;
+    winning_notifications?: boolean;
+    auction_ending_notifications?: boolean;
   } | null;
   stats: {
     activeBids: number;
@@ -67,16 +81,24 @@ const BuyerProfile: React.FC = () => {
   
   // Form data
   const [formData, setFormData] = useState({
-    first_name: '',
-    last_name: '',
+    full_name: '',
     date_of_birth: '',
     address: '',
     city: '',
     state: '',
     postal_code: '',
-    country: '',
+    country: 'Kenya',
     phone: '',
-    preferred_payment_method: ''
+    national_id: '',
+    preferred_categories: [] as string[],
+    max_bid_limit: 0,
+    auto_bid_enabled: false,
+    default_shipping_address: '',
+    preferred_payment_methods: [] as string[],
+    bid_notifications: true,
+    outbid_notifications: true,
+    winning_notifications: true,
+    auction_ending_notifications: true
   });
 
   useEffect(() => {
@@ -94,17 +116,26 @@ const BuyerProfile: React.FC = () => {
         
         // Populate form with existing data
         const profile = result.data.profile || {};
+        const userData = result.data.user;
         setFormData({
-          first_name: profile.first_name || '',
-          last_name: profile.last_name || '',
-          date_of_birth: profile.date_of_birth || '',
-          address: profile.address || '',
-          city: profile.city || '',
-          state: profile.state || '',
-          postal_code: profile.postal_code || '',
-          country: profile.country || '',
-          phone: result.data.user.phone || '',
-          preferred_payment_method: profile.preferred_payment_method || ''
+          full_name: userData.full_name || '',
+          date_of_birth: userData.date_of_birth || '',
+          address: userData.address || '',
+          city: userData.city || '',
+          state: userData.state || '',
+          postal_code: userData.postal_code || '',
+          country: userData.country || 'Kenya',
+          phone: userData.phone || '',
+          national_id: profile.national_id || '',
+          preferred_categories: profile.preferred_categories || [],
+          max_bid_limit: profile.max_bid_limit || 0,
+          auto_bid_enabled: profile.auto_bid_enabled || false,
+          default_shipping_address: profile.default_shipping_address || '',
+          preferred_payment_methods: profile.preferred_payment_methods || [],
+          bid_notifications: profile.bid_notifications !== false,
+          outbid_notifications: profile.outbid_notifications !== false,
+          winning_notifications: profile.winning_notifications !== false,
+          auction_ending_notifications: profile.auction_ending_notifications !== false
         });
       } else {
         setError(result.error || 'Failed to fetch profile data');
@@ -117,7 +148,7 @@ const BuyerProfile: React.FC = () => {
     }
   };
 
-  const handleInputChange = (field: string, value: string) => {
+  const handleInputChange = (field: string, value: string | string[] | number | boolean) => {
     setFormData(prev => ({
       ...prev,
       [field]: value
@@ -150,7 +181,7 @@ const BuyerProfile: React.FC = () => {
   };
 
   const getVerificationStatus = () => {
-    const status = profileData?.profile?.kyc_status || 'pending';
+    const status = profileData?.profile?.national_id_verified ? 'verified' : 'pending';
     const statusConfig = {
       pending: { label: 'Pending Verification', color: 'bg-yellow-100 text-yellow-800', icon: AlertCircle },
       verified: { label: 'Verified', color: 'bg-green-100 text-green-800', icon: CheckCircle },
@@ -241,21 +272,21 @@ const BuyerProfile: React.FC = () => {
                 {/* Editable Fields */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <Label htmlFor="first_name">First Name</Label>
+                    <Label htmlFor="full_name">Full Name</Label>
                     <Input
-                      id="first_name"
-                      value={formData.first_name}
-                      onChange={(e) => handleInputChange('first_name', e.target.value)}
-                      placeholder="Enter your first name"
+                      id="full_name"
+                      value={formData.full_name}
+                      onChange={(e) => handleInputChange('full_name', e.target.value)}
+                      placeholder="Enter your full name"
                     />
                   </div>
                   <div>
-                    <Label htmlFor="last_name">Last Name</Label>
+                    <Label htmlFor="national_id">National ID</Label>
                     <Input
-                      id="last_name"
-                      value={formData.last_name}
-                      onChange={(e) => handleInputChange('last_name', e.target.value)}
-                      placeholder="Enter your last name"
+                      id="national_id"
+                      value={formData.national_id}
+                      onChange={(e) => handleInputChange('national_id', e.target.value)}
+                      placeholder="Enter your national ID"
                     />
                   </div>
                 </div>
@@ -384,7 +415,7 @@ const BuyerProfile: React.FC = () => {
                   </Badge>
                 </div>
 
-                {profileData?.profile?.kyc_status !== 'verified' && (
+                {!profileData?.profile?.national_id_verified && (
                   <div className="space-y-4">
                     <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
                       <Upload className="w-8 h-8 mx-auto text-gray-400 mb-2" />
@@ -418,8 +449,8 @@ const BuyerProfile: React.FC = () => {
                 <div>
                   <Label htmlFor="preferred_payment_method">Preferred Payment Method</Label>
                   <Select 
-                    value={formData.preferred_payment_method} 
-                    onValueChange={(value) => handleInputChange('preferred_payment_method', value)}
+                    value={formData.preferred_payment_methods[0] || ''} 
+                    onValueChange={(value) => handleInputChange('preferred_payment_methods', [value])}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Select payment method" />

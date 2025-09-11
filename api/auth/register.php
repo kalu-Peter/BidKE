@@ -1,19 +1,12 @@
 <?php
-// Enhanced CORS headers for development - Allow both ports
-$allowed_origins = ['http://localhost:8080', 'http://localhost:8081'];
-$origin = $_SERVER['HTTP_ORIGIN'] ?? '';
-
-if (in_array($origin, $allowed_origins)) {
-    header("Access-Control-Allow-Origin: $origin");
-} else {
-    header("Access-Control-Allow-Origin: http://localhost:8081"); // Default fallback
-}
-
-header("Access-Control-Allow-Methods: POST, GET, OPTIONS, PUT, DELETE");
-header("Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With");
-header("Access-Control-Allow-Credentials: true");
-header("Access-Control-Max-Age: 86400"); // 24 hours
-header("Content-Type: application/json; charset=UTF-8");
+// Set CORS headers first - specific origin for credentials
+$origin = $_SERVER['HTTP_ORIGIN'] ?? 'http://localhost:8080';
+header("Access-Control-Allow-Origin: $origin");
+header('Access-Control-Allow-Methods: POST, GET, OPTIONS, PUT, DELETE');
+header('Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With');
+header('Access-Control-Allow-Credentials: true');
+header('Access-Control-Max-Age: 86400'); // 24 hours
+header('Content-Type: application/json; charset=UTF-8');
 
 // Handle preflight OPTIONS requests
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {

@@ -72,9 +72,11 @@ class BuyerProfile {
         $values = [$user_id];
         
         $allowedFields = [
-            'first_name', 'last_name', 'date_of_birth', 'address', 
-            'city', 'state', 'postal_code', 'country', 'phone',
-            'preferred_payment_method', 'kyc_status', 'kyc_documents'
+            'national_id', 'national_id_verified', 'preferred_categories', 
+            'max_bid_limit', 'auto_bid_enabled', 'default_shipping_address', 
+            'preferred_payment_methods', 'bid_notifications', 
+            'outbid_notifications', 'winning_notifications', 
+            'auction_ending_notifications'
         ];
         
         foreach ($allowedFields as $field) {
@@ -99,9 +101,11 @@ class BuyerProfile {
      */
     public function update($id, $data) {
         $allowedFields = [
-            'first_name', 'last_name', 'date_of_birth', 'address', 
-            'city', 'state', 'postal_code', 'country', 'phone',
-            'preferred_payment_method', 'kyc_status', 'kyc_documents'
+            'national_id', 'national_id_verified', 'preferred_categories', 
+            'max_bid_limit', 'auto_bid_enabled', 'default_shipping_address', 
+            'preferred_payment_methods', 'bid_notifications', 
+            'outbid_notifications', 'winning_notifications', 
+            'auction_ending_notifications'
         ];
 
         $updateFields = [];

@@ -268,8 +268,42 @@ class ApiService {
    */
 
   async getBuyerProfile(): Promise<ApiResponse<{
-    user: User;
-    profile: any;
+    user: {
+      id: number;
+      username: string;
+      email: string;
+      phone: string;
+      status: string;
+      is_verified: boolean;
+      created_at: string;
+      full_name?: string;
+      date_of_birth?: string;
+      address?: string;
+      city?: string;
+      state?: string;
+      postal_code?: string;
+      country?: string;
+    };
+    profile: {
+      id?: number;
+      user_id?: number;
+      national_id?: string;
+      national_id_verified?: boolean;
+      preferred_categories?: string[];
+      max_bid_limit?: number;
+      auto_bid_enabled?: boolean;
+      default_shipping_address?: string;
+      preferred_payment_methods?: string[];
+      total_bids?: number;
+      successful_bids?: number;
+      total_spent?: number;
+      won_auctions?: number;
+      buyer_rating?: number;
+      bid_notifications?: boolean;
+      outbid_notifications?: boolean;
+      winning_notifications?: boolean;
+      auction_ending_notifications?: boolean;
+    } | null;
     stats: {
       activeBids: number;
       watchlistItems: number;
@@ -281,8 +315,8 @@ class ApiService {
   }
 
   async updateBuyerProfile(data: {
-    first_name?: string;
-    last_name?: string;
+    // User table fields
+    full_name?: string;
     date_of_birth?: string;
     address?: string;
     city?: string;
@@ -290,9 +324,17 @@ class ApiService {
     postal_code?: string;
     country?: string;
     phone?: string;
-    preferred_payment_method?: string;
-    kyc_status?: string;
-    kyc_documents?: string;
+    // Buyer profile fields
+    national_id?: string;
+    preferred_categories?: string[];
+    max_bid_limit?: number;
+    auto_bid_enabled?: boolean;
+    default_shipping_address?: string;
+    preferred_payment_methods?: string[];
+    bid_notifications?: boolean;
+    outbid_notifications?: boolean;
+    winning_notifications?: boolean;
+    auction_ending_notifications?: boolean;
   }): Promise<ApiResponse> {
     return this.makeRequest('/auth/buyer-profile.php', {
       method: 'PUT',

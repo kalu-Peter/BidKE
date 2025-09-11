@@ -1,37 +1,41 @@
 <?php
-require_once '../config/connect.php';
-require_once '../models/User.php';
-require_once '../models/BuyerProfile.php';
-require_once '../models/UserSession.php';
-
-// Enhanced CORS headers for development - Allow both ports
-$allowed_origins = ['http://localhost:8080', 'http://localhost:8081'];
-$origin = $_SERVER['HTTP_ORIGIN'] ?? '';
-
-if (in_array($origin, $allowed_origins)) {
-    header("Access-Control-Allow-Origin: $origin");
-} else {
-    header("Access-Control-Allow-Origin: http://localhost:8081"); // Default fallback
-}
-
+// Set CORS headers first - specific origin for credentials
+$origin = $_SERVER['HTTP_ORIGIN'] ?? 'http://localhost:8080';
+header("Access-Control-Allow-Origin: $origin");
 header('Access-Control-Allow-Credentials: true');
 header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
 header('Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With');
 header('Content-Type: application/json');
 
-// Handle preflight request
+// Handle preflight request immediately
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     http_response_code(200);
     exit();
 }
 
+// Error handling to ensure headers are always sent
+function sendErrorResponse($message, $code = 400) {
+    global $origin;
+    header("Access-Control-Allow-Origin: $origin");
+    header('Access-Control-Allow-Credentials: true');
+    header('Content-Type: application/json');
+    http_response_code($code);
+    echo json_encode(['success' => false, 'error' => $message]);
+    exit();
+}
+
 try {
+    require_once '../config/connect.php';
+    require_once '../models/User.php';
+    require_once '../models/BuyerProfile.php';
+    require_once '../models/UserSession.php';
+
     $database = Database::getInstance();
     $pdo = $database->getConnection();
     
-    $userModel = new User($pdo);
-    $buyerProfileModel = new BuyerProfile($pdo);
-    $sessionModel = new UserSession($pdo);
+    $userModel = new User();
+    $buyerProfileModel = new BuyerProfile();
+    $sessionModel = new UserSession();
 
     // Get session token from Authorization header
     $headers = getallheaders();
@@ -45,18 +49,18 @@ try {
     }
 
     if (!$sessionToken) {
-        throw new Exception('Session token required');
+        sendErrorResponse('Session token required', 401);
     }
 
     // Verify session and get user
     $sessionData = $sessionModel->validateSession($sessionToken);
     if (!$sessionData) {
-        throw new Exception('Invalid or expired session');
+        sendErrorResponse('Invalid or expired session', 401);
     }
 
     $user = $userModel->findById($sessionData['user_id']);
     if (!$user) {
-        throw new Exception('User not found');
+        sendErrorResponse('User not found', 404);
     }
 
     if ($_SERVER['REQUEST_METHOD'] === 'GET') {
@@ -66,7 +70,7 @@ try {
         // Get buyer statistics
         $stats = $buyerProfileModel->getBuyerStats($user['id']);
         
-        // Combine user and profile data
+        // Combine user and profile data - include ALL user fields from users table
         $response = [
             'user' => [
                 'id' => $user['id'],
@@ -75,7 +79,21 @@ try {
                 'phone' => $user['phone'],
                 'status' => $user['status'],
                 'is_verified' => $user['is_verified'],
-                'created_at' => $user['created_at']
+                'created_at' => $user['created_at'],
+                // Personal information fields from users table
+                'full_name' => $user['full_name'],
+                'date_of_birth' => $user['date_of_birth'],
+                'address' => $user['address'],
+                'city' => $user['city'],
+                'state' => $user['state'],
+                'postal_code' => $user['postal_code'],
+                'country' => $user['country'],
+                'avatar_url' => $user['avatar_url'],
+                'bio' => $user['bio'],
+                'preferred_language' => $user['preferred_language'],
+                'timezone' => $user['timezone'],
+                'email_notifications' => $user['email_notifications'],
+                'sms_notifications' => $user['sms_notifications']
             ],
             'profile' => $buyerProfile,
             'stats' => $stats
@@ -87,64 +105,82 @@ try {
         ]);
 
     } elseif ($_SERVER['REQUEST_METHOD'] === 'PUT') {
-        // Update buyer profile
+        // Update buyer profile and user data
         $input = json_decode(file_get_contents('php://input'), true);
         
         if (!$input) {
-            throw new Exception('Invalid input data');
+            sendErrorResponse('Invalid input data', 400);
         }
 
-        // Validate required fields based on what's being updated
-        $allowedFields = [
-            'first_name', 'last_name', 'date_of_birth', 'address', 
-            'city', 'state', 'postal_code', 'country', 'phone',
-            'preferred_payment_method', 'kyc_status', 'kyc_documents'
+        // Separate fields that belong to users table vs buyer_profiles table
+        $userFields = [
+            'full_name', 'date_of_birth', 'address', 'city', 'state', 
+            'postal_code', 'country', 'phone', 'bio', 'preferred_language', 
+            'timezone', 'email_notifications', 'sms_notifications'
+        ];
+        
+        $buyerProfileFields = [
+            'national_id', 'preferred_categories', 'max_bid_limit', 
+            'auto_bid_enabled', 'default_shipping_address', 
+            'preferred_payment_methods', 'bid_notifications', 
+            'outbid_notifications', 'winning_notifications', 
+            'auction_ending_notifications'
         ];
 
-        $updateData = [];
-        foreach ($allowedFields as $field) {
-            if (isset($input[$field])) {
-                $updateData[$field] = $input[$field];
-            }
-        }
-
-        if (empty($updateData)) {
-            throw new Exception('No valid fields to update');
-        }
-
-        // Get existing buyer profile or create new one
-        $existingProfile = $buyerProfileModel->getByUserId($user['id']);
-        
-        if ($existingProfile) {
-            // Update existing profile
-            $success = $buyerProfileModel->update($existingProfile['id'], $updateData);
-        } else {
-            // Create new profile
-            $updateData['user_id'] = $user['id'];
-            $success = $buyerProfileModel->create($updateData);
-        }
-
-        if (!$success) {
-            throw new Exception('Failed to update profile');
-        }
-
-        // Also update user table fields if provided
-        $userUpdateFields = ['phone'];
+        // Prepare data for users table update
         $userUpdateData = [];
-        
-        foreach ($userUpdateFields as $field) {
+        foreach ($userFields as $field) {
             if (isset($input[$field])) {
                 $userUpdateData[$field] = $input[$field];
             }
         }
 
+        // Prepare data for buyer_profiles table update
+        $profileUpdateData = [];
+        foreach ($buyerProfileFields as $field) {
+            if (isset($input[$field])) {
+                $profileUpdateData[$field] = $input[$field];
+            }
+        }
+
+        $success = true;
+        $message = 'Profile updated successfully';
+
+        // Update users table if there are user fields to update
         if (!empty($userUpdateData)) {
-            $userModel->update($user['id'], $userUpdateData);
+            $userSuccess = $userModel->update($user['id'], $userUpdateData);
+            if (!$userSuccess) {
+                $success = false;
+                $message = 'Failed to update user information';
+            }
+        }
+
+        // Update or create buyer profile if there are profile fields to update
+        if (!empty($profileUpdateData) && $success) {
+            $existingProfile = $buyerProfileModel->getByUserId($user['id']);
+            
+            if ($existingProfile) {
+                // Update existing profile
+                $profileSuccess = $buyerProfileModel->update($existingProfile['id'], $profileUpdateData);
+            } else {
+                // Create new profile
+                $profileUpdateData['user_id'] = $user['id'];
+                $profileSuccess = $buyerProfileModel->create($profileUpdateData);
+            }
+            
+            if (!$profileSuccess) {
+                $success = false;
+                $message = 'Failed to update buyer profile';
+            }
+        }
+
+        if (!$success) {
+            sendErrorResponse($message, 400);
         }
 
         echo json_encode([
             'success' => true,
-            'message' => 'Profile updated successfully'
+            'message' => $message
         ]);
 
     } else {
@@ -152,10 +188,6 @@ try {
     }
 
 } catch (Exception $e) {
-    http_response_code(400);
-    echo json_encode([
-        'success' => false,
-        'error' => $e->getMessage()
-    ]);
+    sendErrorResponse($e->getMessage(), 400);
 }
 ?>
