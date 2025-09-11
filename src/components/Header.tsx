@@ -109,7 +109,7 @@ const Header = () => {
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" className="flex items-center space-x-2">
                     <User className="w-4 h-4" />
-                    <span>{user.full_name}</span>
+                    <span>{user.name || user.username}</span>
                     <Badge variant="outline" className="text-xs">
                       {user.role}
                     </Badge>
@@ -196,7 +196,7 @@ const Header = () => {
                 {isAuthenticated && user ? (
                   <>
                     <div className="px-3 py-2 text-sm">
-                      <div className="font-medium">{user.full_name}</div>
+                      <div className="font-medium">{user.name || user.username}</div>
                       <div className="text-muted-foreground capitalize">{user.role}</div>
                     </div>
                     <Button variant="ghost" className="w-full justify-start" onClick={handleDashboardClick}>

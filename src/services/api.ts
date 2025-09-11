@@ -23,7 +23,13 @@ interface User {
 interface LoginResponse {
   user: User;
   token: string;
-  roles: string[];
+  roles: Array<{
+    role_name: string;
+    role_display_name: string;
+    is_primary: boolean;
+    role_status: string;
+    can_login: boolean;
+  }>;
 }
 
 interface RegisterData {

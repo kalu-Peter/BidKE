@@ -17,7 +17,7 @@ interface User {
     is_primary: boolean;
     role_status: string;
     can_login: boolean;
-  }>; // Add roles array from API
+  }>; // Roles array as returned by API
 }
 
 interface AuthContextType {
@@ -66,14 +66,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const result = await apiService.login(username, password);
       
       if (result.success && result.data) {
-        // Extract the first role name from the roles array
+        // Extract the first role name from the roles array for dashboard routing
         const primaryRole = result.data.roles?.[0]?.role_name || 'buyer';
         
         const userData = {
           ...result.data.user,
           role: primaryRole, // Use the actual role name from the API
           name: result.data.user.username, // Use username as display name
-          roles: result.data.roles // Keep full roles array for future use
+          roles: result.data.roles // Keep full roles array as returned by API
         };
         
         setUser(userData);
