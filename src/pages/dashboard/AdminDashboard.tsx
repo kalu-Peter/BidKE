@@ -7,6 +7,7 @@ import UserManagementTab from "@/components/dashboard/admin/UserManagementTab";
 import ListingsControlTab from "@/components/dashboard/admin/ListingsControlTab";
 import TransactionsTab from "@/components/dashboard/admin/TransactionsTab";
 import ReportsTab from "@/components/dashboard/admin/ReportsTab";
+import AdminSignUpTab from "@/components/dashboard/admin/AdminSignUpTab";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
@@ -16,7 +17,8 @@ import {
   DollarSign,
   TrendingUp,
   AlertTriangle,
-  CheckCircle
+  CheckCircle,
+  UserPlus
 } from "lucide-react";
 
 const AdminDashboard = () => {
@@ -136,12 +138,13 @@ const AdminDashboard = () => {
 
         {/* Main Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-5">
+          <TabsList className="grid w-full grid-cols-6">
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="users">User Management</TabsTrigger>
             <TabsTrigger value="listings">Listings Control</TabsTrigger>
             <TabsTrigger value="transactions">Transactions</TabsTrigger>
             <TabsTrigger value="reports">Reports</TabsTrigger>
+            <TabsTrigger value="signup">Add Admin</TabsTrigger>
           </TabsList>
 
           <TabsContent value="overview" className="space-y-6">
@@ -162,6 +165,10 @@ const AdminDashboard = () => {
 
           <TabsContent value="reports">
             <ReportsTab />
+          </TabsContent>
+
+          <TabsContent value="signup">
+            <AdminSignUpTab />
           </TabsContent>
         </Tabs>
       </div>
