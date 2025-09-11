@@ -113,8 +113,8 @@ try {
     $user->phone = $phone;
     $user->password_hash = $password_hash;
 
-    // Create user (this automatically assigns buyer role)
-    $user_id = $user->create();
+    // Create user (this automatically assigns both buyer and seller roles)
+    $user_id = $user->createWithBothRoles();
 
     if ($user_id) {
         // Get the created user data

@@ -305,6 +305,57 @@ class User {
     }
 
     /**
+     * Create new user with both buyer and seller roles
+     * This replaces the original single-role signup
+     */
+    public function createWithBothRoles() {
+        try {
+            $this->db->beginTransaction();
+
+            // First create the user with buyer role
+            $query = "SELECT create_user_with_buyer_role(?, ?, ?, ?) as user_id";
+            $stmt = $this->db->prepare($query);
+            
+            $stmt->bindParam(1, $this->username);
+            $stmt->bindParam(2, $this->email);
+            $stmt->bindParam(3, $this->phone);
+            $stmt->bindParam(4, $this->password_hash);
+            
+            if ($stmt->execute()) {
+                $result = $stmt->fetch();
+                if ($result && $result['user_id']) {
+                    $this->id = $result['user_id'];
+                    
+                    // Now add seller role
+                    $sellerRoleQuery = "SELECT id FROM roles WHERE role_name = 'seller'";
+                    $sellerRoleStmt = $this->db->prepare($sellerRoleQuery);
+                    $sellerRoleStmt->execute();
+                    $sellerRole = $sellerRoleStmt->fetch();
+                    
+                    if ($sellerRole) {
+                        $addSellerQuery = "INSERT INTO user_roles (user_id, role_id, is_primary, is_active, role_status) VALUES (?, ?, FALSE, TRUE, 'active')";
+                        $addSellerStmt = $this->db->prepare($addSellerQuery);
+                        $addSellerStmt->bindParam(1, $this->id);
+                        $addSellerStmt->bindParam(2, $sellerRole['id']);
+                        $addSellerStmt->execute();
+                    }
+                    
+                    $this->db->commit();
+                    return $this->id;
+                }
+            }
+            
+            $this->db->rollback();
+            return false;
+            
+        } catch (Exception $e) {
+            $this->db->rollback();
+            error_log("User creation with both roles error: " . $e->getMessage());
+            return false;
+        }
+    }
+
+    /**
      * Apply for seller role
      */
     public function applyForSellerRole($business_name = null, $business_type = 'individual') {

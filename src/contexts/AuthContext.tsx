@@ -23,7 +23,7 @@ interface User {
 interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
-  login: (username: string, password: string) => Promise<{ success: boolean; user?: User; error?: string }>;
+  login: (username: string, password: string, preferredRole?: string) => Promise<{ success: boolean; user?: User; error?: string }>;
   logout: () => Promise<void>;
   register: (data: any) => Promise<{ success: boolean; error?: string }>;
   isSubmitting: boolean;
@@ -59,19 +59,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, []);
 
-  const login = async (username: string, password: string) => {
+  const login = async (username: string, password: string, preferredRole?: string) => {
     setIsSubmitting(true);
     
     try {
       const result = await apiService.login(username, password);
       
       if (result.success && result.data) {
-        // Extract the first role name from the roles array for dashboard routing
-        const primaryRole = result.data.roles?.[0]?.role_name || 'buyer';
+        // Check if user has the preferred role, otherwise use primary role
+        let selectedRole = result.data.roles?.[0]?.role_name || 'buyer';
+        
+        if (preferredRole && result.data.roles) {
+          const hasPreferredRole = result.data.roles.some(role => role.role_name === preferredRole);
+          if (hasPreferredRole) {
+            selectedRole = preferredRole;
+          }
+        }
         
         const userData = {
           ...result.data.user,
-          role: primaryRole, // Use the actual role name from the API
+          role: selectedRole, // Use the selected role for dashboard routing
           name: result.data.user.username, // Use username as display name
           roles: result.data.roles // Keep full roles array as returned by API
         };

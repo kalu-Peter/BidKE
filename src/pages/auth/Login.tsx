@@ -18,7 +18,7 @@ const LoginPage = () => {
   const [formData, setFormData] = useState({
     username: "",
     password: "",
-    loginAs: "buyer", // Default to buyer
+    selectedRole: "buyer", // Role selection for dashboard preference
   });
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
   const [isLoading, setIsLoading] = useState(false);
@@ -34,9 +34,9 @@ const LoginPage = () => {
   useEffect(() => {
     if (location.state?.message && location.state?.type === 'success') {
       setSuccessMessage(location.state.message);
-      // If coming from admin signup, set default login type to admin
+      // If coming from admin signup, set default role preference to admin
       if (location.state.message.includes('Admin account')) {
-        setFormData(prev => ({ ...prev, loginAs: 'admin' }));
+        setFormData(prev => ({ ...prev, selectedRole: 'admin' }));
       }
       // Clear the message from location state
       window.history.replaceState({}, document.title);
@@ -79,22 +79,19 @@ const LoginPage = () => {
     setLoginAttempted(true);
 
     try {
-      const result = await login(formData.username, formData.password);
+      const result = await login(formData.username, formData.password, formData.selectedRole);
       
       if (result.success && result.user) {
         setLoginSuccess(true);
         
-        // Get the user's actual role from the response
-        const userRole = result.user.role || 'buyer';
-        
-        // Determine redirect path based on user's actual role and status
+        // Determine redirect path based on user preference and permissions
         let redirectPath: string;
         
         if (from && from !== '/login') {
           redirectPath = from;
         } else {
-          // Use the user's actual role for dashboard redirection
-          redirectPath = getDashboardPath(userRole, result.user.status);
+          // Use the user's role (already set by AuthContext based on preference)
+          redirectPath = getDashboardPath(result.user.role, result.user.status);
         }
 
         // Show success message briefly, then redirect
@@ -239,7 +236,7 @@ const LoginPage = () => {
               <CardHeader className="text-center">
                 <CardTitle className="text-2xl">Sign In to BidLode</CardTitle>
                 <p className="text-gray-600 text-sm">
-                  Welcome back! Please sign in to your account
+                  Access your unified buyer and seller dashboard
                 </p>
               </CardHeader>
               <CardContent>
@@ -249,6 +246,14 @@ const LoginPage = () => {
                     <AlertDescription className="text-green-800">{successMessage}</AlertDescription>
                   </Alert>
                 )}
+
+                {/* Unified Access Info */}
+                <div className="mb-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                  <h4 className="font-medium text-blue-800 mb-2">✨ Unified Account Access</h4>
+                  <p className="text-sm text-blue-700">
+                    Your account includes both buyer and seller features. Choose your preferred dashboard to start with - you can switch between them anytime.
+                  </p>
+                </div>
                 {loginSuccess && user ? (
                   <div>
                     <div className="text-center mb-4">
@@ -260,47 +265,50 @@ const LoginPage = () => {
                   </div>
                 ) : (
                   <form onSubmit={handleSubmit} className="space-y-6">
-                    {/* Role Selection */}
+                    {/* Dashboard Preference Selection */}
                     <div className="space-y-3">
                       <label className="block text-sm font-medium text-gray-700">
-                        Login as <span className="text-red-500">*</span>
+                        Preferred Dashboard <span className="text-red-500">*</span>
                       </label>
+                      <p className="text-xs text-gray-500 mb-2">
+                        Choose which dashboard to access first. You can switch between buyer and seller features anytime.
+                      </p>
                       <div className="grid grid-cols-3 gap-2">
                         <button
                           type="button"
-                          onClick={() => updateField("loginAs", "buyer")}
+                          onClick={() => updateField("selectedRole", "buyer")}
                           className={`p-3 border-2 rounded-lg text-center transition-all ${
-                            formData.loginAs === "buyer"
+                            formData.selectedRole === "buyer"
                               ? "border-primary bg-primary/5 text-primary"
                               : "border-gray-200 hover:border-gray-300 text-gray-700"
                           }`}
                         >
                           <div className="font-medium text-sm">🛒 Buyer</div>
-                          <div className="text-xs mt-1 opacity-75">Bid on auctions</div>
+                          <div className="text-xs mt-1 opacity-75">Browse & bid</div>
                         </button>
                         <button
                           type="button"
-                          onClick={() => updateField("loginAs", "seller")}
+                          onClick={() => updateField("selectedRole", "seller")}
                           className={`p-3 border-2 rounded-lg text-center transition-all ${
-                            formData.loginAs === "seller"
+                            formData.selectedRole === "seller"
                               ? "border-primary bg-primary/5 text-primary"
                               : "border-gray-200 hover:border-gray-300 text-gray-700"
                           }`}
                         >
                           <div className="font-medium text-sm">🏪 Seller</div>
-                          <div className="text-xs mt-1 opacity-75">List items for auction</div>
+                          <div className="text-xs mt-1 opacity-75">List & sell</div>
                         </button>
                         <button
                           type="button"
-                          onClick={() => updateField("loginAs", "admin")}
+                          onClick={() => updateField("selectedRole", "admin")}
                           className={`p-3 border-2 rounded-lg text-center transition-all ${
-                            formData.loginAs === "admin"
+                            formData.selectedRole === "admin"
                               ? "border-primary bg-primary/5 text-primary"
                               : "border-gray-200 hover:border-gray-300 text-gray-700"
                           }`}
                         >
                           <div className="font-medium text-sm">🛡️ Admin</div>
-                          <div className="text-xs mt-1 opacity-75">Manage platform</div>
+                          <div className="text-xs mt-1 opacity-75">Platform admin</div>
                         </button>
                       </div>
                     </div>
@@ -375,10 +383,10 @@ const LoginPage = () => {
                     >
                       {isLoading 
                         ? "Signing in..." 
-                        : `Sign In as ${
-                            formData.loginAs === "buyer" ? "Buyer" : 
-                            formData.loginAs === "seller" ? "Seller" : "Admin"
-                          }`
+                        : `Access ${
+                            formData.selectedRole === "buyer" ? "Buyer" : 
+                            formData.selectedRole === "seller" ? "Seller" : "Admin"
+                          } Dashboard`
                       }
                     </Button>
                   </form>
@@ -401,7 +409,7 @@ const LoginPage = () => {
                           </Link>
                         </p>
                         <p className="text-xs text-gray-500">
-                          Note: If you have multiple roles, you can choose which role to login as.
+                          New accounts get both buyer and seller access. Choose your preferred starting dashboard above.
                         </p>
                       </div>
                     </div>
@@ -409,9 +417,9 @@ const LoginPage = () => {
                     <div className="mt-6 p-4 bg-blue-50 rounded-lg">
                       <h4 className="font-semibold text-blue-800 mb-2">Demo Accounts:</h4>
                       <div className="text-sm text-blue-700 space-y-1">
-                        <p><strong>Test User:</strong> testuser789 / password123</p>
-                        <p><strong>Admin:</strong> purejson / testpass123</p>
-                        <p className="text-xs italic">Use the username and password from your registration</p>
+                        <p><strong>Unified Account:</strong> testuser789 / password123</p>
+                        <p><strong>Admin Account:</strong> purejson / testpass123</p>
+                        <p className="text-xs italic">Regular accounts have both buyer and seller access</p>
                       </div>
                     </div>
                   </>

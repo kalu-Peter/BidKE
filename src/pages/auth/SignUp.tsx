@@ -68,14 +68,14 @@ const SignUp = () => {
       const result = await register(registrationData);
       
       if (result.success) {
-        setSuccessMessage("Registration successful! Please check your email for verification instructions.");
+        setSuccessMessage("Registration successful! Your account has been created with both buyer and seller access. Please check your email for verification instructions.");
         setErrors({});
         
         // Redirect to login after 3 seconds
         setTimeout(() => {
           navigate('/login', { 
             state: { 
-              message: 'Registration successful! Please log in to continue.',
+              message: 'Registration successful! Please log in to access your buyer and seller dashboard.',
               email: formData.email 
             }
           });
@@ -98,12 +98,20 @@ const SignUp = () => {
           <div className="max-w-2xl mx-auto">
             <div className="text-center mb-8">
               <h1 className="text-3xl font-bold text-gray-900 mb-2">Join BidLode</h1>
-              <p className="text-gray-600">Create your account to start your auction journey</p>
+              <p className="text-gray-600">Create your account to start buying and selling in auctions</p>
+              <div className="mt-2 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                <p className="text-sm text-blue-800">
+                  ✨ One account gives you access to both buying and selling features
+                </p>
+              </div>
             </div>
 
             <Card>
               <CardHeader>
-                <CardTitle>Create Account</CardTitle>
+                <CardTitle>Create Your Account</CardTitle>
+                <p className="text-sm text-gray-600 mt-2">
+                  Get instant access to both buying and selling features
+                </p>
               </CardHeader>
               <CardContent>
                 {successMessage && (
@@ -183,6 +191,17 @@ const SignUp = () => {
                     >
                       {isSubmitting ? "Creating Account..." : "Create Account"}
                     </Button>
+                  </div>
+
+                  <div className="mt-6 p-4 bg-gray-50 rounded-lg">
+                    <h4 className="font-medium text-gray-900 mb-2">What you get with your account:</h4>
+                    <ul className="text-sm text-gray-600 space-y-1">
+                      <li>• 🛍️ Participate in auctions as a buyer</li>
+                      <li>• 🏪 List and sell items as a seller</li>
+                      <li>• 👁️ Watch and track favorite auctions</li>
+                      <li>• 🔔 Get notifications on bids and auctions</li>
+                      <li>• 📊 Access to comprehensive dashboard</li>
+                    </ul>
                   </div>
                 </form>
               </CardContent>
