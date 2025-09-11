@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { getDashboardPath } from "@/components/auth/ProtectedRoute";
@@ -25,9 +25,28 @@ const LoginPage = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [loginAttempted, setLoginAttempted] = useState(false);
   const [loginSuccess, setLoginSuccess] = useState(false);
+  const [successMessage, setSuccessMessage] = useState('');
   
   // Get the intended destination from location state or default to dashboard
   const from = location.state?.from?.pathname || null;
+  
+  // Handle success message from registration
+  useEffect(() => {
+    if (location.state?.message && location.state?.type === 'success') {
+      setSuccessMessage(location.state.message);
+      // If coming from admin signup, set default login type to admin
+      if (location.state.message.includes('Admin account')) {
+        setFormData(prev => ({ ...prev, loginAs: 'admin' }));
+      }
+      // Clear the message from location state
+      window.history.replaceState({}, document.title);
+      
+      // Clear success message after 10 seconds
+      setTimeout(() => {
+        setSuccessMessage('');
+      }, 10000);
+    }
+  }, [location.state]);
 
   const updateField = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -224,6 +243,12 @@ const LoginPage = () => {
                 </p>
               </CardHeader>
               <CardContent>
+                {successMessage && (
+                  <Alert className="mb-6 border-green-200 bg-green-50">
+                    <CheckCircle className="h-4 w-4 text-green-600" />
+                    <AlertDescription className="text-green-800">{successMessage}</AlertDescription>
+                  </Alert>
+                )}
                 {loginSuccess && user ? (
                   <div>
                     <div className="text-center mb-4">
@@ -240,30 +265,42 @@ const LoginPage = () => {
                       <label className="block text-sm font-medium text-gray-700">
                         Login as <span className="text-red-500">*</span>
                       </label>
-                      <div className="grid grid-cols-2 gap-3">
+                      <div className="grid grid-cols-3 gap-2">
                         <button
                           type="button"
                           onClick={() => updateField("loginAs", "buyer")}
-                          className={`p-4 border-2 rounded-lg text-center transition-all ${
+                          className={`p-3 border-2 rounded-lg text-center transition-all ${
                             formData.loginAs === "buyer"
                               ? "border-primary bg-primary/5 text-primary"
                               : "border-gray-200 hover:border-gray-300 text-gray-700"
                           }`}
                         >
-                          <div className="font-medium">🛒 Buyer</div>
+                          <div className="font-medium text-sm">🛒 Buyer</div>
                           <div className="text-xs mt-1 opacity-75">Bid on auctions</div>
                         </button>
                         <button
                           type="button"
                           onClick={() => updateField("loginAs", "seller")}
-                          className={`p-4 border-2 rounded-lg text-center transition-all ${
+                          className={`p-3 border-2 rounded-lg text-center transition-all ${
                             formData.loginAs === "seller"
                               ? "border-primary bg-primary/5 text-primary"
                               : "border-gray-200 hover:border-gray-300 text-gray-700"
                           }`}
                         >
-                          <div className="font-medium">🏪 Seller</div>
+                          <div className="font-medium text-sm">🏪 Seller</div>
                           <div className="text-xs mt-1 opacity-75">List items for auction</div>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => updateField("loginAs", "admin")}
+                          className={`p-3 border-2 rounded-lg text-center transition-all ${
+                            formData.loginAs === "admin"
+                              ? "border-primary bg-primary/5 text-primary"
+                              : "border-gray-200 hover:border-gray-300 text-gray-700"
+                          }`}
+                        >
+                          <div className="font-medium text-sm">🛡️ Admin</div>
+                          <div className="text-xs mt-1 opacity-75">Manage platform</div>
                         </button>
                       </div>
                     </div>
@@ -338,7 +375,10 @@ const LoginPage = () => {
                     >
                       {isLoading 
                         ? "Signing in..." 
-                        : `Sign In as ${formData.loginAs === "buyer" ? "Buyer" : "Seller"}`
+                        : `Sign In as ${
+                            formData.loginAs === "buyer" ? "Buyer" : 
+                            formData.loginAs === "seller" ? "Seller" : "Admin"
+                          }`
                       }
                     </Button>
                   </form>
@@ -354,8 +394,14 @@ const LoginPage = () => {
                             Sign up here
                           </Link>
                         </p>
+                        <p className="text-sm text-gray-600">
+                          Need admin access?{" "}
+                          <Link to="/admin-signup" className="text-primary hover:underline font-medium">
+                            Admin registration
+                          </Link>
+                        </p>
                         <p className="text-xs text-gray-500">
-                          Note: If you have both buyer and seller roles, you can choose which role to login as.
+                          Note: If you have multiple roles, you can choose which role to login as.
                         </p>
                       </div>
                     </div>
@@ -364,6 +410,7 @@ const LoginPage = () => {
                       <h4 className="font-semibold text-blue-800 mb-2">Demo Accounts:</h4>
                       <div className="text-sm text-blue-700 space-y-1">
                         <p><strong>Test User:</strong> testuser789 / password123</p>
+                        <p><strong>Admin:</strong> purejson / testpass123</p>
                         <p className="text-xs italic">Use the username and password from your registration</p>
                       </div>
                     </div>
