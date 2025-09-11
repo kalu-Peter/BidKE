@@ -163,7 +163,27 @@ const BuyerProfile: React.FC = () => {
       setError(null);
       setSuccess(null);
 
-      const result = await apiService.updateBuyerProfile(formData);
+      // Clean form data before sending - remove empty values
+      const cleanedFormData = { ...formData };
+      
+      // Handle date field - don't send if empty
+      if (cleanedFormData.date_of_birth === '') {
+        delete cleanedFormData.date_of_birth;
+      }
+      
+      // Handle other empty string fields and empty arrays
+      Object.keys(cleanedFormData).forEach(key => {
+        const value = cleanedFormData[key as keyof typeof cleanedFormData];
+        if (value === '' && key !== 'full_name') { // Keep full_name even if empty
+          delete cleanedFormData[key as keyof typeof cleanedFormData];
+        }
+        // Remove empty arrays to avoid PostgreSQL issues
+        if (Array.isArray(value) && value.length === 0) {
+          delete cleanedFormData[key as keyof typeof cleanedFormData];
+        }
+      });
+
+      const result = await apiService.updateBuyerProfile(cleanedFormData);
       
       if (result.success) {
         setSuccess('Profile updated successfully!');

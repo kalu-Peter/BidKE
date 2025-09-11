@@ -1,4 +1,8 @@
 <?php
+// Disable HTML error output and set JSON header immediately
+ini_set('display_errors', 0);
+error_reporting(0);
+
 // Set CORS headers first - specific origin for credentials
 $origin = $_SERVER['HTTP_ORIGIN'] ?? 'http://localhost:8080';
 header("Access-Control-Allow-Origin: $origin");
@@ -127,19 +131,49 @@ try {
             'auction_ending_notifications'
         ];
 
-        // Prepare data for users table update
+        // Prepare data for users table update with validation
         $userUpdateData = [];
         foreach ($userFields as $field) {
             if (isset($input[$field])) {
-                $userUpdateData[$field] = $input[$field];
+                $value = $input[$field];
+                
+                // Special handling for date fields
+                if ($field === 'date_of_birth') {
+                    // Only add if not empty and valid date format
+                    if (!empty($value) && $value !== '' && strtotime($value) !== false) {
+                        $userUpdateData[$field] = $value;
+                    } elseif (empty($value) || $value === '') {
+                        // Set to NULL for empty dates
+                        $userUpdateData[$field] = null;
+                    }
+                } else {
+                    // For other fields, handle empty strings
+                    $userUpdateData[$field] = empty($value) ? null : $value;
+                }
             }
         }
 
-        // Prepare data for buyer_profiles table update
+        // Prepare data for buyer_profiles table update with validation
         $profileUpdateData = [];
         foreach ($buyerProfileFields as $field) {
             if (isset($input[$field])) {
-                $profileUpdateData[$field] = $input[$field];
+                $value = $input[$field];
+                
+                // Handle array fields - PostgreSQL array format
+                if (in_array($field, ['preferred_categories', 'preferred_payment_methods'])) {
+                    if (is_array($value) && !empty($value)) {
+                        // Convert to PostgreSQL array format: {val1,val2,val3}
+                        $escapedValues = array_map(function($item) {
+                            return '"' . str_replace('"', '""', $item) . '"';
+                        }, $value);
+                        $profileUpdateData[$field] = '{' . implode(',', $escapedValues) . '}';
+                    } else {
+                        // Empty array or null
+                        $profileUpdateData[$field] = null;
+                    }
+                } else {
+                    $profileUpdateData[$field] = empty($value) ? null : $value;
+                }
             }
         }
 

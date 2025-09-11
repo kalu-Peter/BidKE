@@ -55,10 +55,38 @@ class BuyerProfile {
         if ($stmt->execute()) {
             $row = $stmt->fetch();
             if ($row) {
+                // Convert PostgreSQL arrays to PHP arrays for JSON response
+                if (isset($row['preferred_categories']) && $row['preferred_categories']) {
+                    $row['preferred_categories'] = $this->parsePostgreSQLArray($row['preferred_categories']);
+                }
+                if (isset($row['preferred_payment_methods']) && $row['preferred_payment_methods']) {
+                    $row['preferred_payment_methods'] = $this->parsePostgreSQLArray($row['preferred_payment_methods']);
+                }
                 return $row;
             }
         }
         return null;
+    }
+
+    /**
+     * Parse PostgreSQL array format to PHP array
+     */
+    private function parsePostgreSQLArray($pgArray) {
+        if (empty($pgArray) || $pgArray === '{}') {
+            return [];
+        }
+        
+        // Remove the outer braces and split by comma
+        $cleaned = trim($pgArray, '{}');
+        if (empty($cleaned)) {
+            return [];
+        }
+        
+        // Split by comma and clean up quotes
+        $items = explode(',', $cleaned);
+        return array_map(function($item) {
+            return trim($item, '"');
+        }, $items);
     }
 
     /**
@@ -83,7 +111,22 @@ class BuyerProfile {
             if (isset($data[$field])) {
                 $fields[] = $field;
                 $placeholders[] = '?';
-                $values[] = $data[$field];
+                
+                // Handle array fields for PostgreSQL
+                if (in_array($field, ['preferred_categories', 'preferred_payment_methods'])) {
+                    if (is_array($data[$field]) && !empty($data[$field])) {
+                        $escapedValues = array_map(function($item) {
+                            return '"' . str_replace('"', '""', $item) . '"';
+                        }, $data[$field]);
+                        $values[] = '{' . implode(',', $escapedValues) . '}';
+                    } elseif (is_string($data[$field]) && $data[$field] !== '') {
+                        $values[] = $data[$field];
+                    } else {
+                        $values[] = null;
+                    }
+                } else {
+                    $values[] = $data[$field];
+                }
             }
         }
         
