@@ -5,7 +5,9 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Plus, Upload, Car, Smartphone, Calendar, Clock } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Plus, Upload, Car, Smartphone, Calendar, Clock, CheckCircle, AlertCircle } from "lucide-react";
+import { apiService } from "@/services/api";
 
 const PostItemTab: React.FC = () => {
   const [formData, setFormData] = useState({
@@ -37,16 +39,44 @@ const PostItemTab: React.FC = () => {
     electronicsCondition: "",
     
     // Images
-    images: [] as File[]
+    images: [] as Array<{ url: string; alt_text?: string; file?: File }>
   });
+
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [successMessage, setSuccessMessage] = useState("");
+  const [errors, setErrors] = useState<{ [key: string]: string }>({});
+  const [submitResult, setSubmitResult] = useState<any>(null);
 
   const handleInputChange = (field: string, value: string | boolean) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
-    setFormData(prev => ({ ...prev, images: [...prev.images, ...files].slice(0, 8) }));
+    
+    for (const file of files) {
+      if (formData.images.length >= 8) {
+        alert('Maximum 8 images allowed');
+        break;
+      }
+      
+      try {
+        const response = await apiService.uploadFile(file, 'auction');
+        if (response.success && response.data) {
+          setFormData(prev => ({
+            ...prev,
+            images: [...prev.images, { 
+              url: response.data.url, 
+              alt_text: file.name,
+              file: file 
+            }]
+          }));
+        }
+      } catch (error) {
+        console.error('Error uploading file:', error);
+        alert(`Failed to upload ${file.name}`);
+      }
+    }
   };
 
   const removeImage = (index: number) => {
@@ -56,10 +86,152 @@ const PostItemTab: React.FC = () => {
     }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Handle form submission
-    console.log("Form submitted:", formData);
+    
+    // Validate form
+    const validationErrors: { [key: string]: string } = {};
+    
+    if (!formData.itemType) {
+      validationErrors.itemType = "Please select an item type";
+    }
+    
+    if (!formData.title.trim()) {
+      validationErrors.title = "Title is required";
+    }
+    
+    if (!formData.description.trim()) {
+      validationErrors.description = "Description is required";
+    }
+    
+    if (!formData.startingPrice || parseFloat(formData.startingPrice) <= 0) {
+      validationErrors.startingPrice = "Valid starting price is required";
+    }
+    
+    if (formData.hasReservePrice && (!formData.reservePrice || parseFloat(formData.reservePrice) <= 0)) {
+      validationErrors.reservePrice = "Valid reserve price is required when enabled";
+    }
+    
+    if (!formData.auctionStartDate) {
+      validationErrors.auctionStartDate = "Auction start date is required";
+    }
+    
+    if (!formData.auctionStartTime) {
+      validationErrors.auctionStartTime = "Auction start time is required";
+    }
+    
+    if (!formData.auctionEndDate) {
+      validationErrors.auctionEndDate = "Auction end date is required";
+    }
+    
+    if (!formData.auctionEndTime) {
+      validationErrors.auctionEndTime = "Auction end time is required";
+    }
+
+    // Validate item-specific fields
+    if (formData.itemType === "vehicle") {
+      if (!formData.vehicleMake) validationErrors.vehicleMake = "Vehicle make is required";
+      if (!formData.vehicleModel) validationErrors.vehicleModel = "Vehicle model is required";
+      if (!formData.vehicleYear) validationErrors.vehicleYear = "Vehicle year is required";
+      if (!formData.vehicleMileage) validationErrors.vehicleMileage = "Vehicle mileage is required";
+      if (!formData.vehicleCondition) validationErrors.vehicleCondition = "Vehicle condition is required";
+    } else if (formData.itemType === "electronic") {
+      if (!formData.electronicsBrand) validationErrors.electronicsBrand = "Electronics brand is required";
+      if (!formData.electronicsModel) validationErrors.electronicsModel = "Electronics model is required";
+      if (!formData.electronicsYear) validationErrors.electronicsYear = "Electronics year is required";
+      if (!formData.electronicsCondition) validationErrors.electronicsCondition = "Electronics condition is required";
+    }
+
+    // Check date/time logic
+    const startDateTime = new Date(`${formData.auctionStartDate}T${formData.auctionStartTime}`);
+    const endDateTime = new Date(`${formData.auctionEndDate}T${formData.auctionEndTime}`);
+    const now = new Date();
+
+    if (startDateTime <= now) {
+      validationErrors.auctionStartDate = "Auction start time must be in the future";
+    }
+
+    if (endDateTime <= startDateTime) {
+      validationErrors.auctionEndDate = "Auction end time must be after start time";
+    }
+
+    if (Object.keys(validationErrors).length > 0) {
+      setErrors(validationErrors);
+      return;
+    }
+
+    setErrors({});
+    setIsSubmitting(true);
+
+    try {
+      // Prepare auction data
+      const auctionData = {
+        itemType: formData.itemType as 'vehicle' | 'electronic',
+        title: formData.title.trim(),
+        description: formData.description.trim(),
+        startingPrice: parseFloat(formData.startingPrice),
+        reservePrice: formData.hasReservePrice ? parseFloat(formData.reservePrice) : undefined,
+        hasReservePrice: formData.hasReservePrice,
+        auctionStartDate: formData.auctionStartDate,
+        auctionStartTime: formData.auctionStartTime,
+        auctionEndDate: formData.auctionEndDate,
+        auctionEndTime: formData.auctionEndTime,
+        // Vehicle specific
+        ...(formData.itemType === 'vehicle' && {
+          vehicleMake: formData.vehicleMake,
+          vehicleModel: formData.vehicleModel,
+          vehicleYear: formData.vehicleYear,
+          vehicleMileage: formData.vehicleMileage,
+          vehicleCondition: formData.vehicleCondition,
+        }),
+        // Electronics specific
+        ...(formData.itemType === 'electronic' && {
+          electronicsBrand: formData.electronicsBrand,
+          electronicsModel: formData.electronicsModel,
+          electronicsYear: formData.electronicsYear,
+          electronicsCondition: formData.electronicsCondition,
+        }),
+        // Images (uploaded URLs)
+        images: formData.images
+      };
+
+      const result = await apiService.createAuction(auctionData);
+
+      if (result.success) {
+        setSubmitResult(result.data);
+        setSuccessMessage("Auction created successfully! Your item has been submitted for review.");
+        
+        // Reset form
+        setFormData({
+          itemType: "",
+          title: "",
+          description: "",
+          startingPrice: "",
+          reservePrice: "",
+          hasReservePrice: false,
+          auctionStartDate: "",
+          auctionStartTime: "",
+          auctionEndDate: "",
+          auctionEndTime: "",
+          vehicleMake: "",
+          vehicleModel: "",
+          vehicleYear: "",
+          vehicleMileage: "",
+          vehicleCondition: "",
+          electronicsBrand: "",
+          electronicsModel: "",
+          electronicsYear: "",
+          electronicsCondition: "",
+          images: []
+        });
+      } else {
+        setErrors({ submit: result.error || "Failed to create auction. Please try again." });
+      }
+    } catch (error: any) {
+      setErrors({ submit: error.message || "Failed to create auction. Please try again." });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const renderItemTypeSelection = () => (
@@ -260,6 +432,45 @@ const PostItemTab: React.FC = () => {
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-8">
+        {/* Success Message */}
+        {successMessage && (
+          <Alert className="border-green-200 bg-green-50">
+            <CheckCircle className="h-4 w-4 text-green-600" />
+            <AlertDescription className="text-green-800">
+              {successMessage}
+              {submitResult && (
+                <div className="mt-2 text-sm">
+                  <p><strong>Auction ID:</strong> {submitResult.auction_id}</p>
+                  <p><strong>Status:</strong> {submitResult.status}</p>
+                </div>
+              )}
+            </AlertDescription>
+          </Alert>
+        )}
+
+        {/* Error Message */}
+        {errors.submit && (
+          <Alert variant="destructive">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>{errors.submit}</AlertDescription>
+          </Alert>
+        )}
+
+        {/* Validation Errors */}
+        {Object.keys(errors).length > 0 && !errors.submit && (
+          <Alert variant="destructive">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>
+              Please fix the following errors:
+              <ul className="list-disc list-inside mt-2">
+                {Object.entries(errors).map(([field, error]) => (
+                  <li key={field}>{error}</li>
+                ))}
+              </ul>
+            </AlertDescription>
+          </Alert>
+        )}
+
         <form onSubmit={handleSubmit} className="space-y-8">
           {/* Item Type Selection */}
           {renderItemTypeSelection()}
@@ -279,6 +490,7 @@ const PostItemTab: React.FC = () => {
                       onChange={(e) => handleInputChange("title", e.target.value)}
                       required
                     />
+                    {errors.title && <p className="text-red-500 text-sm">{errors.title}</p>}
                   </div>
                   <div className="space-y-2">
                     <label className="text-sm font-medium">Starting Price (Ksh) *</label>
@@ -289,6 +501,7 @@ const PostItemTab: React.FC = () => {
                       onChange={(e) => handleInputChange("startingPrice", e.target.value)}
                       required
                     />
+                    {errors.startingPrice && <p className="text-red-500 text-sm">{errors.startingPrice}</p>}
                   </div>
                 </div>
                 
@@ -418,11 +631,11 @@ const PostItemTab: React.FC = () => {
                   {/* Display uploaded images */}
                   {formData.images.length > 0 && (
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4">
-                      {formData.images.map((file, index) => (
+                      {formData.images.map((image, index) => (
                         <div key={index} className="relative">
                           <img
-                            src={URL.createObjectURL(file)}
-                            alt={`Upload ${index + 1}`}
+                            src={image.file ? URL.createObjectURL(image.file) : image.url}
+                            alt={image.alt_text || `Upload ${index + 1}`}
                             className="w-full h-24 object-cover rounded-lg"
                           />
                           <button
@@ -441,9 +654,11 @@ const PostItemTab: React.FC = () => {
 
               {/* Submit Buttons */}
               <div className="flex justify-end space-x-4 pt-6 border-t">
-                <Button variant="outline" type="button">Save as Draft</Button>
-                <Button type="submit" className="bg-primary hover:bg-primary/90">
-                  Submit for Review
+                <Button variant="outline" type="button" disabled={isSubmitting}>
+                  Save as Draft
+                </Button>
+                <Button type="submit" className="bg-primary hover:bg-primary/90" disabled={isSubmitting}>
+                  {isSubmitting ? "Creating Auction..." : "Submit for Review"}
                 </Button>
               </div>
             </>

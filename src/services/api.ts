@@ -346,15 +346,82 @@ class ApiService {
    * Upload Methods
    */
 
-  async uploadFile(file: File, type: 'avatar' | 'auction' | 'document'): Promise<ApiResponse<{ url: string }>> {
+  async uploadFile(file: File, type: 'avatar' | 'auction' | 'document' = 'auction'): Promise<ApiResponse<{ url: string; filename: string; path: string }>> {
     const formData = new FormData();
     formData.append('file', file);
-    formData.append('type', type);
 
-    return this.makeRequest('/upload.php', {
+    const headers: Record<string, string> = {};
+    
+    // Add session token if available
+    if (this.sessionToken) {
+      headers['Authorization'] = `Bearer ${this.sessionToken}`;
+    }
+
+    try {
+      const response = await fetch(`${this.baseUrl}/upload.php`, {
+        method: 'POST',
+        body: formData,
+        headers,
+        credentials: 'include'
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || `HTTP ${response.status}`);
+      }
+
+      return data;
+    } catch (error) {
+      console.error('Upload failed:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Upload failed'
+      };
+    }
+  }
+
+  /**
+   * Auction Creation Methods
+   */
+
+  async createAuction(auctionData: {
+    itemType: 'vehicle' | 'electronic';
+    title: string;
+    description: string;
+    startingPrice: number;
+    reservePrice?: number;
+    hasReservePrice: boolean;
+    auctionStartDate: string;
+    auctionStartTime: string;
+    auctionEndDate: string;
+    auctionEndTime: string;
+    // Vehicle specific
+    vehicleMake?: string;
+    vehicleModel?: string;
+    vehicleYear?: string;
+    vehicleMileage?: string;
+    vehicleCondition?: string;
+    // Electronics specific
+    electronicsBrand?: string;
+    electronicsModel?: string;
+    electronicsYear?: string;
+    electronicsCondition?: string;
+    // Images
+    images?: Array<{ url: string; alt_text?: string }>;
+  }): Promise<ApiResponse<{
+    auction_id: number;
+    item_type: string;
+    title: string;
+    status: string;
+    start_time: string;
+    end_time: string;
+    starting_price: number;
+    reserve_price?: number;
+  }>> {
+    return this.makeRequest('/auctions/create.php', {
       method: 'POST',
-      body: formData,
-      headers: {} // Don't set Content-Type for FormData
+      body: JSON.stringify(auctionData)
     });
   }
 }
