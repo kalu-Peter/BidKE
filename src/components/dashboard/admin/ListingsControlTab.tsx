@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -18,155 +18,192 @@ import {
   Clock,
   MessageCircle,
   Image as ImageIcon,
-  ShieldCheck
+  ShieldCheck,
+  Loader2,
+  RefreshCw
 } from "lucide-react";
+
+// Types
+interface Listing {
+  id: number;
+  title: string;
+  description: string;
+  starting_price: number;
+  reserve_price: number | null;
+  current_bid: number;
+  start_time: string;
+  end_time: string;
+  status: string;
+  featured: boolean;
+  view_count: number;
+  bid_count: number;
+  created_at: string;
+  seller_name: string;
+  seller_email: string;
+  category_name: string;
+  category_slug: string;
+  item_type: 'vehicle' | 'electronics' | 'other';
+  make_brand: string;
+  model: string;
+  year: number | null;
+  item_condition: string;
+  location: string;
+  auction_duration: number;
+  images: string[];
+  documents: string[];
+  verification_status: string;
+}
+
+interface Stats {
+  total: number;
+  draft: number;
+  pending_review: number;
+  needs_info: number;
+  approved: number;
+  live: number;
+  ended: number;
+  rejected: number;
+}
+
+interface PaginationInfo {
+  page: number;
+  limit: number;
+  total: number;
+  pages: number;
+}
 
 const ListingsControlTab: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
-  const [selectedListing, setSelectedListing] = useState<any>(null);
+  const [selectedListing, setSelectedListing] = useState<Listing | null>(null);
   const [showRejectModal, setShowRejectModal] = useState(false);
   const [showRequestInfoModal, setShowRequestInfoModal] = useState(false);
   const [rejectReason, setRejectReason] = useState("");
   const [infoRequest, setInfoRequest] = useState("");
-
-  // Mock data for listings
-  const allListings = [
-    {
-      id: 1,
-      title: "Toyota Hilux 2018 - Double Cab",
-      description: "Well maintained pickup truck with service history",
-      seller: "ABC Auctioneers Ltd",
-      sellerRating: 4.8,
-      category: "Cars",
-      subcategory: "Pickup Trucks",
-      reservePrice: 1500000,
-      startingBid: 1200000,
-      submittedDate: "2024-01-22",
-      status: "pending_review",
-      images: ["image1.jpg", "image2.jpg", "image3.jpg"],
-      documents: ["logbook.pdf", "inspection.pdf"],
-      condition: "Used - Good",
-      mileage: "85,000 km",
-      year: 2018,
-      location: "Nairobi",
-      auctionDuration: 7,
-      features: ["4WD", "Manual Transmission", "Diesel Engine"],
-      verificationStatus: "documents_uploaded"
-    },
-    {
-      id: 2,
-      title: "Samsung Galaxy S21 Ultra - 256GB",
-      description: "Mint condition smartphone with original accessories",
-      seller: "Tech Repos Ltd",
-      sellerRating: 4.2,
-      category: "Electronics",
-      subcategory: "Smartphones",
-      reservePrice: 45000,
-      startingBid: 35000,
-      submittedDate: "2024-01-21",
-      status: "needs_info",
-      images: ["phone1.jpg", "phone2.jpg"],
-      documents: [],
-      condition: "Used - Excellent",
-      color: "Phantom Black",
-      storage: "256GB",
-      location: "Mombasa",
-      auctionDuration: 5,
-      features: ["5G", "120Hz Display", "S Pen"],
-      verificationStatus: "missing_documents",
-      requestedInfo: "Please provide purchase receipt and IMEI verification"
-    },
-    {
-      id: 3,
-      title: "Yamaha R15 V3 - Sport Bike",
-      description: "Performance motorcycle in excellent condition",
-      seller: "Moto Elite",
-      sellerRating: 4.6,
-      category: "Motorbikes",
-      subcategory: "Sport Bikes",
-      reservePrice: 250000,
-      startingBid: 200000,
-      submittedDate: "2024-01-20",
-      status: "approved",
-      images: ["bike1.jpg", "bike2.jpg", "bike3.jpg", "bike4.jpg"],
-      documents: ["logbook.pdf", "insurance.pdf"],
-      condition: "Used - Excellent",
-      mileage: "12,000 km",
-      year: 2021,
-      location: "Kisumu",
-      auctionDuration: 7,
-      features: ["ABS", "Digital Display", "LED Headlights"],
-      verificationStatus: "verified",
-      approvedDate: "2024-01-21",
-      auctionStartDate: "2024-01-23"
-    },
-    {
-      id: 4,
-      title: "MacBook Pro 2020 - M1 Chip",
-      description: "Professional laptop with M1 processor",
-      seller: "Digital Solutions",
-      sellerRating: 4.9,
-      category: "Electronics",
-      subcategory: "Laptops",
-      reservePrice: 95000,
-      startingBid: 75000,
-      submittedDate: "2024-01-19",
-      status: "rejected",
-      images: ["laptop1.jpg"],
-      documents: [],
-      condition: "Used - Good",
-      processor: "Apple M1",
-      storage: "512GB SSD",
-      ram: "16GB",
-      location: "Nakuru",
-      auctionDuration: 5,
-      features: ["Touch Bar", "Retina Display", "MacOS"],
-      verificationStatus: "rejected",
-      rejectionReason: "Insufficient images and missing proof of purchase",
-      rejectionDate: "2024-01-21"
-    },
-    {
-      id: 5,
-      title: "Honda Civic 2019 - Sedan",
-      description: "Reliable family car with full service history",
-      seller: "Premium Motors",
-      sellerRating: 4.7,
-      category: "Cars",
-      subcategory: "Sedans",
-      reservePrice: 1200000,
-      startingBid: 950000,
-      submittedDate: "2024-01-18",
-      status: "live",
-      images: ["civic1.jpg", "civic2.jpg", "civic3.jpg"],
-      documents: ["logbook.pdf", "service_history.pdf"],
-      condition: "Used - Very Good",
-      mileage: "45,000 km",
-      year: 2019,
-      location: "Eldoret",
-      auctionDuration: 7,
-      features: ["CVT Transmission", "Honda Sensing", "Sunroof"],
-      verificationStatus: "verified",
-      approvedDate: "2024-01-19",
-      auctionStartDate: "2024-01-20",
-      currentBid: 1050000,
-      totalBids: 12,
-      timeRemaining: "2d 14h"
-    }
-  ];
-
-  const filteredListings = allListings.filter(listing => {
-    const matchesSearch = listing.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         listing.seller.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesCategory = categoryFilter === "all" || listing.category.toLowerCase() === categoryFilter;
-    const matchesStatus = statusFilter === "all" || listing.status === statusFilter;
-    
-    return matchesSearch && matchesCategory && matchesStatus;
+  
+  // API state
+  const [listings, setListings] = useState<Listing[]>([]);
+  const [stats, setStats] = useState<Stats>({
+    total: 0,
+    draft: 0,
+    pending_review: 0,
+    needs_info: 0,
+    approved: 0,
+    live: 0,
+    ended: 0,
+    rejected: 0
   });
+  const [pagination, setPagination] = useState<PaginationInfo>({
+    page: 1,
+    limit: 20,
+    total: 0,
+    pages: 0
+  });
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // Fetch listings from API
+  const fetchListings = async (page: number = 1) => {
+    setLoading(true);
+    setError(null);
+    
+    try {
+      const params = new URLSearchParams({
+        page: page.toString(),
+        limit: pagination.limit.toString(),
+        status: statusFilter,
+        category: categoryFilter,
+        search: searchTerm
+      });
+      
+      const response = await fetch(`http://localhost:8000/admin/listings.php?${params}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include'
+      });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        setListings(data.data || []);
+        setStats(data.stats || stats);
+        setPagination(data.pagination || pagination);
+      } else {
+        throw new Error(data.message || 'Failed to fetch listings');
+      }
+    } catch (err) {
+      console.error('Error fetching listings:', err);
+      setError(err instanceof Error ? err.message : 'Failed to load listings');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Update auction status
+  const updateAuctionStatus = async (auctionId: number, action: string, reason?: string, message?: string) => {
+    try {
+      const response = await fetch('http://localhost:8000/admin/listings.php', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({
+          auction_id: auctionId,
+          action,
+          reason,
+          message
+        })
+      });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        // Refresh listings
+        await fetchListings(pagination.page);
+        return true;
+      } else {
+        throw new Error(data.message || 'Failed to update auction status');
+      }
+    } catch (err) {
+      console.error('Error updating auction status:', err);
+      setError(err instanceof Error ? err.message : 'Failed to update auction');
+      return false;
+    }
+  };
+
+  // Load listings on component mount and when filters change
+  useEffect(() => {
+    fetchListings(1);
+  }, [statusFilter, categoryFilter, searchTerm]);
+
+  // Filter change handlers
+  const handleSearchChange = (value: string) => {
+    setSearchTerm(value);
+  };
+
+  const handleCategoryChange = (value: string) => {
+    setCategoryFilter(value);
+  };
+
+  const handleStatusChange = (value: string) => {
+    setStatusFilter(value);
+  };
 
   const getStatusColor = (status: string) => {
     switch (status) {
+      case "draft":
       case "pending_review":
         return "bg-yellow-100 text-yellow-800";
       case "needs_info":
@@ -199,48 +236,55 @@ const ListingsControlTab: React.FC = () => {
     }
   };
 
-  const handleApproveListing = (listingId: number) => {
-    console.log("Approve listing:", listingId);
-    // Handle listing approval logic
+  const handleApproveListing = async (listingId: number) => {
+    const success = await updateAuctionStatus(listingId, 'approve');
+    if (success) {
+      console.log("Listing approved successfully");
+    }
   };
 
   const handleRejectListing = (listingId: number) => {
-    setSelectedListing(allListings.find(l => l.id === listingId));
+    setSelectedListing(listings.find(l => l.id === listingId) || null);
     setShowRejectModal(true);
   };
 
   const handleRequestInfo = (listingId: number) => {
-    setSelectedListing(allListings.find(l => l.id === listingId));
+    setSelectedListing(listings.find(l => l.id === listingId) || null);
     setShowRequestInfoModal(true);
   };
 
   const handleViewDetails = (listingId: number) => {
-    const listing = allListings.find(l => l.id === listingId);
-    setSelectedListing(listing);
+    const listing = listings.find(l => l.id === listingId);
+    setSelectedListing(listing || null);
   };
 
-  const submitRejection = () => {
-    console.log("Reject listing with reason:", rejectReason);
-    setShowRejectModal(false);
-    setRejectReason("");
-    setSelectedListing(null);
+  const submitRejection = async () => {
+    if (!selectedListing || !rejectReason.trim()) return;
+    
+    const success = await updateAuctionStatus(selectedListing.id, 'reject', rejectReason);
+    if (success) {
+      setShowRejectModal(false);
+      setRejectReason("");
+      setSelectedListing(null);
+    }
   };
 
-  const submitInfoRequest = () => {
-    console.log("Request info for listing:", infoRequest);
-    setShowRequestInfoModal(false);
-    setInfoRequest("");
-    setSelectedListing(null);
+  const submitInfoRequest = async () => {
+    if (!selectedListing || !infoRequest.trim()) return;
+    
+    const success = await updateAuctionStatus(selectedListing.id, 'request_info', undefined, infoRequest);
+    if (success) {
+      setShowRequestInfoModal(false);
+      setInfoRequest("");
+      setSelectedListing(null);
+    }
   };
 
-  // Statistics
-  const stats = {
-    total: allListings.length,
-    pending: allListings.filter(l => l.status === "pending_review").length,
-    needsInfo: allListings.filter(l => l.status === "needs_info").length,
-    approved: allListings.filter(l => l.status === "approved").length,
-    live: allListings.filter(l => l.status === "live").length,
-    rejected: allListings.filter(l => l.status === "rejected").length
+  const handleMakeLive = async (listingId: number) => {
+    const success = await updateAuctionStatus(listingId, 'make_live');
+    if (success) {
+      console.log("Auction is now live");
+    }
   };
 
   return (
@@ -255,6 +299,26 @@ const ListingsControlTab: React.FC = () => {
         </p>
       </CardHeader>
       <CardContent className="space-y-6">
+        {/* Error Display */}
+        {error && (
+          <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
+            <div className="flex items-center space-x-2">
+              <AlertTriangle className="w-4 h-4 text-red-600" />
+              <span className="font-medium text-red-800">Error</span>
+            </div>
+            <p className="text-sm text-red-700 mt-1">{error}</p>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={() => fetchListings(pagination.page)}
+              className="mt-2"
+            >
+              <RefreshCw className="w-4 h-4 mr-1" />
+              Try Again
+            </Button>
+          </div>
+        )}
+
         {/* Listing Statistics */}
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
           <div className="bg-blue-50 p-4 rounded-lg text-center">
@@ -262,11 +326,11 @@ const ListingsControlTab: React.FC = () => {
             <p className="text-sm text-blue-600">Total</p>
           </div>
           <div className="bg-yellow-50 p-4 rounded-lg text-center">
-            <p className="text-2xl font-bold text-yellow-800">{stats.pending}</p>
+            <p className="text-2xl font-bold text-yellow-800">{stats.pending_review}</p>
             <p className="text-sm text-yellow-600">Pending</p>
           </div>
           <div className="bg-orange-50 p-4 rounded-lg text-center">
-            <p className="text-2xl font-bold text-orange-800">{stats.needsInfo}</p>
+            <p className="text-2xl font-bold text-orange-800">{stats.needs_info || 0}</p>
             <p className="text-sm text-orange-600">Needs Info</p>
           </div>
           <div className="bg-green-50 p-4 rounded-lg text-center">
@@ -289,11 +353,11 @@ const ListingsControlTab: React.FC = () => {
             <Input
               placeholder="Search listings by title or seller..."
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              onChange={(e) => handleSearchChange(e.target.value)}
               className="w-full"
             />
           </div>
-          <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+          <Select value={categoryFilter} onValueChange={handleCategoryChange}>
             <SelectTrigger className="w-full md:w-48">
               <SelectValue placeholder="Filter by category" />
             </SelectTrigger>
@@ -304,12 +368,13 @@ const ListingsControlTab: React.FC = () => {
               <SelectItem value="electronics">Electronics</SelectItem>
             </SelectContent>
           </Select>
-          <Select value={statusFilter} onValueChange={setStatusFilter}>
+          <Select value={statusFilter} onValueChange={handleStatusChange}>
             <SelectTrigger className="w-full md:w-48">
               <SelectValue placeholder="Filter by status" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Status</SelectItem>
+              <SelectItem value="draft">Draft</SelectItem>
               <SelectItem value="pending_review">Pending Review</SelectItem>
               <SelectItem value="needs_info">Needs Info</SelectItem>
               <SelectItem value="approved">Approved</SelectItem>
@@ -319,204 +384,230 @@ const ListingsControlTab: React.FC = () => {
           </Select>
         </div>
 
+        {/* Loading State */}
+        {loading && (
+          <div className="flex items-center justify-center py-8">
+            <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+            <span className="ml-2 text-gray-600">Loading listings...</span>
+          </div>
+        )}
+
         {/* Listings List */}
-        <div className="space-y-4">
-          {filteredListings.map((listing) => (
-            <div key={listing.id} className="border rounded-lg p-4 hover:shadow-md transition-shadow">
-              <div className="flex flex-col lg:flex-row gap-4">
-                {/* Listing Image */}
-                <div className="w-full lg:w-32 h-24 flex-shrink-0 bg-gray-100 rounded flex items-center justify-center">
-                  {listing.images.length > 0 ? (
-                    <div className="text-center">
-                      <ImageIcon className="w-8 h-8 text-gray-400 mx-auto" />
-                      <p className="text-xs text-gray-500">{listing.images.length} images</p>
-                    </div>
-                  ) : (
-                    <div className="text-center">
-                      <ImageIcon className="w-8 h-8 text-red-400 mx-auto" />
-                      <p className="text-xs text-red-500">No images</p>
-                    </div>
-                  )}
-                </div>
-
-                {/* Listing Details */}
-                <div className="flex-1">
-                  <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between mb-2">
-                    <div>
-                      <h3 className="font-semibold text-lg">{listing.title}</h3>
-                      <p className="text-sm text-gray-600 mb-1">{listing.description}</p>
-                      <div className="flex items-center space-x-4 text-sm text-gray-500">
-                        <span className="flex items-center">
-                          <User className="w-4 h-4 mr-1" />
-                          {listing.seller}
-                        </span>
-                        <Badge variant="outline">{listing.category}</Badge>
-                        <span className="flex items-center">
-                          <Calendar className="w-4 h-4 mr-1" />
-                          {new Date(listing.submittedDate).toLocaleDateString()}
-                        </span>
+        {!loading && (
+          <div className="space-y-4">
+            {listings.map((listing) => (
+              <div key={listing.id} className="border rounded-lg p-4 hover:shadow-md transition-shadow">
+                <div className="flex flex-col lg:flex-row gap-4">
+                  {/* Listing Image */}
+                  <div className="w-full lg:w-32 h-24 flex-shrink-0 bg-gray-100 rounded flex items-center justify-center">
+                    {listing.images.length > 0 ? (
+                      <div className="text-center">
+                        <ImageIcon className="w-8 h-8 text-gray-400 mx-auto" />
+                        <p className="text-xs text-gray-500">{listing.images.length} images</p>
                       </div>
-                    </div>
-                    <div className="flex items-center space-x-2 mt-2 sm:mt-0">
-                      <Badge className={getStatusColor(listing.status)}>
-                        {listing.status.replace('_', ' ')}
-                      </Badge>
-                      <div className="flex items-center space-x-1">
-                        {getVerificationIcon(listing.verificationStatus)}
+                    ) : (
+                      <div className="text-center">
+                        <ImageIcon className="w-8 h-8 text-red-400 mx-auto" />
+                        <p className="text-xs text-red-500">No images</p>
                       </div>
-                    </div>
+                    )}
                   </div>
 
-                  {/* Price and Auction Info */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
-                    <div>
-                      <p className="text-sm text-gray-500">Reserve Price</p>
-                      <p className="font-bold text-green-600">
-                        Ksh {listing.reservePrice.toLocaleString()}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-gray-500">Starting Bid</p>
-                      <p className="font-medium text-gray-700">
-                        Ksh {listing.startingBid.toLocaleString()}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-gray-500">Duration</p>
-                      <p className="font-medium text-gray-700">
-                        {listing.auctionDuration} days
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-gray-500">Location</p>
-                      <p className="font-medium text-gray-700">{listing.location}</p>
-                    </div>
-                  </div>
-
-                  {/* Live Auction Info */}
-                  {listing.status === 'live' && (
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4 p-3 bg-blue-50 rounded-lg">
+                  {/* Listing Details */}
+                  <div className="flex-1">
+                    <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between mb-2">
                       <div>
-                        <p className="text-sm text-blue-600">Current Bid</p>
-                        <p className="font-bold text-blue-800">
-                          Ksh {listing.currentBid?.toLocaleString()}
+                        <h3 className="font-semibold text-lg">{listing.title}</h3>
+                        <p className="text-sm text-gray-600 mb-1">{listing.description}</p>
+                        <div className="flex items-center space-x-4 text-sm text-gray-500">
+                          <span className="flex items-center">
+                            <User className="w-4 h-4 mr-1" />
+                            {listing.seller_name || 'Unknown Seller'}
+                          </span>
+                          <Badge variant="outline">{listing.category_name}</Badge>
+                          <span className="flex items-center">
+                            <Calendar className="w-4 h-4 mr-1" />
+                            {new Date(listing.created_at).toLocaleDateString()}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="flex items-center space-x-2 mt-2 sm:mt-0">
+                        <Badge className={getStatusColor(listing.status)}>
+                          {listing.status.replace('_', ' ')}
+                        </Badge>
+                        <div className="flex items-center space-x-1">
+                          {getVerificationIcon(listing.verification_status)}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Price and Auction Info */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+                      <div>
+                        <p className="text-sm text-gray-500">Reserve Price</p>
+                        <p className="font-bold text-green-600">
+                          {listing.reserve_price ? `Ksh ${listing.reserve_price.toLocaleString()}` : 'No Reserve'}
                         </p>
                       </div>
                       <div>
-                        <p className="text-sm text-blue-600">Total Bids</p>
-                        <p className="font-bold text-blue-800">{listing.totalBids}</p>
+                        <p className="text-sm text-gray-500">Starting Bid</p>
+                        <p className="font-medium text-gray-700">
+                          Ksh {listing.starting_price.toLocaleString()}
+                        </p>
                       </div>
                       <div>
-                        <p className="text-sm text-blue-600">Time Remaining</p>
-                        <p className="font-bold text-blue-800">{listing.timeRemaining}</p>
+                        <p className="text-sm text-gray-500">Duration</p>
+                        <p className="font-medium text-gray-700">
+                          {listing.auction_duration} days
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-gray-500">Location</p>
+                        <p className="font-medium text-gray-700">{listing.location || 'N/A'}</p>
                       </div>
                     </div>
-                  )}
 
-                  {/* Status-specific messages */}
-                  {listing.status === 'needs_info' && listing.requestedInfo && (
-                    <div className="p-3 bg-orange-50 border border-orange-200 rounded-lg mb-4">
-                      <div className="flex items-center space-x-2 mb-1">
-                        <AlertTriangle className="w-4 h-4 text-orange-600" />
-                        <span className="font-medium text-orange-800">Information Requested:</span>
+                    {/* Live Auction Info */}
+                    {listing.status === 'live' && (
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4 p-3 bg-blue-50 rounded-lg">
+                        <div>
+                          <p className="text-sm text-blue-600">Current Bid</p>
+                          <p className="font-bold text-blue-800">
+                            Ksh {listing.current_bid.toLocaleString()}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-sm text-blue-600">Total Bids</p>
+                          <p className="font-bold text-blue-800">{listing.bid_count}</p>
+                        </div>
+                        <div>
+                          <p className="text-sm text-blue-600">Views</p>
+                          <p className="font-bold text-blue-800">{listing.view_count}</p>
+                        </div>
                       </div>
-                      <p className="text-sm text-orange-700">{listing.requestedInfo}</p>
-                    </div>
-                  )}
-
-                  {listing.status === 'rejected' && listing.rejectionReason && (
-                    <div className="p-3 bg-red-50 border border-red-200 rounded-lg mb-4">
-                      <div className="flex items-center space-x-2 mb-1">
-                        <XCircle className="w-4 h-4 text-red-600" />
-                        <span className="font-medium text-red-800">Rejection Reason:</span>
-                      </div>
-                      <p className="text-sm text-red-700">{listing.rejectionReason}</p>
-                    </div>
-                  )}
-
-                  {/* Documents and Images Summary */}
-                  <div className="flex items-center space-x-4 mb-4 text-sm">
-                    <div className="flex items-center space-x-1">
-                      <ImageIcon className="w-4 h-4 text-gray-400" />
-                      <span className={listing.images.length > 0 ? "text-green-600" : "text-red-600"}>
-                        {listing.images.length} images
-                      </span>
-                    </div>
-                    <div className="flex items-center space-x-1">
-                      <FileText className="w-4 h-4 text-gray-400" />
-                      <span className={listing.documents.length > 0 ? "text-green-600" : "text-red-600"}>
-                        {listing.documents.length} documents
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Action Buttons */}
-                  <div className="flex flex-wrap gap-2">
-                    <Button 
-                      variant="outline" 
-                      size="sm"
-                      onClick={() => handleViewDetails(listing.id)}
-                    >
-                      <Eye className="w-4 h-4 mr-1" />
-                      View Details
-                    </Button>
-                    
-                    {listing.status === 'pending_review' && (
-                      <>
-                        <Button 
-                          size="sm"
-                          onClick={() => handleApproveListing(listing.id)}
-                        >
-                          <CheckCircle className="w-4 h-4 mr-1" />
-                          Approve
-                        </Button>
-                        <Button 
-                          variant="outline" 
-                          size="sm"
-                          onClick={() => handleRequestInfo(listing.id)}
-                        >
-                          <MessageCircle className="w-4 h-4 mr-1" />
-                          Request Info
-                        </Button>
-                        <Button 
-                          variant="destructive" 
-                          size="sm"
-                          onClick={() => handleRejectListing(listing.id)}
-                        >
-                          <XCircle className="w-4 h-4 mr-1" />
-                          Reject
-                        </Button>
-                      </>
                     )}
 
-                    {listing.status === 'needs_info' && (
-                      <>
+                    {/* Item Details */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-4 text-sm">
+                      <div>
+                        <p className="text-gray-500">Item Type</p>
+                        <p className="font-medium capitalize">{listing.item_type}</p>
+                      </div>
+                      <div>
+                        <p className="text-gray-500">Make/Brand</p>
+                        <p className="font-medium">{listing.make_brand || 'N/A'}</p>
+                      </div>
+                      <div>
+                        <p className="text-gray-500">Model</p>
+                        <p className="font-medium">{listing.model || 'N/A'}</p>
+                      </div>
+                      {listing.year && (
+                        <div>
+                          <p className="text-gray-500">Year</p>
+                          <p className="font-medium">{listing.year}</p>
+                        </div>
+                      )}
+                      <div>
+                        <p className="text-gray-500">Condition</p>
+                        <p className="font-medium">{listing.item_condition || 'N/A'}</p>
+                      </div>
+                    </div>
+
+                    {/* Documents and Images Summary */}
+                    <div className="flex items-center space-x-4 mb-4 text-sm">
+                      <div className="flex items-center space-x-1">
+                        <ImageIcon className="w-4 h-4 text-gray-400" />
+                        <span className={listing.images.length > 0 ? "text-green-600" : "text-red-600"}>
+                          {listing.images.length} images
+                        </span>
+                      </div>
+                      <div className="flex items-center space-x-1">
+                        <FileText className="w-4 h-4 text-gray-400" />
+                        <span className={listing.documents.length > 0 ? "text-green-600" : "text-red-600"}>
+                          {listing.documents.length} documents
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Action Buttons */}
+                    <div className="flex flex-wrap gap-2">
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => handleViewDetails(listing.id)}
+                      >
+                        <Eye className="w-4 h-4 mr-1" />
+                        View Details
+                      </Button>
+                      
+                      {(listing.status === 'draft' || listing.status === 'pending_review') && (
+                        <>
+                          <Button 
+                            size="sm"
+                            onClick={() => handleApproveListing(listing.id)}
+                          >
+                            <CheckCircle className="w-4 h-4 mr-1" />
+                            Approve
+                          </Button>
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={() => handleRequestInfo(listing.id)}
+                          >
+                            <MessageCircle className="w-4 h-4 mr-1" />
+                            Request Info
+                          </Button>
+                          <Button 
+                            variant="destructive" 
+                            size="sm"
+                            onClick={() => handleRejectListing(listing.id)}
+                          >
+                            <XCircle className="w-4 h-4 mr-1" />
+                            Reject
+                          </Button>
+                        </>
+                      )}
+
+                      {listing.status === 'needs_info' && (
+                        <>
+                          <Button 
+                            size="sm"
+                            onClick={() => handleApproveListing(listing.id)}
+                          >
+                            <CheckCircle className="w-4 h-4 mr-1" />
+                            Approve
+                          </Button>
+                          <Button 
+                            variant="destructive" 
+                            size="sm"
+                            onClick={() => handleRejectListing(listing.id)}
+                          >
+                            <XCircle className="w-4 h-4 mr-1" />
+                            Reject
+                          </Button>
+                        </>
+                      )}
+
+                      {listing.status === 'approved' && (
                         <Button 
                           size="sm"
-                          onClick={() => handleApproveListing(listing.id)}
+                          onClick={() => handleMakeLive(listing.id)}
+                          className="bg-purple-600 hover:bg-purple-700"
                         >
                           <CheckCircle className="w-4 h-4 mr-1" />
-                          Approve
+                          Make Live
                         </Button>
-                        <Button 
-                          variant="destructive" 
-                          size="sm"
-                          onClick={() => handleRejectListing(listing.id)}
-                        >
-                          <XCircle className="w-4 h-4 mr-1" />
-                          Reject
-                        </Button>
-                      </>
-                    )}
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
 
         {/* Empty State */}
-        {filteredListings.length === 0 && (
+        {!loading && listings.length === 0 && (
           <div className="text-center py-12">
             <FileText className="w-16 h-16 text-gray-300 mx-auto mb-4" />
             <h3 className="text-lg font-semibold text-gray-900 mb-2">No listings found</h3>
@@ -532,6 +623,47 @@ const ListingsControlTab: React.FC = () => {
             }}>
               Clear Filters
             </Button>
+          </div>
+        )}
+
+        {/* Pagination */}
+        {!loading && pagination.pages > 1 && (
+          <div className="flex items-center justify-between">
+            <div className="text-sm text-gray-600">
+              Showing {((pagination.page - 1) * pagination.limit) + 1} to {Math.min(pagination.page * pagination.limit, pagination.total)} of {pagination.total} results
+            </div>
+            <div className="flex space-x-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => fetchListings(pagination.page - 1)}
+                disabled={pagination.page <= 1}
+              >
+                Previous
+              </Button>
+              {[...Array(Math.min(5, pagination.pages))].map((_, i) => {
+                const pageNum = pagination.page - 2 + i;
+                if (pageNum < 1 || pageNum > pagination.pages) return null;
+                return (
+                  <Button
+                    key={pageNum}
+                    variant={pageNum === pagination.page ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => fetchListings(pageNum)}
+                  >
+                    {pageNum}
+                  </Button>
+                );
+              })}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => fetchListings(pagination.page + 1)}
+                disabled={pagination.page >= pagination.pages}
+              >
+                Next
+              </Button>
+            </div>
           </div>
         )}
 
