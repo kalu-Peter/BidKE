@@ -1,0 +1,27 @@
+{
+  "name": "BidKE - Kenya's Premier Auction Platform",
+  "short_name": "BidKE",
+  "description": "Kenya's leading online auction platform for secure bidding",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#1e40af",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/logo.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable any"
+    },
+    {
+      "src": "/logo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable any"
+    }
+  ],
+  "categories": ["business", "finance", "marketplace"],
+  "lang": "en",
+  "dir": "ltr"
+}

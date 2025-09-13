@@ -28,8 +28,8 @@ interface LoginResponse {
     role_display_name: string;
     is_primary: boolean;
     role_status: string;
+    can_login: boolean;
   }>;
-  has_login: boolean;
 }
 
 interface RegisterData {
@@ -66,56 +66,6 @@ interface Category {
   id: number;
   name: string;
   description: string;
-}
-
-interface AdminListing {
-  id: number;
-  title: string;
-  description: string;
-  seller: {
-    id: number;
-    name: string;
-    email: string;
-    rating: number;
-  };
-  category: {
-    name: string;
-    slug: string;
-  };
-  pricing: {
-    starting_price: number;
-    reserve_price: number | null;
-    current_bid: number | null;
-  };
-  timing: {
-    start_time: string;
-    end_time: string;
-    duration_days: number;
-    submitted_date: string;
-  };
-  status: 'draft' | 'needs_info' | 'approved' | 'live' | 'rejected' | 'ended';
-  featured: boolean;
-  stats: {
-    view_count: number;
-    bid_count: number;
-  };
-  verification_status: 'pending' | 'documents_uploaded' | 'missing_documents' | 'verified' | 'rejected';
-  item_details: {
-    type: 'vehicle' | 'electronics';
-    make?: string;
-    model?: string;
-    year?: number;
-    mileage?: string;
-    condition?: string;
-    transmission?: string;
-    fuel_type?: string;
-    brand?: string;
-    warranty?: boolean;
-  };
-  images: Array<{ url: string; alt_text: string }>;
-  documents: Array<{ name: string; url: string }>;
-  rejection_reason?: string;
-  info_request?: string;
 }
 
 class ApiService {
@@ -474,94 +424,10 @@ class ApiService {
       body: JSON.stringify(auctionData)
     });
   }
-
-  /**
-   * Admin Management Methods
-   */
-
-  async getAdminListings(params: {
-    page?: number;
-    limit?: number;
-    search?: string;
-    category?: string;
-    status?: string;
-  } = {}): Promise<ApiResponse<{
-    listings: AdminListing[];
-    pagination: {
-      page: number;
-      limit: number;
-      total: number;
-      total_pages: number;
-    };
-    statistics: {
-      total: number;
-      pending: number;
-      needs_info: number;
-      approved: number;
-      live: number;
-      rejected: number;
-    };
-  }>> {
-    const queryParams = new URLSearchParams();
-    Object.entries(params).forEach(([key, value]) => {
-      if (value !== undefined && value !== '') {
-        queryParams.append(key, value.toString());
-      }
-    });
-
-    return this.makeRequest(`/api/admin/listings.php?${queryParams.toString()}`);
-  }
-
-  async approveListing(listingId: number, adminNotes?: string): Promise<ApiResponse<{
-    listing_id: number;
-    title: string;
-    new_status: string;
-    approved_at: string;
-  }>> {
-    return this.makeRequest('/api/admin/approve.php', {
-      method: 'POST',
-      body: JSON.stringify({ 
-        listing_id: listingId, 
-        admin_notes: adminNotes 
-      })
-    });
-  }
-
-  async rejectListing(listingId: number, rejectionReason: string): Promise<ApiResponse<{
-    listing_id: number;
-    title: string;
-    new_status: string;
-    rejection_reason: string;
-    rejected_at: string;
-  }>> {
-    return this.makeRequest('/api/admin/reject.php', {
-      method: 'POST',
-      body: JSON.stringify({ 
-        listing_id: listingId, 
-        rejection_reason: rejectionReason 
-      })
-    });
-  }
-
-  async requestInfo(listingId: number, infoRequest: string): Promise<ApiResponse<{
-    listing_id: number;
-    title: string;
-    new_status: string;
-    info_request: string;
-    requested_at: string;
-  }>> {
-    return this.makeRequest('/api/admin/request-info.php', {
-      method: 'POST',
-      body: JSON.stringify({ 
-        listing_id: listingId, 
-        info_request: infoRequest 
-      })
-    });
-  }
 }
 
 // Create and export singleton instance
 export const apiService = new ApiService();
 
 // Export types for use in components
-export type { ApiResponse, User, RegisterData, Auction, Category, AdminListing };
+export type { ApiResponse, User, RegisterData, Auction, Category };

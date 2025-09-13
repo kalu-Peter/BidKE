@@ -234,7 +234,7 @@ const LoginPage = () => {
           <div className="max-w-md mx-auto">
             <Card>
               <CardHeader className="text-center">
-                <CardTitle className="text-2xl">Sign In to BidLode</CardTitle>
+                <CardTitle className="text-2xl">Sign In to BidKE</CardTitle>
                 <p className="text-gray-600 text-sm">
                   Access your unified buyer and seller dashboard
                 </p>
