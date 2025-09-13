@@ -69,7 +69,16 @@ interface AuctionItem {
 const AuctionDetails = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { user } = useAuth();
+  
+  // Safe auth hook usage with error handling
+  let user = null;
+  try {
+    const authContext = useAuth();
+    user = authContext?.user || null;
+  } catch (error) {
+    console.warn('Auth context not available:', error);
+    // Continue without user authentication
+  }
   
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [bidAmount, setBidAmount] = useState("");

@@ -1,19 +1,61 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { 
   Search,
   Grid3X3,
   List,
   Eye,
   Heart,
-  Clock
+  Clock,
+  AlertCircle,
+  Loader2
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
+
+interface Auction {
+  id: number;
+  title: string;
+  description: string;
+  starting_price: number;
+  current_bid: number;
+  reserve_price?: number;
+  start_time: string;
+  end_time: string;
+  status: string;
+  category_name: string;
+  category_slug: string;
+  seller_name: string;
+  seller_email: string;
+  featured: boolean;
+  view_count: number;
+  bid_count: number;
+  images: string[];
+  item_type: string;
+  make_brand?: string;
+  model?: string;
+  year?: number;
+  item_condition: string;
+  location?: string;
+  isWatched?: boolean;
+}
+
+interface ApiResponse {
+  success: boolean;
+  data: Auction[];
+  pagination?: {
+    page: number;
+    limit: number;
+    total: number;
+    pages: number;
+  };
+  message?: string;
+}
 
 const BrowseAuctionsContent = () => {
   const { user } = useAuth();
@@ -22,162 +64,167 @@ const BrowseAuctionsContent = () => {
   const [category, setCategory] = useState("all");
   const [priceRange, setPriceRange] = useState("all");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+  const [auctions, setAuctions] = useState<Auction[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalAuctions, setTotalAuctions] = useState(0);
 
-  const [allAuctions, setAllAuctions] = useState([
-    {
-      id: 1,
-      title: "Toyota Land Cruiser V8",
-      category: "Cars",
-      currentBid: 2800000,
-      reservePrice: 3200000,
-      timeLeft: "2d 14h",
-      bids: 23,
-      seller: "Auto Plaza Ltd",
-      image: "https://images.unsplash.com/photo-1449824913935-59a10b8d2000?auto=format&fit=crop&w=500&q=80",
-      featured: true,
-      isWatched: false
-    },
-    {
-      id: 2,
-      title: "Honda CBR 1000RR",
-      category: "Motorbikes",
-      currentBid: 850000,
-      reservePrice: 1200000,
-      timeLeft: "1d 8h",
-      bids: 15,
-      seller: "Moto Elite",
-      image: "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?auto=format&fit=crop&w=500&q=80",
-      featured: true,
-      isWatched: false
-    },
-    {
-      id: 3,
-      title: "iPhone 14 Pro Max",
-      category: "Electronics",
-      currentBid: 95000,
-      reservePrice: 120000,
-      timeLeft: "18h 45m",
-      bids: 31,
-      seller: "TechHub Kenya",
-      image: "https://images.unsplash.com/photo-1592750475338-74b7b21085ab?auto=format&fit=crop&w=500&q=80",
-      featured: true,
-      isWatched: true
-    },
-    {
-      id: 4,
-      title: "MacBook Pro M2",
-      category: "Electronics",
-      currentBid: 185000,
-      reservePrice: 250000,
-      timeLeft: "3d 2h",
-      bids: 18,
-      seller: "Digital Solutions",
-      image: "https://images.unsplash.com/photo-1517336714731-489689fd1ca8?auto=format&fit=crop&w=500&q=80",
-      featured: true,
-      isWatched: false
-    },
-    {
-      id: 5,
-      title: "Mazda Demio 2018",
-      category: "Cars",
-      currentBid: 800000,
-      reservePrice: 950000,
-      timeLeft: "2d 12h",
-      bids: 15,
-      seller: "Auto Dealers Ltd",
-      image: "https://images.unsplash.com/photo-1465156799763-2c087c332922?auto=format&fit=crop&w=400&q=80",
-      featured: false,
-      isWatched: false
-    },
-    {
-      id: 6,
-      title: "Samsung 55'' 4K TV",
-      category: "Electronics",
-      currentBid: 45000,
-      reservePrice: 65000,
-      timeLeft: "1h 30m",
-      bids: 8,
-      seller: "TechHub Kenya",
-      image: "https://images.unsplash.com/photo-1519125323398-675f0ddb6308?auto=format&fit=crop&w=400&q=80",
-      featured: false,
-      isWatched: true
-    },
-    {
-      id: 7,
-      title: "TVS HLX 125 2021",
-      category: "Motorbikes",
-      currentBid: 54000,
-      reservePrice: 75000,
-      timeLeft: "5h 20m",
-      bids: 12,
-      seller: "Bike World",
-      image: "https://images.unsplash.com/photo-1558618047-3c8c76ca7d13?auto=format&fit=crop&w=400&q=80",
-      featured: false,
-      isWatched: false
-    },
-    {
-      id: 8,
-      title: "Honda Civic 2019",
-      category: "Cars",
-      currentBid: 1200000,
-      reservePrice: 1450000,
-      timeLeft: "1d 14h",
-      bids: 28,
-      seller: "Premium Motors",
-      image: "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?auto=format&fit=crop&w=400&q=80",
-      featured: false,
-      isWatched: false
-    },
-    {
-      id: 9,
-      title: "Yamaha R15 V3",
-      category: "Motorbikes",
-      currentBid: 85000,
-      reservePrice: 110000,
-      timeLeft: "4h 45m",
-      bids: 18,
-      seller: "Moto Elite",
-      image: "https://images.unsplash.com/photo-1558618847-3f0c2cf36c38?auto=format&fit=crop&w=400&q=80",
-      featured: false,
-      isWatched: false
+  // Fetch auctions from API
+  const fetchAuctions = async (page = 1, search = "", categoryFilter = "all", priceFilter = "all") => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      const params = new URLSearchParams({
+        page: page.toString(),
+        limit: '12',
+        status: 'live', // Only fetch live auctions
+        search: search,
+      });
+
+      if (categoryFilter !== "all") {
+        params.append('category', categoryFilter);
+      }
+
+      if (priceFilter !== "all") {
+        const [min, max] = priceFilter.split('-');
+        if (min) params.append('min_price', min);
+        if (max && max !== '+') params.append('max_price', max);
+      }
+
+      const response = await fetch(`http://localhost:8000/auctions.php?${params}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Origin': 'http://localhost:8082'
+        },
+        credentials: 'include'
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data: ApiResponse = await response.json();
+      
+      if (data.success) {
+        setAuctions(data.data || []);
+        if (data.pagination) {
+          setCurrentPage(data.pagination.page);
+          setTotalPages(data.pagination.pages);
+          setTotalAuctions(data.pagination.total);
+        }
+      } else {
+        setError(data.message || 'Failed to fetch auctions');
+      }
+    } catch (err) {
+      console.error('Error fetching auctions:', err);
+      setError('Failed to load auctions. Please try again.');
+    } finally {
+      setLoading(false);
     }
-  ]);
+  };
 
-  // Filter auctions based on search criteria
-  const filteredAuctions = allAuctions.filter(auction => {
-    const matchesSearch = auction.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         auction.category.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         auction.seller.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesCategory = category === "all" || auction.category.toLowerCase() === category.toLowerCase();
-    const matchesPriceRange = priceRange === "all" || 
-      (priceRange === "0-50000" && auction.currentBid < 50000) ||
-      (priceRange === "50000-200000" && auction.currentBid >= 50000 && auction.currentBid < 200000) ||
-      (priceRange === "200000-500000" && auction.currentBid >= 200000 && auction.currentBid < 500000) ||
-      (priceRange === "500000+" && auction.currentBid >= 500000);
-    
-    return matchesSearch && matchesCategory && matchesPriceRange;
-  });
+  // Calculate time left for auction
+  const calculateTimeLeft = (endTime: string) => {
+    const end = new Date(endTime).getTime();
+    const now = new Date().getTime();
+    const timeLeft = end - now;
+
+    if (timeLeft <= 0) return "Ended";
+
+    const days = Math.floor(timeLeft / (1000 * 60 * 60 * 24));
+    const hours = Math.floor((timeLeft % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+    const minutes = Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60));
+
+    if (days > 0) return `${days}d ${hours}h`;
+    if (hours > 0) return `${hours}h ${minutes}m`;
+    return `${minutes}m`;
+  };
+
+  // Get auction image
+  const getAuctionImage = (auction: Auction) => {
+    if (auction.images && auction.images.length > 0) {
+      return `http://localhost:8000${auction.images[0]}`;
+    }
+    // Default image based on category
+    switch (auction.category_slug) {
+      case 'cars':
+        return '/src/assets/category-cars.jpg';
+      case 'motorbikes':
+        return '/src/assets/category-motorbikes.jpg';
+      case 'electronics':
+        return '/src/assets/category-electronics.jpg';
+      default:
+        return '/placeholder.svg';
+    }
+  };
+
+  // Initial fetch
+  useEffect(() => {
+    fetchAuctions();
+  }, []);
+
+  // Fetch when filters change (with debounce for search)
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      fetchAuctions(1, searchTerm, category, priceRange);
+    }, searchTerm ? 500 : 0); // Debounce search input
+
+    return () => clearTimeout(timeoutId);
+  }, [searchTerm, category, priceRange]);
 
   // Handler functions
-  const handleToggleWatch = (auctionId: number) => {
+  const handleToggleWatch = async (auctionId: number) => {
     if (!user) return;
-    setAllAuctions(prev => prev.map(auction => 
-      auction.id === auctionId 
-        ? { ...auction, isWatched: !auction.isWatched }
-        : auction
-    ));
+    
+    try {
+      const auction = auctions.find(a => a.id === auctionId);
+      if (!auction) return;
+
+      const response = await fetch('http://localhost:8000/watchlist.php', {
+        method: auction.isWatched ? 'DELETE' : 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Origin': 'http://localhost:8082'
+        },
+        credentials: 'include',
+        body: JSON.stringify({
+          user_id: user.id,
+          auction_id: auctionId
+        })
+      });
+
+      if (response.ok) {
+        setAuctions(prev => prev.map(a => 
+          a.id === auctionId 
+            ? { ...a, isWatched: !a.isWatched }
+            : a
+        ));
+      }
+    } catch (error) {
+      console.error('Error toggling watchlist:', error);
+    }
   };
 
   const handlePlaceBid = (auctionId: number) => {
     if (!user) {
-      console.log("Please login to place a bid");
+      navigate('/login');
       return;
     }
-    console.log(`Placing bid on auction ${auctionId}`);
+    navigate(`/auction/${auctionId}#place-bid`);
   };
 
   const handleViewDetails = (auctionId: number) => {
     navigate(`/auction/${auctionId}`);
+  };
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+    fetchAuctions(page, searchTerm, category, priceRange);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   return (
@@ -189,6 +236,14 @@ const BrowseAuctionsContent = () => {
           <p className="text-gray-600">Discover amazing deals from verified sellers</p>
         </div>
         
+        {/* Error Alert */}
+        {error && (
+          <Alert variant="destructive">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        )}
+        
         <div className="flex flex-col lg:flex-row gap-4">
           <div className="flex-1 relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
@@ -197,9 +252,10 @@ const BrowseAuctionsContent = () => {
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="pl-10 h-12"
+              disabled={loading}
             />
           </div>
-          <Select value={category} onValueChange={setCategory}>
+          <Select value={category} onValueChange={setCategory} disabled={loading}>
             <SelectTrigger className="w-full lg:w-48 h-12">
               <SelectValue placeholder="All Categories" />
             </SelectTrigger>
@@ -210,7 +266,7 @@ const BrowseAuctionsContent = () => {
               <SelectItem value="electronics">Electronics</SelectItem>
             </SelectContent>
           </Select>
-          <Select value={priceRange} onValueChange={setPriceRange}>
+          <Select value={priceRange} onValueChange={setPriceRange} disabled={loading}>
             <SelectTrigger className="w-full lg:w-48 h-12">
               <SelectValue placeholder="All Prices" />
             </SelectTrigger>
@@ -225,131 +281,163 @@ const BrowseAuctionsContent = () => {
         </div>
       </div>
 
+      {/* Loading State */}
+      {loading && (
+        <div className="flex justify-center items-center py-12">
+          <Loader2 className="w-8 h-8 animate-spin text-primary mr-2" />
+          <span className="text-gray-600">Loading auctions...</span>
+        </div>
+      )}
+
       {/* Results Header */}
-      <div className="flex justify-between items-center">
-        <div>
-          <h3 className="text-lg font-semibold text-gray-900">
-            {searchTerm || category !== "all" || priceRange !== "all" ? "Search Results" : "All Auctions"}
-          </h3>
-          <p className="text-gray-600 text-sm">
-            Showing {filteredAuctions.length} of {allAuctions.length} auctions
-            {user && (
-              <span className="ml-2">
-                • {filteredAuctions.filter(a => a.isWatched).length} Watched
-              </span>
-            )}
-          </p>
+      {!loading && (
+        <div className="flex justify-between items-center">
+          <div>
+            <h3 className="text-lg font-semibold text-gray-900">
+              {searchTerm || category !== "all" || priceRange !== "all" ? "Search Results" : "All Auctions"}
+            </h3>
+            <p className="text-gray-600 text-sm">
+              Showing {auctions.length} of {totalAuctions} auctions
+              {user && (
+                <span className="ml-2">
+                  • {auctions.filter(a => a.isWatched).length} Watched
+                </span>
+              )}
+            </p>
+          </div>
+          <div className="flex gap-2">
+            <Button 
+              variant={viewMode === "grid" ? "default" : "outline"} 
+              size="sm"
+              onClick={() => setViewMode("grid")}
+              disabled={loading}
+            >
+              <Grid3X3 className="w-4 h-4 mr-2" />
+              Grid
+            </Button>
+            <Button 
+              variant={viewMode === "list" ? "default" : "outline"} 
+              size="sm"
+              onClick={() => setViewMode("list")}
+              disabled={loading}
+            >
+              <List className="w-4 h-4 mr-2" />
+              List
+            </Button>
+          </div>
         </div>
-        <div className="flex gap-2">
-          <Button 
-            variant={viewMode === "grid" ? "default" : "outline"} 
-            size="sm"
-            onClick={() => setViewMode("grid")}
-          >
-            <Grid3X3 className="w-4 h-4 mr-2" />
-            Grid
-          </Button>
-          <Button 
-            variant={viewMode === "list" ? "default" : "outline"} 
-            size="sm"
-            onClick={() => setViewMode("list")}
-          >
-            <List className="w-4 h-4 mr-2" />
-            List
-          </Button>
-        </div>
-      </div>
+      )}
 
       {/* Auction Grid */}
-      <div className={`grid gap-6 ${viewMode === "grid" ? "grid-cols-1 md:grid-cols-2 lg:grid-cols-3" : "grid-cols-1"}`}>
-        {filteredAuctions.map((auction) => (
-          <Card key={auction.id} className="group hover:shadow-xl transition-all duration-300">
-            <div className="aspect-video bg-gray-200 rounded-t-lg relative overflow-hidden">
-              <img 
-                src={auction.image}
-                alt={auction.title}
-                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-              />
-              {auction.featured && (
-                <Badge className="absolute top-3 right-3 bg-accent text-white">
-                  Featured
-                </Badge>
-              )}
-              {user && (
-                <button 
-                  onClick={() => handleToggleWatch(auction.id)}
-                  className={`absolute top-3 left-3 p-2 rounded-full transition-colors ${
-                    auction.isWatched 
-                      ? 'bg-accent text-white' 
-                      : 'bg-white/90 text-gray-400 hover:text-accent hover:bg-white'
-                  }`}
-                >
-                  <Heart className={`w-4 h-4 ${auction.isWatched ? 'fill-current' : ''}`} />
-                </button>
-              )}
-            </div>
-            <CardContent className="p-4">
-              <div className="flex justify-between items-start mb-2">
-                <Badge variant="outline" className="text-xs">
-                  {auction.category}
-                </Badge>
-                <div className="flex items-center text-sm text-gray-500">
-                  <Clock className="w-4 h-4 mr-1" />
-                  <span className={auction.timeLeft.includes('h') && !auction.timeLeft.includes('d') ? 'text-accent font-medium' : ''}>
-                    {auction.timeLeft}
-                  </span>
+      {!loading && (
+        <div className={`grid gap-6 ${viewMode === "grid" ? "grid-cols-1 md:grid-cols-2 lg:grid-cols-3" : "grid-cols-1"}`}>
+          {auctions.map((auction) => {
+            const timeLeft = calculateTimeLeft(auction.end_time);
+            const isEndingSoon = timeLeft.includes('h') && !timeLeft.includes('d') && timeLeft !== "Ended";
+            
+            return (
+              <Card key={auction.id} className="group hover:shadow-xl transition-all duration-300">
+                <div className="aspect-video bg-gray-200 rounded-t-lg relative overflow-hidden">
+                  <img 
+                    src={getAuctionImage(auction)}
+                    alt={auction.title}
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                    onError={(e) => {
+                      const target = e.target as HTMLImageElement;
+                      target.src = '/placeholder.svg';
+                    }}
+                  />
+                  {auction.featured && (
+                    <Badge className="absolute top-3 right-3 bg-accent text-white">
+                      Featured
+                    </Badge>
+                  )}
+                  {user && (
+                    <button 
+                      onClick={() => handleToggleWatch(auction.id)}
+                      className={`absolute top-3 left-3 p-2 rounded-full transition-colors ${
+                        auction.isWatched 
+                          ? 'bg-accent text-white' 
+                          : 'bg-white/90 text-gray-400 hover:text-accent hover:bg-white'
+                      }`}
+                    >
+                      <Heart className={`w-4 h-4 ${auction.isWatched ? 'fill-current' : ''}`} />
+                    </button>
+                  )}
                 </div>
-              </div>
-              <h3 
-                className="font-semibold text-lg mb-1 group-hover:text-primary transition-colors cursor-pointer"
-                onClick={() => handleViewDetails(auction.id)}
-              >
-                {auction.title}
-              </h3>
-              <p className="text-sm text-gray-500 mb-3">by {auction.seller}</p>
-              <div className="space-y-2 mb-4">
-                <div className="flex justify-between text-sm">
-                  <span className="text-gray-600">Current bid</span>
-                  <span className="font-semibold text-green-600">Ksh {auction.currentBid.toLocaleString()}</span>
-                </div>
-                {auction.reservePrice && (
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-600">Reserve price</span>
-                    <span className="text-gray-900">Ksh {auction.reservePrice.toLocaleString()}</span>
+                <CardContent className="p-4">
+                  <div className="flex justify-between items-start mb-2">
+                    <Badge variant="outline" className="text-xs capitalize">
+                      {auction.category_name}
+                    </Badge>
+                    <div className="flex items-center text-sm text-gray-500">
+                      <Clock className="w-4 h-4 mr-1" />
+                      <span className={isEndingSoon ? 'text-accent font-medium' : ''}>
+                        {timeLeft}
+                      </span>
+                    </div>
                   </div>
-                )}
-              </div>
-              <div className="flex justify-between items-center text-sm text-gray-500 mb-3">
-                <div className="flex items-center space-x-1">
-                  <Eye className="w-4 h-4" />
-                  <span>{auction.bids} bids</span>
-                </div>
-                <span className={auction.timeLeft.includes('h') && !auction.timeLeft.includes('d') ? 'text-accent font-medium' : ''}>
-                  Ending {auction.timeLeft.includes('h') && !auction.timeLeft.includes('d') ? 'soon' : 'in ' + auction.timeLeft}
-                </span>
-              </div>
-              <div className="flex space-x-2">
-                <Button 
-                  className="flex-1" 
-                  onClick={() => handlePlaceBid(auction.id)}
-                >
-                  {user ? 'Place Bid' : 'Login to Bid'}
-                </Button>
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  onClick={() => handleViewDetails(auction.id)}
-                >
-                  <Eye className="w-4 h-4" />
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+                  <h3 
+                    className="font-semibold text-lg mb-1 group-hover:text-primary transition-colors cursor-pointer line-clamp-2"
+                    onClick={() => handleViewDetails(auction.id)}
+                  >
+                    {auction.title}
+                  </h3>
+                  <p className="text-sm text-gray-500 mb-3">
+                    by {auction.seller_name || 'Anonymous Seller'}
+                  </p>
+                  <div className="space-y-2 mb-4">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-600">Current bid</span>
+                      <span className="font-semibold text-green-600">
+                        Ksh {auction.current_bid.toLocaleString()}
+                      </span>
+                    </div>
+                    {auction.reserve_price && (
+                      <div className="flex justify-between text-sm">
+                        <span className="text-gray-600">Reserve price</span>
+                        <span className="text-gray-900">
+                          Ksh {auction.reserve_price.toLocaleString()}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex justify-between items-center text-sm text-gray-500 mb-3">
+                    <div className="flex items-center space-x-1">
+                      <Eye className="w-4 h-4" />
+                      <span>{auction.bid_count} bids</span>
+                    </div>
+                    <span className={isEndingSoon ? 'text-accent font-medium' : ''}>
+                      {timeLeft === "Ended" ? "Auction ended" : 
+                       isEndingSoon ? 'Ending soon' : `Ending in ${timeLeft}`}
+                    </span>
+                  </div>
+                  <div className="flex space-x-2">
+                    <Button 
+                      className="flex-1" 
+                      onClick={() => handlePlaceBid(auction.id)}
+                      disabled={timeLeft === "Ended"}
+                    >
+                      {timeLeft === "Ended" ? 'Auction Ended' : 
+                       user ? 'Place Bid' : 'Login to Bid'}
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => handleViewDetails(auction.id)}
+                    >
+                      <Eye className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+      )}
 
       {/* Empty State */}
-      {filteredAuctions.length === 0 && (
+      {!loading && auctions.length === 0 && (
         <div className="text-center py-12">
           <Search className="w-16 h-16 text-gray-300 mx-auto mb-4" />
           <h3 className="text-lg font-semibold text-gray-900 mb-2">No auctions found</h3>
@@ -362,6 +450,45 @@ const BrowseAuctionsContent = () => {
             setPriceRange("all");
           }}>
             Clear Filters
+          </Button>
+        </div>
+      )}
+
+      {/* Pagination */}
+      {!loading && totalPages > 1 && (
+        <div className="flex justify-center items-center space-x-2 mt-8">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => handlePageChange(currentPage - 1)}
+            disabled={currentPage === 1}
+          >
+            Previous
+          </Button>
+          
+          {[...Array(Math.min(5, totalPages))].map((_, i) => {
+            const pageNum = Math.max(1, currentPage - 2) + i;
+            if (pageNum > totalPages) return null;
+            
+            return (
+              <Button
+                key={pageNum}
+                variant={pageNum === currentPage ? "default" : "outline"}
+                size="sm"
+                onClick={() => handlePageChange(pageNum)}
+              >
+                {pageNum}
+              </Button>
+            );
+          })}
+          
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => handlePageChange(currentPage + 1)}
+            disabled={currentPage === totalPages}
+          >
+            Next
           </Button>
         </div>
       )}
