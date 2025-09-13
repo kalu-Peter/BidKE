@@ -49,7 +49,7 @@ try {
 
         // Add status filter
         if ($status === 'live') {
-            $conditions[] = "a.status = 'approved' AND a.start_time <= NOW() AND a.end_time > NOW()";
+            $conditions[] = "(a.status = 'approved' OR a.status = 'live') AND a.start_time <= NOW() AND a.end_time > NOW()";
         } elseif ($status !== 'all') {
             $conditions[] = "a.status = :status";
             $params[':status'] = $status;
