@@ -50,6 +50,7 @@ interface AuctionItem {
     verified: boolean;
     rating: number;
     totalSales: number;
+    avatar?: string; // Optional avatar property
   };
   starting_price: number;
   current_bid: number;
@@ -87,8 +88,8 @@ const AuctionDetails = () => {
     const authContext = useAuth();
     user = authContext?.user || null;
   } catch (error) {
-    console.warn('Auth context not available:', error);
-    // Continue without user authentication
+    console.warn('Auth context not available, continuing without authentication:', error);
+    // Continue without user authentication - component will show login prompts
   }
   
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
@@ -148,7 +149,8 @@ const AuctionDetails = () => {
             name: result.data.seller_name,
             verified: true, // You can add verification logic later
             rating: 4.8, // Mock rating for now
-            totalSales: 50 // Mock total sales for now
+            totalSales: 50, // Mock total sales for now
+            avatar: undefined // API doesn't provide avatar, so set to undefined
           },
           isWatched: false // You can implement watchlist logic later
         };
@@ -217,16 +219,27 @@ const AuctionDetails = () => {
   };
 
   const handlePlaceBid = async () => {
-    if (!user || !auction) {
+    if (!user || !user.id) {
       navigate('/login');
+      return;
+    }
+
+    if (!auction) {
+      setBidError("Auction data not available");
       return;
     }
 
     setBidError("");
     const bidValue = parseFloat(bidAmount);
+    
+    if (isNaN(bidValue) || bidValue <= 0) {
+      setBidError("Please enter a valid bid amount");
+      return;
+    }
+
     const minBid = auction.current_bid + auction.bid_increment;
 
-    if (isNaN(bidValue) || bidValue < minBid) {
+    if (bidValue < minBid) {
       setBidError(`Bid must be at least KES ${minBid.toLocaleString()}`);
       return;
     }
@@ -236,33 +249,44 @@ const AuctionDetails = () => {
       return;
     }
 
+    if (auction.auction_ended) {
+      setBidError("This auction has already ended");
+      return;
+    }
+
     setIsPlacingBid(true);
     
     // Simulate API call
     setTimeout(() => {
-      // Add new bid to history
-      const newBid: BidHistoryItem = {
-        id: auction.bid_history.length + 1,
-        bidder: user.role === 'buyer' ? `Buyer#${user.id}` : `Seller#${user.id}`,
-        amount: bidValue,
-        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        isCurrentUser: true
-      };
+      try {
+        // Add new bid to history
+        const newBid: BidHistoryItem = {
+          id: auction.bid_history.length + 1,
+          bidder: user.role === 'buyer' ? `Buyer#${user.id}` : `Seller#${user.id}`,
+          amount: bidValue,
+          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          isCurrentUser: true
+        };
 
-      setAuction(prev => prev ? ({
-        ...prev,
-        current_bid: bidValue,
-        bid_history: [newBid, ...prev.bid_history]
-      }) : null);
+        setAuction(prev => prev ? ({
+          ...prev,
+          current_bid: bidValue,
+          bid_history: [newBid, ...prev.bid_history]
+        }) : null);
 
-      setBidAmount("");
-      setIsPlacingBid(false);
-      setShowBidSuccess(true);
-      
-      // Show winning notification
-      notifyWinning(auction.id, auction.title);
-      
-      setTimeout(() => setShowBidSuccess(false), 3000);
+        setBidAmount("");
+        setIsPlacingBid(false);
+        setShowBidSuccess(true);
+        
+        // Show winning notification
+        notifyWinning(auction.id, auction.title);
+        
+        setTimeout(() => setShowBidSuccess(false), 3000);
+      } catch (error) {
+        console.error('Error placing bid:', error);
+        setBidError("Failed to place bid. Please try again.");
+        setIsPlacingBid(false);
+      }
     }, 1500);
   };
 
