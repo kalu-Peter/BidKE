@@ -26,7 +26,8 @@ import {
   Gavel,
   TrendingUp,
   Calendar,
-  DollarSign
+  DollarSign,
+  Loader2
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNotifications, NotificationContainer } from "@/components/notifications/BidNotification";
@@ -42,7 +43,6 @@ interface BidHistoryItem {
 interface AuctionItem {
   id: number;
   title: string;
-  category: string;
   description: string;
   images: string[];
   seller: {
@@ -51,19 +51,30 @@ interface AuctionItem {
     rating: number;
     totalSales: number;
   };
-  startingPrice: number;
-  currentBid: number;
-  minimumIncrement: number;
-  timeRemaining: number; // in seconds
-  status: 'upcoming' | 'live' | 'ended';
-  bidHistory: BidHistoryItem[];
+  starting_price: number;
+  current_bid: number;
+  reserve_price?: number;
+  bid_increment: number;
+  time_remaining: number;
+  status: string;
+  bid_history: BidHistoryItem[];
   isWatched: boolean;
-  endTime: string;
-  startTime: string;
-  condition: string;
-  location: string;
-  repossessionNotes?: string;
-  winner?: string;
+  end_time: string;
+  start_time: string;
+  category_name: string;
+  category_slug: string;
+  seller_name: string;
+  seller_email: string;
+  featured: boolean;
+  view_count: number;
+  bid_count: number;
+  auction_ended: boolean;
+}
+
+interface ApiResponse {
+  success: boolean;
+  data: AuctionItem;
+  message?: string;
 }
 
 const AuctionDetails = () => {
@@ -86,6 +97,9 @@ const AuctionDetails = () => {
   const [isPlacingBid, setIsPlacingBid] = useState(false);
   const [showBidSuccess, setShowBidSuccess] = useState(false);
   const [timeLeft, setTimeLeft] = useState({ hours: 0, minutes: 0, seconds: 0 });
+  const [auction, setAuction] = useState<AuctionItem | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   
   // Notification system
   const {
@@ -97,97 +111,120 @@ const AuctionDetails = () => {
     notifyAuctionEnding
   } = useNotifications();
 
-  // Mock auction data - in real app, this would come from API
-  const [auction, setAuction] = useState<AuctionItem>({
-    id: 1,
-    title: "2019 Honda Boda Boda",
-    category: "Motorbikes",
-    description: "Well-maintained Honda motorcycle in excellent condition. Recently serviced with new tires and brakes. Perfect for commercial use or personal transportation. This motorcycle was repossessed from a defaulted loan and is being sold to recover outstanding debt.",
-    images: [
-      "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?auto=format&fit=crop&w=800&q=80",
-      "https://images.unsplash.com/photo-1558618847-3f0c2cf36c38?auto=format&fit=crop&w=800&q=80",
-      "https://images.unsplash.com/photo-1558618047-3c8c76ca7d13?auto=format&fit=crop&w=800&q=80",
-      "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?auto=format&fit=crop&w=800&q=80",
-      "https://images.unsplash.com/photo-1558618847-3f0c2cf36c38?auto=format&fit=crop&w=800&q=80",
-    ],
-    seller: {
-      name: "Moto Elite Ltd",
-      verified: true,
-      rating: 4.8,
-      totalSales: 342
-    },
-    startingPrice: 50000,
-    currentBid: 85000,
-    minimumIncrement: 2000,
-    timeRemaining: 5025, // 1h 23m 45s
-    status: 'live',
-    bidHistory: [
-      { id: 1, bidder: "Buyer#1023", amount: 85000, timestamp: "12:31 PM", isCurrentUser: false },
-      { id: 2, bidder: "Buyer#0987", amount: 83000, timestamp: "12:29 PM", isCurrentUser: false },
-      { id: 3, bidder: "Buyer#0432", amount: 81000, timestamp: "12:26 PM", isCurrentUser: true },
-      { id: 4, bidder: "Buyer#0234", amount: 79000, timestamp: "12:24 PM", isCurrentUser: false },
-      { id: 5, bidder: "Buyer#0567", amount: 77000, timestamp: "12:22 PM", isCurrentUser: false },
-      { id: 6, bidder: "Buyer#0789", amount: 75000, timestamp: "12:18 PM", isCurrentUser: false },
-      { id: 7, bidder: "Buyer#0345", amount: 73000, timestamp: "12:15 PM", isCurrentUser: false },
-      { id: 8, bidder: "Buyer#0123", amount: 71000, timestamp: "12:12 PM", isCurrentUser: false },
-    ],
-    isWatched: false,
-    endTime: "2025-09-10T16:30:00",
-    startTime: "2025-09-08T10:00:00",
-    condition: "Good - Minor wear and tear, fully functional",
-    location: "Nairobi, Kenya",
-    repossessionNotes: "This asset was repossessed due to loan default. All necessary legal procedures have been followed."
-  });
+  // Fetch auction data from API
+  useEffect(() => {
+    const fetchAuctionDetails = async () => {
+      if (!id) {
+        setError("Auction ID is required");
+        setLoading(false);
+        return;
+      }
+
+      try {
+        setLoading(true);
+        setError(null);
+        
+        const response = await fetch(`http://localhost:8000/auction-details.php?id=${id}`);
+        const result: ApiResponse = await response.json();
+
+        if (!result.success) {
+          throw new Error(result.message || "Failed to fetch auction details");
+        }
+
+        // Transform API data to match component interface
+        const auctionData: AuctionItem = {
+          ...result.data,
+          images: result.data.images.map((img: string) => {
+            // Convert backend image paths to frontend-compatible paths
+            if (img.startsWith('/src/assets/')) {
+              return img; // Use as relative path for Vite
+            } else if (img.startsWith('http')) {
+              return img; // Already a full URL
+            } else {
+              return `http://localhost:8000${img}`; // Backend served images
+            }
+          }),
+          seller: {
+            name: result.data.seller_name,
+            verified: true, // You can add verification logic later
+            rating: 4.8, // Mock rating for now
+            totalSales: 50 // Mock total sales for now
+          },
+          isWatched: false // You can implement watchlist logic later
+        };
+
+        setAuction(auctionData);
+      } catch (err) {
+        console.error("Error fetching auction details:", err);
+        setError(err instanceof Error ? err.message : "Failed to load auction details");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchAuctionDetails();
+  }, [id]);
 
   // Countdown timer effect
   useEffect(() => {
+    if (!auction || auction.time_remaining <= 0) return;
+
     const timer = setInterval(() => {
-      if (auction.timeRemaining > 0) {
-        const hours = Math.floor(auction.timeRemaining / 3600);
-        const minutes = Math.floor((auction.timeRemaining % 3600) / 60);
-        const seconds = auction.timeRemaining % 60;
+      setAuction(prev => {
+        if (!prev || prev.time_remaining <= 0) return prev;
+        
+        const newTimeRemaining = prev.time_remaining - 1;
+        const hours = Math.floor(newTimeRemaining / 3600);
+        const minutes = Math.floor((newTimeRemaining % 3600) / 60);
+        const seconds = newTimeRemaining % 60;
         
         setTimeLeft({ hours, minutes, seconds });
-        setAuction(prev => ({ ...prev, timeRemaining: prev.timeRemaining - 1 }));
-      } else {
-        setAuction(prev => ({ ...prev, status: 'ended' }));
-        clearInterval(timer);
-      }
+        
+        if (newTimeRemaining <= 0) {
+          return { ...prev, time_remaining: 0, auction_ended: true };
+        }
+        
+        return { ...prev, time_remaining: newTimeRemaining };
+      });
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [auction.timeRemaining]);
+  }, [auction?.time_remaining]);
 
   // Show ending notification when auction is about to end
   useEffect(() => {
-    if (auction.timeRemaining === 300) { // 5 minutes left
+    if (!auction) return;
+    
+    if (auction.time_remaining === 300) { // 5 minutes left
       notifyAuctionEnding(auction.id, auction.title, "5 minutes");
-    } else if (auction.timeRemaining === 60) { // 1 minute left
+    } else if (auction.time_remaining === 60) { // 1 minute left
       notifyAuctionEnding(auction.id, auction.title, "1 minute");
     }
-  }, [auction.timeRemaining, auction.id, auction.title, notifyAuctionEnding]);
+  }, [auction?.time_remaining, auction?.id, auction?.title, notifyAuctionEnding]);
 
   const handlePrevImage = () => {
+    if (!auction) return;
     setCurrentImageIndex(prev => 
       prev === 0 ? auction.images.length - 1 : prev - 1
     );
   };
 
   const handleNextImage = () => {
+    if (!auction) return;
     setCurrentImageIndex(prev => 
       prev === auction.images.length - 1 ? 0 : prev + 1
     );
   };
 
   const handlePlaceBid = async () => {
-    if (!user) {
+    if (!user || !auction) {
       navigate('/login');
       return;
     }
 
     setBidError("");
     const bidValue = parseFloat(bidAmount);
-    const minBid = auction.currentBid + auction.minimumIncrement;
+    const minBid = auction.current_bid + auction.bid_increment;
 
     if (isNaN(bidValue) || bidValue < minBid) {
       setBidError(`Bid must be at least KES ${minBid.toLocaleString()}`);
@@ -205,18 +242,18 @@ const AuctionDetails = () => {
     setTimeout(() => {
       // Add new bid to history
       const newBid: BidHistoryItem = {
-        id: auction.bidHistory.length + 1,
+        id: auction.bid_history.length + 1,
         bidder: user.role === 'buyer' ? `Buyer#${user.id}` : `Seller#${user.id}`,
         amount: bidValue,
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
         isCurrentUser: true
       };
 
-      setAuction(prev => ({
+      setAuction(prev => prev ? ({
         ...prev,
-        currentBid: bidValue,
-        bidHistory: [newBid, ...prev.bidHistory]
-      }));
+        current_bid: bidValue,
+        bid_history: [newBid, ...prev.bid_history]
+      }) : null);
 
       setBidAmount("");
       setIsPlacingBid(false);
@@ -238,6 +275,8 @@ const AuctionDetails = () => {
   };
 
   const getStatusBadge = () => {
+    if (!auction) return null;
+    
     switch (auction.status) {
       case 'upcoming':
         return <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">🔜 Upcoming</Badge>;
@@ -245,10 +284,65 @@ const AuctionDetails = () => {
         return <Badge variant="destructive" className="bg-red-50 text-red-700 border-red-200">🔴 Live</Badge>;
       case 'ended':
         return <Badge variant="default" className="bg-green-50 text-green-700 border-green-200">✅ Ended</Badge>;
+      default:
+        return <Badge variant="outline">Unknown</Badge>;
     }
   };
 
-  const canBid = user && (user.role === 'buyer' || user.role === 'seller') && auction.status === 'live';
+  const canBid = user && (user.role === 'buyer' || user.role === 'seller') && auction && auction.status === 'live';
+
+  if (loading) {
+    return (
+      <>
+        <Header />
+        <div className="min-h-screen bg-gray-50 pt-20 flex items-center justify-center">
+          <div className="text-center">
+            <Loader2 className="w-12 h-12 animate-spin mx-auto mb-4 text-primary" />
+            <h2 className="text-xl font-semibold text-gray-900 mb-2">Loading Auction Details</h2>
+            <p className="text-gray-600">Please wait while we fetch the auction information...</p>
+          </div>
+        </div>
+        <Footer />
+      </>
+    );
+  }
+
+  if (error) {
+    return (
+      <>
+        <Header />
+        <div className="min-h-screen bg-gray-50 pt-20 flex items-center justify-center">
+          <div className="text-center max-w-md mx-auto">
+            <AlertTriangle className="w-16 h-16 text-red-500 mx-auto mb-4" />
+            <h2 className="text-xl font-semibold text-gray-900 mb-2">Error Loading Auction</h2>
+            <p className="text-gray-600 mb-4">{error}</p>
+            <Button onClick={() => navigate('/browse-auctions')}>
+              Back to Auctions
+            </Button>
+          </div>
+        </div>
+        <Footer />
+      </>
+    );
+  }
+
+  if (!auction) {
+    return (
+      <>
+        <Header />
+        <div className="min-h-screen bg-gray-50 pt-20 flex items-center justify-center">
+          <div className="text-center">
+            <h2 className="text-xl font-semibold text-gray-900 mb-2">Auction Not Found</h2>
+            <p className="text-gray-600 mb-4">The auction you're looking for doesn't exist.</p>
+            <Button onClick={() => navigate('/browse-auctions')}>
+              Back to Auctions
+            </Button>
+          </div>
+        </div>
+        <Footer />
+      </>
+    );
+  }
 
   return (
     <>
@@ -271,7 +365,7 @@ const AuctionDetails = () => {
               Back to Auctions
             </Button>
             <span>/</span>
-            <span>{auction.category}</span>
+            <span>{auction.category_name}</span>
             <span>/</span>
             <span className="text-gray-900 font-medium">{auction.title}</span>
           </div>
@@ -287,6 +381,19 @@ const AuctionDetails = () => {
                       src={auction.images[currentImageIndex]}
                       alt={`${auction.title} - Image ${currentImageIndex + 1}`}
                       className="w-full h-full object-cover"
+                      onError={(e) => {
+                        const target = e.target as HTMLImageElement;
+                        // Fallback to default image based on category
+                        if (auction.category_name === 'Cars') {
+                          target.src = '/src/assets/category-cars.jpg';
+                        } else if (auction.category_name === 'Motorbikes') {
+                          target.src = '/src/assets/category-motorbikes.jpg';
+                        } else if (auction.category_name === 'Electronics') {
+                          target.src = '/src/assets/category-electronics.jpg';
+                        } else {
+                          target.src = '/placeholder.svg';
+                        }
+                      }}
                     />
                     
                     {/* Navigation Arrows */}
@@ -343,6 +450,19 @@ const AuctionDetails = () => {
                             src={image}
                             alt={`Thumbnail ${index + 1}`}
                             className="w-full h-full object-cover"
+                            onError={(e) => {
+                              const target = e.target as HTMLImageElement;
+                              // Fallback to default image based on category
+                              if (auction.category_name === 'Cars') {
+                                target.src = '/src/assets/category-cars.jpg';
+                              } else if (auction.category_name === 'Motorbikes') {
+                                target.src = '/src/assets/category-motorbikes.jpg';
+                              } else if (auction.category_name === 'Electronics') {
+                                target.src = '/src/assets/category-electronics.jpg';
+                              } else {
+                                target.src = '/placeholder.svg';
+                              }
+                            }}
                           />
                         </button>
                       ))}
@@ -360,7 +480,7 @@ const AuctionDetails = () => {
                         {auction.title}
                       </CardTitle>
                       <div className="flex items-center space-x-4">
-                        <Badge variant="outline">{auction.category}</Badge>
+                        <Badge variant="outline">{auction.category_name}</Badge>
                         {getStatusBadge()}
                       </div>
                     </div>
@@ -376,40 +496,38 @@ const AuctionDetails = () => {
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                      <Label className="text-sm font-medium text-gray-700">Condition</Label>
-                      <p className="text-gray-900">{auction.condition}</p>
+                      <Label className="text-sm font-medium text-gray-700">Category</Label>
+                      <p className="text-gray-900">{auction.category_name}</p>
                     </div>
                     <div>
-                      <Label className="text-sm font-medium text-gray-700">Location</Label>
-                      <div className="flex items-center space-x-1">
-                        <MapPin className="w-4 h-4 text-gray-500" />
-                        <span className="text-gray-900">{auction.location}</span>
-                      </div>
+                      <Label className="text-sm font-medium text-gray-700">Status</Label>
+                      <p className="text-gray-900">{auction.status.charAt(0).toUpperCase() + auction.status.slice(1)}</p>
                     </div>
                   </div>
-
-                  {auction.repossessionNotes && (
-                    <>
-                      <Separator />
-                      <div>
-                        <div className="flex items-center space-x-2 mb-2">
-                          <AlertTriangle className="w-4 h-4 text-orange-500" />
-                          <Label className="text-sm font-medium text-orange-700">Repossession Notice</Label>
-                        </div>
-                        <p className="text-sm text-gray-600 bg-orange-50 p-3 rounded border border-orange-200">
-                          {auction.repossessionNotes}
-                        </p>
-                      </div>
-                    </>
-                  )}
 
                   {/* Seller Info */}
                   <Separator />
                   <div>
                     <h3 className="font-semibold text-gray-900 mb-3">Seller Information</h3>
                     <div className="flex items-center space-x-3">
-                      <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center">
-                        <User className="w-6 h-6 text-primary" />
+                      <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center overflow-hidden">
+                        {auction.seller.avatar ? (
+                          <img 
+                            src={auction.seller.avatar}
+                            alt={auction.seller.name}
+                            className="w-full h-full object-cover"
+                            onError={(e) => {
+                              const target = e.target as HTMLImageElement;
+                              target.style.display = 'none';
+                              const parent = target.parentElement;
+                              if (parent) {
+                                parent.innerHTML = '<svg class="w-6 h-6 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>';
+                              }
+                            }}
+                          />
+                        ) : (
+                          <User className="w-6 h-6 text-primary" />
+                        )}
                       </div>
                       <div className="flex-1">
                         <div className="flex items-center space-x-2">
@@ -452,11 +570,11 @@ const AuctionDetails = () => {
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <Label className="text-sm text-gray-600">Starting Price</Label>
-                      <p className="text-lg font-semibold">KES {auction.startingPrice.toLocaleString()}</p>
+                      <p className="text-lg font-semibold">KES {auction.starting_price.toLocaleString()}</p>
                     </div>
                     <div>
                       <Label className="text-sm text-gray-600">Min. Increment</Label>
-                      <p className="text-lg font-semibold">KES {auction.minimumIncrement.toLocaleString()}</p>
+                      <p className="text-lg font-semibold">KES {auction.bid_increment.toLocaleString()}</p>
                     </div>
                   </div>
 
@@ -465,7 +583,7 @@ const AuctionDetails = () => {
                   <div>
                     <Label className="text-sm text-gray-600">Current Highest Bid</Label>
                     <p className="text-3xl font-bold text-green-600">
-                      KES {auction.currentBid.toLocaleString()}
+                      KES {auction.current_bid.toLocaleString()}
                     </p>
                   </div>
 
@@ -473,24 +591,24 @@ const AuctionDetails = () => {
 
                   <div>
                     <Label className="text-sm text-gray-600">Time Remaining</Label>
-                    {auction.status === 'live' ? (
+                    {auction.status === 'live' && !auction.auction_ended ? (
                       <div className="text-2xl font-mono font-bold text-red-600">
                         {String(timeLeft.hours).padStart(2, '0')}:
                         {String(timeLeft.minutes).padStart(2, '0')}:
                         {String(timeLeft.seconds).padStart(2, '0')}
                       </div>
-                    ) : auction.status === 'ended' ? (
+                    ) : auction.auction_ended || auction.status === 'ended' ? (
                       <p className="text-lg font-semibold text-gray-500">Auction Ended</p>
                     ) : (
                       <p className="text-lg font-semibold text-blue-600">Starts Soon</p>
                     )}
                   </div>
 
-                  {auction.status === 'ended' && auction.winner && (
+                  {auction.auction_ended && (
                     <Alert>
                       <CheckCircle className="h-4 w-4" />
                       <AlertDescription>
-                        Won by {auction.winner}
+                        This auction has ended.
                       </AlertDescription>
                     </Alert>
                   )}
@@ -503,14 +621,14 @@ const AuctionDetails = () => {
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => notifyOutbid(auction.id, auction.title, auction.currentBid + 5000)}
+                        onClick={() => notifyOutbid(auction.id, auction.title, auction.current_bid + 5000)}
                       >
                         Test Outbid
                       </Button>
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => notifyWon(auction.id, auction.title, auction.currentBid)}
+                        onClick={() => notifyWon(auction.id, auction.title, auction.current_bid)}
                       >
                         Test Won
                       </Button>
@@ -534,7 +652,7 @@ const AuctionDetails = () => {
                       <Input
                         id="bidAmount"
                         type="number"
-                        placeholder={`Minimum: ${(auction.currentBid + auction.minimumIncrement).toLocaleString()}`}
+                        placeholder={`Minimum: ${(auction.current_bid + auction.bid_increment).toLocaleString()}`}
                         value={bidAmount}
                         onChange={(e) => setBidAmount(e.target.value)}
                         className="text-lg"
@@ -600,7 +718,7 @@ const AuctionDetails = () => {
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-3 max-h-64 overflow-y-auto">
-                    {auction.bidHistory.map((bid) => (
+                    {auction.bid_history.map((bid) => (
                       <div 
                         key={bid.id}
                         className={`flex items-center justify-between p-3 rounded ${
