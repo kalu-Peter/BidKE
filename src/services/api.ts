@@ -489,6 +489,8 @@ class ApiService {
     electronicsCondition?: string;
     // Images
     images?: Array<{ url: string; alt_text?: string }>;
+    // Allow caller to set status: 'draft' (default) or 'pending'|'pending_review' (submit for review)
+    status?: 'draft' | 'pending' | 'pending_review';
   }): Promise<ApiResponse<{
     auction_id: number;
     item_type: string;
@@ -499,6 +501,7 @@ class ApiService {
     starting_price: number;
     reserve_price?: number;
   }>> {
+    // Ensure status is sent (backend defaults to draft)
     return this.makeRequest('/auctions/create.php', {
       method: 'POST',
       body: JSON.stringify(auctionData)
@@ -531,6 +534,13 @@ class ApiService {
     });
 
     return this.makeRequest(`/seller-auctions.php?${queryParams.toString()}`);
+  }
+
+  async updateAuction(auctionId: number, data: any): Promise<ApiResponse> {
+    return this.makeRequest('/auctions/update.php', {
+      method: 'PUT',
+      body: JSON.stringify({ auction_id: auctionId, ...data })
+    });
   }
 }
 

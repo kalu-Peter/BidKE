@@ -8,6 +8,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Plus, Upload, Car, Smartphone, Calendar, Clock, CheckCircle, AlertCircle } from "lucide-react";
 import { apiService } from "@/services/api";
+import { useNavigate } from 'react-router-dom';
 
 const PostItemTab: React.FC = () => {
   const [formData, setFormData] = useState({
@@ -46,6 +47,7 @@ const PostItemTab: React.FC = () => {
   const [successMessage, setSuccessMessage] = useState("");
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
   const [submitResult, setSubmitResult] = useState<any>(null);
+  const navigate = useNavigate();
 
   const handleInputChange = (field: string, value: string | boolean) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -86,7 +88,7 @@ const PostItemTab: React.FC = () => {
     }));
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent, submitStatus: 'draft' | 'pending' = 'pending') => {
     e.preventDefault();
     
     // Validate form
@@ -195,7 +197,12 @@ const PostItemTab: React.FC = () => {
         images: formData.images
       };
 
-      const result = await apiService.createAuction(auctionData);
+  // Attach status (draft or pending_review)
+  // normalize 'pending' to 'pending_review' which admin API expects
+  const normalizedStatus = submitStatus === 'pending' ? 'pending_review' : submitStatus;
+  (auctionData as any).status = normalizedStatus;
+
+  const result = await apiService.createAuction(auctionData);
 
       if (result.success) {
         setSubmitResult(result.data);
@@ -224,6 +231,10 @@ const PostItemTab: React.FC = () => {
           electronicsCondition: "",
           images: []
         });
+        // If saved as draft, navigate to drafts tab so the seller sees their draft
+        if (normalizedStatus === 'draft') {
+          navigate('/dashboard/drafts');
+        }
       } else {
         setErrors({ submit: result.error || "Failed to create auction. Please try again." });
       }
@@ -654,10 +665,10 @@ const PostItemTab: React.FC = () => {
 
               {/* Submit Buttons */}
               <div className="flex justify-end space-x-4 pt-6 border-t">
-                <Button variant="outline" type="button" disabled={isSubmitting}>
+                <Button variant="outline" type="button" disabled={isSubmitting} onClick={async (e) => { setIsSubmitting(true); await handleSubmit(e as any, 'draft'); }}>
                   Save as Draft
                 </Button>
-                <Button type="submit" className="bg-primary hover:bg-primary/90" disabled={isSubmitting}>
+                <Button type="submit" className="bg-primary hover:bg-primary/90" disabled={isSubmitting} onClick={(e) => handleSubmit(e as any, 'pending')}>
                   {isSubmitting ? "Creating Auction..." : "Submit for Review"}
                 </Button>
               </div>

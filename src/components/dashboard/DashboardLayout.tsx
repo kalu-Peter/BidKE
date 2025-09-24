@@ -63,6 +63,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({
     // Seller Functions
     { icon: Plus, label: "Post New Item", path: "/dashboard/post-item", section: "selling" },
     { icon: FileText, label: "My Listings", path: "/dashboard/listings", section: "selling" },
+    { icon: FileText, label: "Drafts & Pending", path: "/dashboard/drafts", section: "selling" },
     { icon: BarChart3, label: "Sales Reports", path: "/dashboard/sales", section: "selling" },
     { icon: DollarSign, label: "Payouts", path: "/dashboard/payouts", section: "selling" },
     { icon: User, label: "Profile & Verification", path: "/dashboard/company", section: "selling" },

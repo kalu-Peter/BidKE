@@ -538,7 +538,7 @@ const AuctionDetails = () => {
                         {auction.seller.avatar ? (
                           <img 
                             src={auction.seller.avatar}
-                            alt={auction.seller.name}
+                            alt="Seller avatar"
                             className="w-full h-full object-cover"
                             onError={(e) => {
                               const target = e.target as HTMLImageElement;
@@ -555,7 +555,7 @@ const AuctionDetails = () => {
                       </div>
                       <div className="flex-1">
                         <div className="flex items-center space-x-2">
-                          <span className="font-medium text-gray-900">{auction.seller.name}</span>
+                          <span className="font-medium text-gray-900">Seller</span>
                           {auction.seller.verified && (
                             <Shield className="w-4 h-4 text-green-500" />
                           )}

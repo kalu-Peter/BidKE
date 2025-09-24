@@ -9,6 +9,7 @@ import { FileText, BarChart3, DollarSign } from "lucide-react";
 import OverviewTab from "@/components/dashboard/seller/OverviewTab";
 import PostItemTab from "@/components/dashboard/seller/PostItemTab";
 import ListingsTab from "@/components/dashboard/seller/ListingsTab";
+import DraftsTab from "@/components/dashboard/seller/DraftsTab";
 import SalesTab from "@/components/dashboard/seller/SalesTab";
 import MyBidsTab from "@/components/dashboard/seller/MyBidsTab";
 import WatchlistTab from "@/components/dashboard/seller/WatchlistTab";
@@ -24,6 +25,7 @@ const SellerDashboard = () => {
     const path = location.pathname;
     if (path.includes('/dashboard/post-item')) return 'post-item';
     if (path.includes('/dashboard/listings')) return 'listings';
+    if (path.includes('/dashboard/drafts')) return 'drafts';
     if (path.includes('/dashboard/sales')) return 'sales';
     if (path.includes('/dashboard/payouts')) return 'sales'; // Payouts is part of sales tab
     // Company profile moved to dedicated seller profile page
@@ -50,6 +52,9 @@ const SellerDashboard = () => {
         break;
       case 'listings':
         newPath = '/dashboard/listings';
+        break;
+      case 'drafts':
+        newPath = '/dashboard/drafts';
         break;
       case 'sales':
         newPath = '/dashboard/sales';
@@ -129,6 +134,7 @@ const SellerDashboard = () => {
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="post-item">Post New Item</TabsTrigger>
             <TabsTrigger value="listings">My Listings</TabsTrigger>
+            <TabsTrigger value="drafts">Drafts & Pending</TabsTrigger>
             <TabsTrigger value="sales">Sales & Payouts</TabsTrigger>
             <TabsTrigger value="browse">Browse Auctions</TabsTrigger>
             <TabsTrigger value="my-bids">My Bids</TabsTrigger>
@@ -147,6 +153,10 @@ const SellerDashboard = () => {
           <TabsContent value="listings">
             <ListingsTab />
           </TabsContent>
+
+            <TabsContent value="drafts">
+              <DraftsTab />
+            </TabsContent>
 
           <TabsContent value="sales">
             <SalesTab />

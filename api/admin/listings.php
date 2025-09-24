@@ -247,20 +247,42 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
                 $filesStmt = $pdo->prepare($filesQuery);
                 $filesStmt->execute(['auction_id' => $listing['id']]);
                 $files = $filesStmt->fetchAll();
-                
+
                 $listing['images'] = [];
                 $listing['documents'] = [];
-                
-                foreach ($files as $file) {
-                    $fileData = [
-                        'name' => $file['original_name'],
-                        'url' => 'http://localhost:8000/' . $file['file_path']
-                    ];
-                    
-                    if ($file['file_type'] === 'image') {
-                        $listing['images'][] = $fileData;
-                    } else {
-                        $listing['documents'][] = $fileData;
+
+                if (!empty($files)) {
+                    foreach ($files as $file) {
+                        $fileData = [
+                            'name' => $file['original_name'],
+                            'url' => 'http://localhost:8000/' . $file['file_path']
+                        ];
+
+                        if ($file['file_type'] === 'image') {
+                            $listing['images'][] = $fileData;
+                        } else {
+                            $listing['documents'][] = $fileData;
+                        }
+                    }
+                } else {
+                    // Fallback: check auction_images table for legacy entries
+                    try {
+                        $legacyFilesQuery = "SELECT image_url, alt_text FROM auction_images WHERE auction_id = :auction_id ORDER BY sort_order ASC";
+                        $legacyStmt = $pdo->prepare($legacyFilesQuery);
+                        $legacyStmt->execute(['auction_id' => $listing['id']]);
+                        $legacyFiles = $legacyStmt->fetchAll();
+
+                        foreach ($legacyFiles as $lf) {
+                            $listing['images'][] = [
+                                'name' => $lf['alt_text'] ?? basename($lf['image_url'] ?? ''),
+                                'url' => 'http://localhost:8000/' . ltrim($lf['image_url'], '/')
+                            ];
+                        }
+                    } catch (Exception $e2) {
+                        // If neither table exists or query fails, use empty arrays
+                        error_log("Error fetching legacy auction images: " . $e2->getMessage());
+                        $listing['images'] = [];
+                        $listing['documents'] = [];
                     }
                 }
             } catch (Exception $e) {

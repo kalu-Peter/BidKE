@@ -108,15 +108,11 @@ if (!empty($missing_fields)) {
 try {
     // For now, use a dummy seller ID since we skipped auth
     $seller_id = 1; // You would get this from Auth::verifyToken($token)['user_id'];
-    
-    // Get a fresh database connection
-    $dsn = "pgsql:host=localhost;port=5054;dbname=bidlode";
-    $connection = new PDO($dsn, 'postgres', 'webwiz', [
-        PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
-        PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-        PDO::ATTR_EMULATE_PREPARES => false,
-    ]);
-    
+
+    // Use shared Database connection for consistency
+    $dbInstance = Database::getInstance();
+    $connection = $dbInstance->getConnection();
+
     // Start transaction
     $connection->beginTransaction();
 
@@ -140,29 +136,46 @@ try {
     $start_datetime = $data['auctionStartDate'] . ' ' . $data['auctionStartTime'];
     $end_datetime = $data['auctionEndDate'] . ' ' . $data['auctionEndTime'];
 
-    // Create auction directly
-    $auction_query = "INSERT INTO auctions (seller_id, category_id, title, description, starting_price, reserve_price, bid_increment, start_time, end_time, status) 
-                      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id";
+        // Determine status: allow caller to specify 'draft' or 'pending' (submit for review)
+        $allowed_statuses = ['draft', 'pending', 'approved', 'active', 'ended', 'cancelled'];
+        $status = 'draft';
+        if (!empty($data['status']) && in_array($data['status'], $allowed_statuses)) {
+            $status = $data['status'];
+        }
+
+        // Create auction directly
+        $auction_query = "INSERT INTO auctions (seller_id, category_id, title, description, starting_price, reserve_price, bid_increment, start_time, end_time, status) 
+                          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id";
     
-    $auction_stmt = $connection->prepare($auction_query);
-    $auction_stmt->execute([
-        $seller_id,
-        $category_id,
-        trim($data['title']),
-        trim($data['description']),
-        floatval($data['startingPrice']),
-        !empty($data['reservePrice']) ? floatval($data['reservePrice']) : null,
-        1000, // Default bid increment
-        $start_datetime,
-        $end_datetime,
-        'draft'
-    ]);
-    
-    $auction_result = $auction_stmt->fetch();
-    if (!$auction_result) {
-        throw new Exception('Failed to create auction');
-    }
-    $auction_id = $auction_result['id'];
+        $auction_stmt = $connection->prepare($auction_query);
+        if (!$auction_stmt->execute([
+            $seller_id,
+            $category_id,
+            trim($data['title']),
+            trim($data['description']),
+            floatval($data['startingPrice']),
+            !empty($data['reservePrice']) ? floatval($data['reservePrice']) : null,
+            1000, // Default bid increment
+            $start_datetime,
+            $end_datetime,
+            $status
+        ])) {
+            $err = $auction_stmt->errorInfo();
+            throw new Exception('Auction insert failed: ' . json_encode($err));
+        }
+
+        // Fetch returned ID (RETURNING id)
+        $auction_result = $auction_stmt->fetch(PDO::FETCH_ASSOC);
+        if ($auction_result && isset($auction_result['id'])) {
+            $auction_id = $auction_result['id'];
+        } else {
+            // Fallback to lastInsertId
+            $auction_id = $connection->lastInsertId() ?: null;
+        }
+
+        if (empty($auction_id)) {
+            throw new Exception('Failed to obtain auction ID after insert');
+        }
 
     // Create item-specific record
     if ($data['itemType'] === 'vehicle') {
@@ -209,24 +222,31 @@ try {
     }
 
     // Handle images if provided
+    // Insert files into auction_files so admin endpoints can find them
     if (!empty($data['images']) && is_array($data['images'])) {
-        $image_query = "INSERT INTO auction_images (auction_id, image_url, alt_text, is_primary, sort_order, uploaded_by) VALUES (?, ?, ?, ?, ?, ?)";
-        $image_stmt = $connection->prepare($image_query);
-        
+        $file_query = "INSERT INTO auction_files (auction_id, file_type, original_name, file_name, file_path, file_size, mime_type) VALUES (?, 'image', ?, ?, ?, ?, ?)";
+        $file_stmt = $connection->prepare($file_query);
+
         foreach ($data['images'] as $index => $image) {
-            $is_primary = ($index === 0) ? 't' : 'f'; // First image is primary
-            $alt_text = $image['alt_text'] ?? '';
-            $image_url = $image['url'] ?? '';
-            
-            if (!empty($image_url)) {
-                $image_stmt->execute([
+            $original_name = $image['alt_text'] ?? basename($image['url'] ?? '');
+            $file_path = $image['url'] ?? '';
+            $file_name = basename($file_path);
+            $file_size = null;
+            $mime_type = null;
+
+            if (!empty($file_path)) {
+                if (!$file_stmt->execute([
                     $auction_id,
-                    $image_url,
-                    $alt_text,
-                    $is_primary,
-                    $index,
-                    $seller_id  // Use seller_id as uploaded_by
-                ]);
+                    $original_name,
+                    $file_name,
+                    $file_path,
+                    $file_size,
+                    $mime_type
+                ])) {
+                    $err = $file_stmt->errorInfo();
+                    // Log and continue (file insertion shouldn't block auction creation)
+                    error_log('Failed to insert auction file: ' . json_encode($err));
+                }
             }
         }
     }
@@ -236,11 +256,12 @@ try {
         'auction_id' => $auction_id,
         'item_type' => $data['itemType'],
         'title' => trim($data['title']),
-        'status' => 'draft',
+        'status' => $status,
         'start_time' => $start_datetime,
         'end_time' => $end_datetime,
         'starting_price' => floatval($data['startingPrice']),
-        'reserve_price' => !empty($data['reservePrice']) ? floatval($data['reservePrice']) : null
+        'reserve_price' => !empty($data['reservePrice']) ? floatval($data['reservePrice']) : null,
+        'files_inserted' => isset($file_stmt) ? count($data['images']) : 0
     ];
 
     sendSuccess($response_data, 'Auction created successfully and saved to database');
