@@ -50,23 +50,28 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           apiService.setSessionToken(sessionToken);
           const profileResult = await apiService.getUserProfile();
 
+          const parsedSaved = JSON.parse(savedUser) || {};
+
           if (profileResult.success && profileResult.data) {
-            const userData = JSON.parse(savedUser);
-            // Update with fresh data from server, but keep roles from login
-            const updatedUserData = {
-              ...userData,
-              ...profileResult.data,
-              // Keep the role and roles from login, don't overwrite with profile data
-              role: userData.role || 'buyer',
-              name: profileResult.data.username || userData.name || userData.username,
-              roles: userData.roles // Keep roles from login
+            // Profile endpoint returns { user, roles, current_role }
+            const payload: any = profileResult.data;
+            const serverUser = payload.user || payload; // fallback if flat
+            const serverRoles = payload.roles || (parsedSaved as any).roles || [];
+            const serverCurrentRole = payload.current_role || payload.login_role || (parsedSaved as any).role;
+
+            const merged: any = {
+              ...serverUser,
+              // prefer client-saved roles if present, otherwise server roles
+              roles: (parsedSaved as any).roles || serverRoles,
+              // keep client-selected role if present, otherwise serverCurrentRole or 'buyer'
+              role: (parsedSaved as any).role || serverCurrentRole || 'buyer'
             };
 
-            setUser(updatedUserData);
+            setUser(merged);
             setIsAuthenticated(true);
           } else {
-            // Token is invalid, clear local storage
-            console.warn('Session token invalid, clearing authentication');
+            // Token may be invalid — clear saved auth
+            console.warn('Session token invalid or expired; clearing saved auth');
             localStorage.removeItem('bidlode_user');
             localStorage.removeItem('bidlode_session_token');
             apiService.setSessionToken(null);
@@ -93,23 +98,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const result = await apiService.login(username, password);
       
       if (result.success && result.data) {
-        // Check if user has the preferred role, otherwise use primary role
-        let selectedRole = result.data.roles?.[0]?.role_name || 'buyer';
-        
-        if (preferredRole && result.data.roles) {
-          const hasPreferredRole = result.data.roles.some(role => role.role_name === preferredRole);
-          if (hasPreferredRole) {
-            selectedRole = preferredRole;
-          }
+        // Determine available roles
+        const roles = (result as any).data?.available_roles || (result as any).data?.roles || [];
+
+        // Choose role: preferredRole if available, else login_role from server, else first available, else buyer
+        let selectedRole = (result as any).data?.login_role || (roles && roles[0] && roles[0].role_name) || 'buyer';
+        if (preferredRole && roles && roles.some((r:any) => r.role_name === preferredRole)) {
+          selectedRole = preferredRole;
         }
-        
+
         const userData = {
           ...result.data.user,
-          role: selectedRole, // Use the selected role for dashboard routing
-          name: result.data.user.username, // Use username as display name
-          roles: result.data.roles // Keep full roles array as returned by API
+          role: selectedRole,
+          name: result.data.user.username,
+          roles
         };
-        
+
+        // Persist the richer user object
+        localStorage.setItem('bidlode_user', JSON.stringify(userData));
+
         setUser(userData);
         setIsAuthenticated(true);
         

@@ -169,8 +169,21 @@ class ApiService {
     });
 
     if (result.success && result.data) {
+      // Save session token
       this.setSessionToken(result.data.token);
-      localStorage.setItem('bidlode_user', JSON.stringify(result.data.user));
+
+      // Normalize roles/available_roles and login_role
+      const roles = (result.data as any).available_roles || (result.data as any).roles || [];
+      const loginRole = (result.data as any).login_role || (roles && roles[0] && roles[0].role_name) || 'buyer';
+
+      // Store a richer user object so front-end can restore role/roles on refresh
+      const storedUser = {
+        ...(result.data.user || {}),
+        roles,
+        role: loginRole
+      };
+
+      localStorage.setItem('bidlode_user', JSON.stringify(storedUser));
     }
 
     return result;
