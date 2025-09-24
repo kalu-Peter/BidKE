@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { apiService } from '@/services/api';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -107,31 +108,22 @@ const AdminSignUpTab: React.FC = () => {
     setError('');
 
     try {
-      const response = await fetch('http://localhost:8000/auth/admin-signup.php', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include',
-        body: JSON.stringify({
-          username: formData.username,
-          email: formData.email,
-          password: formData.password,
-          phone: formData.phone,
-          fullName: formData.fullName
-        }),
+      const res = await apiService.createAdminUser({
+        username: formData.username,
+        email: formData.email,
+        password: formData.password,
+        phone: formData.phone,
+        fullName: formData.fullName
       });
 
-      const data = await response.json();
-
-      if (data.success) {
-        setSuccess(`Admin account created successfully! Username: ${data.data.username}`);
+      if (res.success && res.data) {
+        setSuccess(`Admin account created successfully! Username: ${res.data.username}`);
         resetForm();
       } else {
-        setError(data.error || 'Registration failed');
+        setError(res.error || 'Registration failed');
       }
-    } catch (error) {
-      console.error('Admin registration error:', error);
+    } catch (err) {
+      console.error('Admin registration error:', err);
       setError('Network error. Please try again.');
     } finally {
       setIsLoading(false);

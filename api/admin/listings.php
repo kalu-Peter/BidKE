@@ -131,9 +131,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         $baseQuery = "
             SELECT 
                 a.id, a.title, a.description, a.starting_price, a.reserve_price,
-                a.current_bid, a.start_time, a.end_time, a.status, a.featured,
-                a.view_count, a.bid_count, a.created_at, a.updated_at,
-                u.fullname as seller_name, u.email as seller_email, u.phone as seller_phone,
+                -- alias current_price to current_bid to keep existing consumers working
+                a.current_price AS current_bid, a.start_time, a.end_time, a.status, a.featured,
+                -- alias watcher/bid counters
+                COALESCE(a.total_watchers, 0) AS view_count, COALESCE(a.total_bids, 0) AS bid_count, a.created_at, a.updated_at,
+                u.full_name as seller_name, u.email as seller_email, u.phone as seller_phone,
                 c.name as category_name, c.slug as category_slug,
                 CASE 
                     WHEN v.id IS NOT NULL THEN 'vehicle'

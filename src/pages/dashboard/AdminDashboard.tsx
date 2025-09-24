@@ -8,6 +8,7 @@ import ListingsControlTab from "@/components/dashboard/admin/ListingsControlTab"
 import TransactionsTab from "@/components/dashboard/admin/TransactionsTab";
 import ReportsTab from "@/components/dashboard/admin/ReportsTab";
 import AdminSignUpTab from "@/components/dashboard/admin/AdminSignUpTab";
+import SellerVerificationsTab from "@/components/dashboard/admin/SellerVerificationsTab";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
@@ -144,6 +145,7 @@ const AdminDashboard = () => {
             <TabsTrigger value="listings">Listings Control</TabsTrigger>
             <TabsTrigger value="transactions">Transactions</TabsTrigger>
             <TabsTrigger value="reports">Reports</TabsTrigger>
+            <TabsTrigger value="verifications">Verifications</TabsTrigger>
             <TabsTrigger value="signup">Add Admin</TabsTrigger>
           </TabsList>
 
@@ -165,6 +167,10 @@ const AdminDashboard = () => {
 
           <TabsContent value="reports">
             <ReportsTab />
+          </TabsContent>
+
+          <TabsContent value="verifications">
+            <SellerVerificationsTab />
           </TabsContent>
 
           <TabsContent value="signup">

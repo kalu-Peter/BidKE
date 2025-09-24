@@ -152,10 +152,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     
     try {
       const result = await apiService.register(data);
-      
+      // If server returned validation details, include them
+      const validationErrors = (result as any).details?.validation_errors || (result as any).details?.validation_errors || null;
+
       return {
         success: result.success,
-        error: result.error
+        error: result.error,
+        validationErrors
       };
     } catch (error) {
       return {

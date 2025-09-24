@@ -81,7 +81,12 @@ const SignUp = () => {
           });
         }, 3000);
       } else {
-        setErrors({ submit: result.error || "Registration failed. Please try again." });
+        // Map validation errors from backend to form fields if present
+        if ((result as any).validationErrors) {
+          const v = (result as any).validationErrors as { [key: string]: string };
+          setErrors(prev => ({ ...prev, ...v }));
+        }
+        setErrors(prev => ({ ...prev, submit: result.error || "Registration failed. Please try again." }));
         setSuccessMessage("");
       }
     } catch (error) {

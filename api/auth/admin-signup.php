@@ -85,21 +85,20 @@ try {
         // Hash password
         $hashedPassword = password_hash($input['password'], PASSWORD_DEFAULT);
         
-        // First check if fullname column exists, if not add it
+        // First check if full_name column exists (schema uses `full_name`), if not add it
         $stmt = $pdo->query("SELECT column_name FROM information_schema.columns 
-                             WHERE table_name = 'users' AND column_name = 'fullname'");
+                             WHERE table_name = 'users' AND column_name = 'full_name'");
         if (!$stmt->fetch()) {
-            $pdo->exec("ALTER TABLE users ADD COLUMN fullname VARCHAR(255)");
+            $pdo->exec("ALTER TABLE users ADD COLUMN full_name VARCHAR(255)");
         }
-        
-        // Create user record with fullname
-        $stmt = $pdo->prepare("INSERT INTO users (username, email, password_hash, role, phone, fullname, is_verified, created_at) 
-                               VALUES (?, ?, ?, ?, ?, ?, ?, NOW())");
+
+        // Create user record (do NOT insert a 'role' column on users table; roles are stored in roles/user_roles)
+        $stmt = $pdo->prepare("INSERT INTO users (username, email, password_hash, phone, full_name, is_verified, created_at) 
+                               VALUES (?, ?, ?, ?, ?, ?, NOW())");
         $result = $stmt->execute([
             $input['username'],
             $input['email'],
             $hashedPassword,
-            'admin',
             $input['phone'],
             $input['fullName'],
             1 // Admin users are auto-verified

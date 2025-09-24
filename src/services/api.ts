@@ -39,6 +39,18 @@ interface RegisterData {
   phone?: string;
 }
 
+interface AdminRegisterData extends RegisterData {
+  fullName: string;
+}
+
+interface AdminRegisterResponse {
+  user_id: number;
+  username: string;
+  email: string;
+  fullName: string;
+  role: string;
+}
+
 interface Auction {
   id: number;
   title: string;
@@ -111,7 +123,10 @@ class ApiService {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || `HTTP ${response.status}`);
+        // Return the server payload so callers can access structured details
+        // (e.g., validation errors returned in `details`)
+        console.error('API Error response:', data);
+        return data;
       }
 
       return data;
@@ -159,6 +174,16 @@ class ApiService {
     }
 
     return result;
+  }
+
+  /**
+   * Create admin user (uses backend admin-signup.php)
+   */
+  async createAdminUser(data: AdminRegisterData): Promise<ApiResponse<AdminRegisterResponse>> {
+    return this.makeRequest('/auth/admin-signup.php', {
+      method: 'POST',
+      body: JSON.stringify(data)
+    });
   }
 
   async logout(): Promise<ApiResponse> {
@@ -348,6 +373,13 @@ class ApiService {
   }
 
   /**
+   * Get seller profile for the authenticated user
+   */
+  async getSellerProfile(): Promise<ApiResponse<any>> {
+    return this.makeRequest('/auth/seller-profile.php');
+  }
+
+  /**
    * Upload Methods
    */
 
@@ -384,6 +416,36 @@ class ApiService {
         error: error instanceof Error ? error.message : 'Upload failed'
       };
     }
+  }
+
+  /**
+   * Submit seller verification documents and business info
+   */
+  async submitSellerVerification(data: { documents: string[]; notes?: string; business_name?: string; business_type?: string }): Promise<ApiResponse> {
+    return this.makeRequest('/auth/seller-verify.php', {
+      method: 'POST',
+      body: JSON.stringify(data)
+    });
+  }
+
+  /**
+   * Admin: get pending seller verifications
+   */
+  async getPendingSellerVerifications(params: { limit?: number; offset?: number } = {}): Promise<ApiResponse<any[]>> {
+    const q = new URLSearchParams();
+    if (params.limit) q.append('limit', params.limit.toString());
+    if (params.offset) q.append('offset', params.offset.toString());
+    return this.makeRequest(`/admin/seller-verifications.php?${q.toString()}`);
+  }
+
+  /**
+   * Admin: approve or reject a seller verification
+   */
+  async reviewSellerVerification(action: 'approve' | 'reject', userId: number, notes?: string): Promise<ApiResponse> {
+    return this.makeRequest('/admin/seller-verifications.php', {
+      method: 'POST',
+      body: JSON.stringify({ action, user_id: userId, notes })
+    });
   }
 
   /**

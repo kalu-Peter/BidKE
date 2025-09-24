@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { apiService } from '@/services/api';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -96,24 +97,15 @@ const AdminSignUp: React.FC = () => {
     setError('');
 
     try {
-      const response = await fetch('http://localhost:8000/auth/admin-signup.php', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include',
-        body: JSON.stringify({
-          username: formData.username,
-          email: formData.email,
-          password: formData.password,
-          phone: formData.phone,
-          fullName: formData.fullName
-        }),
+      const res = await apiService.createAdminUser({
+        username: formData.username,
+        email: formData.email,
+        password: formData.password,
+        phone: formData.phone,
+        fullName: formData.fullName
       });
 
-      const data = await response.json();
-
-      if (data.success) {
+      if (res.success) {
         // Redirect to login with success message
         navigate('/login', { 
           state: { 
@@ -122,7 +114,7 @@ const AdminSignUp: React.FC = () => {
           }
         });
       } else {
-        setError(data.error || 'Registration failed');
+        setError(res.error || 'Registration failed');
       }
     } catch (error) {
       console.error('Admin registration error:', error);

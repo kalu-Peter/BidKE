@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import { Button } from "@/components/ui/button";
@@ -32,6 +32,7 @@ import {
   DollarSign
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import { apiService } from "@/services/api";
 
 const SellerProfile: React.FC = () => {
   const navigate = useNavigate();
@@ -39,29 +40,28 @@ const SellerProfile: React.FC = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
-  // Mock seller data
-  const [sellerProfile, setSellerProfile] = useState({
-    firstName: "Jane",
-    lastName: "Smith",
-    email: "jane.smith@example.com",
-    phone: "+254 700 987 654",
-    location: "Mombasa, Kenya",
-    bio: "Professional seller specializing in electronics and automotive parts. Quality guaranteed on all items.",
-    profilePicture: "https://images.unsplash.com/photo-1494790108755-2616b612b743?auto=format&fit=crop&w=400&q=80",
-    joinedDate: "2023-03-10",
+  // Seller profile state (will be loaded for the logged-in user)
+  const [sellerProfile, setSellerProfile] = useState<any>({
+    firstName: user?.name || user?.username || '',
+    lastName: '',
+    email: user?.email || '',
+    phone: user?.phone || '',
+    location: '',
+    bio: '',
+    profilePicture: '',
+    joinedDate: '',
     verified: false,
-    sellerRating: 4.9,
-    totalListings: 234,
-    successfulSales: 189,
-    totalEarnings: 2450000,
-    // Business information
-    businessName: "TechParts Kenya Ltd",
-    businessType: "Limited Company",
-    businessRegistration: "BN123456789",
-    taxNumber: "P051234567M",
-    businessAddress: "123 Digo Road, Mombasa",
-    businessEmail: "info@techpartskenya.com",
-    businessPhone: "+254 700 123 789"
+    sellerRating: 0,
+    totalListings: 0,
+    successfulSales: 0,
+    totalEarnings: 0,
+    businessName: '',
+    businessType: '',
+    businessRegistration: '',
+    taxNumber: '',
+    businessAddress: '',
+    businessEmail: user?.email || '',
+    businessPhone: user?.phone || ''
   });
 
   // Verification status for sellers
@@ -110,8 +110,91 @@ const SellerProfile: React.FC = () => {
   };
 
   const submitForVerification = (type: string) => {
-    console.log(`Submitting ${type} verification`);
+    (async () => {
+      try {
+        // Build documents list depending on type
+        const docsToUpload: File[] = [];
+        if (type === 'identity' && verificationDocs.idDocument) docsToUpload.push(verificationDocs.idDocument as File);
+        if (type === 'business' && verificationDocs.businessRegistration) docsToUpload.push(verificationDocs.businessRegistration as File);
+        if (type === 'tax' && verificationDocs.taxCertificate) docsToUpload.push(verificationDocs.taxCertificate as File);
+
+        const uploadedUrls: string[] = [];
+
+        for (const f of docsToUpload) {
+          const res = await apiService.uploadFile(f, 'document');
+          if (res.success && res.data && (res.data.url || res.data.path)) {
+            uploadedUrls.push(res.data.url || res.data.path);
+          } else {
+            // Show a basic alert for now
+            alert('Failed to upload file: ' + (res.error || 'Unknown'));
+            return;
+          }
+        }
+
+        // Submit verification request
+        const payload: any = { documents: uploadedUrls };
+        if (type === 'business') {
+          payload.business_name = sellerProfile.businessName;
+          payload.business_type = sellerProfile.businessType;
+        }
+
+        const submitRes = await apiService.submitSellerVerification(payload);
+        if (submitRes.success) {
+          alert('Verification submitted successfully.');
+          // refresh profile to reflect pending status
+          try {
+            await loadProfile();
+          } catch (e) {
+            console.warn('Failed to refresh profile', e);
+          }
+        } else {
+          alert('Submission failed: ' + (submitRes.error || submitRes.message || 'Unknown'));
+        }
+      } catch (err) {
+        console.error(err);
+        alert('An error occurred while submitting verification.');
+      }
+    })();
   };
+
+  // Load seller profile for the logged-in user
+  const loadProfile = async () => {
+    const res = await apiService.getSellerProfile();
+    if (res.success && res.data) {
+      const p = res.data;
+      setSellerProfile({
+        firstName: p.full_name ? p.full_name.split(' ')[0] : (user?.name || user?.username || ''),
+        lastName: p.full_name ? p.full_name.split(' ').slice(1).join(' ') : '',
+        email: p.business_email || p.email || user?.email || '',
+        phone: p.business_phone || p.phone || user?.phone || '',
+        location: p.business_address || '',
+        bio: p.business_description || '',
+        profilePicture: p.avatar_url || '',
+        joinedDate: p.created_at || '',
+        verified: p.business_verified || false,
+        sellerRating: p.seller_rating || 0,
+        totalListings: p.total_listings || 0,
+        successfulSales: p.completed_sales || 0,
+        totalEarnings: p.total_revenue || 0,
+        businessName: p.business_name || '',
+        businessType: p.business_type || '',
+        businessRegistration: p.business_registration || '',
+        taxNumber: p.tax_pin || '',
+        businessAddress: p.business_address || '',
+        businessEmail: p.business_email || user?.email || '',
+        businessPhone: p.business_phone || user?.phone || ''
+      });
+      // update verification flags if present
+      setVerification(prev => ({
+        ...prev,
+        businessVerified: p.business_verified || false
+      }));
+    }
+  };
+
+  useEffect(() => {
+    loadProfile();
+  }, []);
 
   const verificationProgress = Object.values(verification).filter(Boolean).length;
   const totalVerifications = Object.keys(verification).length;
