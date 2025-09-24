@@ -1,90 +1,150 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { FileText, Eye, Edit, Trash2, CheckCircle, Clock, XCircle } from "lucide-react";
+import { FileText, Eye, Edit, Trash2, CheckCircle, Clock, XCircle, Plus, Upload } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
+import { apiService } from "@/services/api";
+import { Auction } from "../../../services/api";
+import { toast } from "@/hooks/use-toast";
 
 const ListingsTab: React.FC = () => {
-  // Mock data
-  const listings = [
-    {
-      id: 1,
-      title: "Toyota Axio 2016",
-      category: "Cars",
-      reservePrice: 900000,
-      currentBid: 950000,
-      bids: 12,
-      timeLeft: "2h 15m",
-      status: "active",
-      image: "https://images.unsplash.com/photo-1503736334956-4c8f8e92946d?auto=format&fit=crop&w=400&q=80"
-    },
-    {
-      id: 2,
-      title: "Bajaj Boxer 150cc",
-      category: "Motorbikes",
-      reservePrice: 60000,
-      currentBid: 68000,
-      bids: 8,
-      timeLeft: "1d 5h",
-      status: "active",
-      image: "https://images.unsplash.com/photo-1518655048521-f130df041f66?auto=format&fit=crop&w=400&q=80"
-    },
-    {
-      id: 3,
-      title: "HP EliteBook 840 G5",
-      category: "Electronics",
-      reservePrice: 30000,
-      currentBid: 35000,
-      bids: 5,
-      timeLeft: "Ended",
-      status: "sold",
-      image: "https://images.unsplash.com/photo-1517336714731-489689fd1ca8?auto=format&fit=crop&w=400&q=80"
-    },
-    {
-      id: 4,
-      title: "MacBook Pro 2019",
-      category: "Electronics",
-      reservePrice: 80000,
-      currentBid: 0,
-      bids: 0,
-      timeLeft: "Pending",
-      status: "pending",
-      image: "https://images.unsplash.com/photo-1541807084-5c52b6b3adef?auto=format&fit=crop&w=400&q=80"
-    },
-    {
-      id: 5,
-      title: "Honda Civic 2018",
-      category: "Cars",
-      reservePrice: 1200000,
-      currentBid: 0,
-      bids: 0,
-      timeLeft: "Ended",
-      status: "ended",
-      image: "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?auto=format&fit=crop&w=400&q=80"
-    }
-  ];
+  const { user } = useAuth();
+  const [listings, setListings] = useState<Auction[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [statusFilter, setStatusFilter] = useState('all');
+
+  // Fetch seller's listings
+  useEffect(() => {
+    const fetchListings = async () => {
+      if (!user?.id) {
+        setError("User not authenticated");
+        setLoading(false);
+        return;
+      }
+
+      try {
+        setLoading(true);
+        setError(null);
+
+        const response = await apiService.getSellerAuctions({
+          sellerId: user.id,
+          status: statusFilter,
+          page: currentPage,
+          limit: 10
+        });
+
+        if (response.success && response.data) {
+          setListings(response.data.auctions || []);
+          setTotalPages(response.data.pagination?.pages || 1);
+        } else {
+          throw new Error(response.error || 'Failed to fetch listings');
+        }
+      } catch (err) {
+        console.error('Error fetching listings:', err);
+        setError(err instanceof Error ? err.message : 'Failed to load listings');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchListings();
+  }, [user?.id, currentPage, statusFilter]);
+
+  // Handle status filter change
+  const handleStatusFilter = (status: string) => {
+    setStatusFilter(status);
+    setCurrentPage(1);
+  };
 
   const getStatusBadge = (status: string) => {
     const configs = {
-      active: { label: "Active", color: "bg-green-100 text-green-800", icon: <CheckCircle className="w-3 h-3" /> },
+      live: { label: "Live", color: "bg-green-100 text-green-800", icon: <CheckCircle className="w-3 h-3" /> },
+      approved: { label: "Approved", color: "bg-blue-100 text-blue-800", icon: <CheckCircle className="w-3 h-3" /> },
       pending: { label: "Pending Review", color: "bg-yellow-100 text-yellow-800", icon: <Clock className="w-3 h-3" /> },
-      sold: { label: "Sold", color: "bg-blue-100 text-blue-800", icon: <CheckCircle className="w-3 h-3" /> },
-      ended: { label: "Ended", color: "bg-gray-100 text-gray-800", icon: <XCircle className="w-3 h-3" /> }
+      ended: { label: "Ended", color: "bg-gray-100 text-gray-800", icon: <XCircle className="w-3 h-3" /> },
+      sold: { label: "Sold", color: "bg-purple-100 text-purple-800", icon: <CheckCircle className="w-3 h-3" /> }
     };
     return configs[status as keyof typeof configs] || configs.ended;
   };
 
+  const formatTimeLeft = (timeRemaining: number) => {
+    if (timeRemaining <= 0) return "Ended";
+
+    const hours = Math.floor(timeRemaining / 3600);
+    const minutes = Math.floor((timeRemaining % 3600) / 60);
+
+    if (hours > 24) {
+      const days = Math.floor(hours / 24);
+      return `${days}d ${hours % 24}h`;
+    } else if (hours > 0) {
+      return `${hours}h ${minutes}m`;
+    } else {
+      return `${minutes}m`;
+    }
+  };
+
   const handleViewListing = (id: number) => {
-    console.log("View listing:", id);
+    // Navigate to auction details page
+    window.open(`/auction/${id}`, '_blank');
   };
 
   const handleEditListing = (id: number) => {
-    console.log("Edit listing:", id);
+    // TODO: Implement edit functionality
+    toast({
+      title: "Edit Auction",
+      description: "Edit functionality will be implemented soon.",
+    });
   };
 
   const handleDeleteListing = (id: number) => {
-    console.log("Delete listing:", id);
+    // TODO: Implement delete functionality with confirmation
+    toast({
+      title: "Delete Auction",
+      description: "Delete functionality will be implemented soon.",
+      variant: "destructive",
+    });
   };
+
+  const handleAddImages = (id: number) => {
+    // TODO: Implement image upload functionality
+    toast({
+      title: "Add Images",
+      description: "Image upload functionality will be implemented soon.",
+    });
+  };
+
+  if (loading) {
+    return (
+      <Card>
+        <CardContent className="flex items-center justify-center py-8">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+            <p className="text-gray-600">Loading your listings...</p>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (error) {
+    return (
+      <Card>
+        <CardContent className="flex items-center justify-center py-8">
+          <div className="text-center">
+            <XCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
+            <p className="text-red-600 mb-4">{error}</p>
+            <Button onClick={() => window.location.reload()}>
+              Try Again
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card>
@@ -101,31 +161,57 @@ const ListingsTab: React.FC = () => {
             {listings.length} Total Listings
           </Badge>
         </div>
+
+        {/* Status Filter */}
+        <div className="flex space-x-2 mt-4">
+          {['all', 'live', 'approved', 'pending', 'ended', 'sold'].map((status) => (
+            <Button
+              key={status}
+              variant={statusFilter === status ? "default" : "outline"}
+              size="sm"
+              onClick={() => handleStatusFilter(status)}
+            >
+              {status === 'all' ? 'All' : status.charAt(0).toUpperCase() + status.slice(1)}
+            </Button>
+          ))}
+        </div>
       </CardHeader>
       <CardContent>
         <div className="grid gap-6">
           {listings.map((listing) => (
             <div key={listing.id} className="flex items-center space-x-4 p-4 border rounded-lg hover:shadow-md transition-shadow">
-              <img 
-                src={listing.image} 
-                alt={listing.title} 
+              <img
+                src={listing.images[0]?.image_url || listing.images[0]?.image_path || '/placeholder.svg'}
+                alt={listing.title}
                 className="w-20 h-20 object-cover rounded"
+                onError={(e) => {
+                  const target = e.target as HTMLImageElement;
+                  target.src = '/placeholder.svg';
+                }}
               />
               <div className="flex-1">
                 <div className="flex items-center space-x-2 mb-1">
                   <h3 className="font-semibold text-lg">{listing.title}</h3>
-                  <Badge variant="outline">{listing.category}</Badge>
+                  <Badge variant="outline">{listing.category_name || listing.category}</Badge>
                 </div>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm text-gray-600">
-                  <span>Reserve: Ksh {listing.reservePrice.toLocaleString()}</span>
+                  <span>Starting: Ksh {listing.starting_price.toLocaleString()}</span>
                   <span>
-                    Current: {listing.currentBid > 0 
-                      ? `Ksh ${listing.currentBid.toLocaleString()}` 
+                    Current: {listing.current_bid > 0
+                      ? `Ksh ${listing.current_bid.toLocaleString()}`
                       : "No bids yet"
                     }
                   </span>
-                  <span>Bids: {listing.bids}</span>
-                  <span>Time: {listing.timeLeft}</span>
+                  <span>Bids: {listing.bid_count}</span>
+                  <span>Time: {formatTimeLeft(listing.time_remaining)}</span>
+                </div>
+                <div className="flex items-center space-x-2 mt-2">
+                  <span className="text-xs text-gray-500">
+                    Created: {new Date(listing.created_at).toLocaleDateString()}
+                  </span>
+                  {listing.featured && (
+                    <Badge variant="secondary" className="text-xs">Featured</Badge>
+                  )}
                 </div>
               </div>
               <div className="flex items-center space-x-2">
@@ -137,26 +223,35 @@ const ListingsTab: React.FC = () => {
                 </Badge>
               </div>
               <div className="flex space-x-2">
-                <Button 
-                  variant="outline" 
+                <Button
+                  variant="outline"
                   size="sm"
                   onClick={() => handleViewListing(listing.id)}
                   title="View listing"
                 >
                   <Eye className="w-4 h-4" />
                 </Button>
-                <Button 
-                  variant="outline" 
+                <Button
+                  variant="outline"
                   size="sm"
                   onClick={() => handleEditListing(listing.id)}
                   title="Edit listing"
-                  disabled={listing.status === 'sold'}
+                  disabled={listing.status === 'sold' || (listing.auction_ended ?? false)}
                 >
                   <Edit className="w-4 h-4" />
                 </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleAddImages(listing.id)}
+                  title="Add images"
+                  disabled={listing.status === 'sold' || (listing.auction_ended ?? false)}
+                >
+                  <Upload className="w-4 h-4" />
+                </Button>
                 {listing.status === 'pending' && (
-                  <Button 
-                    variant="outline" 
+                  <Button
+                    variant="outline"
                     size="sm"
                     onClick={() => handleDeleteListing(listing.id)}
                     title="Delete listing"
@@ -173,9 +268,42 @@ const ListingsTab: React.FC = () => {
         {listings.length === 0 && (
           <div className="text-center py-12">
             <FileText className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">No listings yet</h3>
-            <p className="text-gray-600 mb-4">Start by posting your first auction item</p>
-            <Button>Post New Item</Button>
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">No listings found</h3>
+            <p className="text-gray-600 mb-4">
+              {statusFilter === 'all'
+                ? "You haven't posted any auctions yet"
+                : `No ${statusFilter} auctions found`
+              }
+            </p>
+            <Button onClick={() => window.location.href = '/dashboard/post-item'}>
+              <Plus className="w-4 h-4 mr-2" />
+              Post New Item
+            </Button>
+          </div>
+        )}
+
+        {/* Pagination */}
+        {totalPages > 1 && (
+          <div className="flex justify-center space-x-2 mt-6">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+              disabled={currentPage === 1}
+            >
+              Previous
+            </Button>
+            <span className="flex items-center px-3 text-sm text-gray-600">
+              Page {currentPage} of {totalPages}
+            </span>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+              disabled={currentPage === totalPages}
+            >
+              Next
+            </Button>
           </div>
         )}
       </CardContent>

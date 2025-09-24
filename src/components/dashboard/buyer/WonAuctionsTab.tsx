@@ -294,7 +294,6 @@ const WonAuctionsTab: React.FC = () => {
                   <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between mb-2">
                     <div>
                       <h3 className="font-semibold text-lg">{auction.title}</h3>
-                      <p className="text-sm text-gray-500">by {auction.seller}</p>
                       <div className="flex items-center space-x-2 mt-1">
                         <Badge variant="outline">{auction.category}</Badge>
                         <div className="flex items-center">

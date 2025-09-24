@@ -155,7 +155,7 @@ const WonAuctionsTab: React.FC = () => {
                       <div>
                         <h4 className="font-semibold text-lg">{auction.title}</h4>
                         <div className="text-sm text-gray-600 space-y-1">
-                          <p>{auction.category} • {auction.seller}</p>
+                          <p>{auction.category}</p>
                           <p>Won {auction.dateWon}</p>
                           <p className="flex items-center space-x-1">
                             <span>📍</span>

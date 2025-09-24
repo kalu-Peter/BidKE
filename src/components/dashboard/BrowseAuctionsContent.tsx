@@ -383,9 +383,6 @@ const BrowseAuctionsContent = () => {
                   >
                     {auction.title}
                   </h3>
-                  <p className="text-sm text-gray-500 mb-3">
-                    by {auction.seller_name || 'Anonymous Seller'}
-                  </p>
                   <div className="space-y-2 mb-4">
                     <div className="flex justify-between text-sm">
                       <span className="text-gray-600">Current bid</span>

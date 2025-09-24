@@ -23,6 +23,7 @@ interface User {
 interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
+  isLoading: boolean; // Add loading state
   login: (username: string, password: string, preferredRole?: string) => Promise<{ success: boolean; user?: User; error?: string }>;
   logout: () => Promise<void>;
   register: (data: any) => Promise<{ success: boolean; error?: string }>;
@@ -34,29 +35,55 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isLoading, setIsLoading] = useState(true); // Add loading state
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     // Check for existing authentication on mount
-    const savedUser = localStorage.getItem('bidlode_user');
-    const sessionToken = localStorage.getItem('bidlode_session_token');
-    
-    if (savedUser && sessionToken) {
-      try {
-        const userData = JSON.parse(savedUser);
-        // Ensure role and name are set for backward compatibility
-        if (!userData.role) userData.role = 'buyer';
-        if (!userData.name) userData.name = userData.username;
-        
-        setUser(userData);
-        setIsAuthenticated(true);
-        apiService.setSessionToken(sessionToken);
-      } catch (error) {
-        console.error('Failed to parse saved user data:', error);
-        localStorage.removeItem('bidlode_user');
-        localStorage.removeItem('bidlode_session_token');
+    const checkExistingAuth = async () => {
+      const savedUser = localStorage.getItem('bidlode_user');
+      const sessionToken = localStorage.getItem('bidlode_session_token');
+
+      if (savedUser && sessionToken) {
+        try {
+          // Validate the session token with the server
+          apiService.setSessionToken(sessionToken);
+          const profileResult = await apiService.getUserProfile();
+
+          if (profileResult.success && profileResult.data) {
+            const userData = JSON.parse(savedUser);
+            // Update with fresh data from server, but keep roles from login
+            const updatedUserData = {
+              ...userData,
+              ...profileResult.data,
+              // Keep the role and roles from login, don't overwrite with profile data
+              role: userData.role || 'buyer',
+              name: profileResult.data.username || userData.name || userData.username,
+              roles: userData.roles // Keep roles from login
+            };
+
+            setUser(updatedUserData);
+            setIsAuthenticated(true);
+          } else {
+            // Token is invalid, clear local storage
+            console.warn('Session token invalid, clearing authentication');
+            localStorage.removeItem('bidlode_user');
+            localStorage.removeItem('bidlode_session_token');
+            apiService.setSessionToken(null);
+          }
+        } catch (error) {
+          console.error('Failed to validate session:', error);
+          // Clear invalid session data
+          localStorage.removeItem('bidlode_user');
+          localStorage.removeItem('bidlode_session_token');
+          apiService.setSessionToken(null);
+        }
       }
-    }
+
+      setIsLoading(false); // Set loading to false after validation
+    };
+
+    checkExistingAuth();
   }, []);
 
   const login = async (username: string, password: string, preferredRole?: string) => {
@@ -143,6 +170,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const value: AuthContextType = {
     user,
     isAuthenticated,
+    isLoading,
     login,
     logout,
     register,

@@ -208,8 +208,28 @@ try {
         ]);
     }
 
-    // Commit transaction
-    $connection->commit();
+    // Handle images if provided
+    if (!empty($data['images']) && is_array($data['images'])) {
+        $image_query = "INSERT INTO auction_images (auction_id, image_url, alt_text, is_primary, sort_order, uploaded_by) VALUES (?, ?, ?, ?, ?, ?)";
+        $image_stmt = $connection->prepare($image_query);
+        
+        foreach ($data['images'] as $index => $image) {
+            $is_primary = ($index === 0) ? 't' : 'f'; // First image is primary
+            $alt_text = $image['alt_text'] ?? '';
+            $image_url = $image['url'] ?? '';
+            
+            if (!empty($image_url)) {
+                $image_stmt->execute([
+                    $auction_id,
+                    $image_url,
+                    $alt_text,
+                    $is_primary,
+                    $index,
+                    $seller_id  // Use seller_id as uploaded_by
+                ]);
+            }
+        }
+    }
 
     // Prepare response
     $response_data = [

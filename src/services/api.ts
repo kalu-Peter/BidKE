@@ -45,21 +45,26 @@ interface Auction {
   description: string;
   category_id: number;
   category_name: string;
+  category?: string; // Alias for category_name
   starting_price: number;
   current_bid: number;
   reserve_price: number | null;
   buy_now_price: number | null;
   start_date: string;
   end_date: string;
-  status: 'draft' | 'active' | 'ended' | 'cancelled';
+  created_at?: string;
+  status: 'draft' | 'active' | 'ended' | 'cancelled' | 'live' | 'approved' | 'pending' | 'sold';
   seller_id: number;
   seller_name: string;
   image_url: string | null;
+  images?: Array<{ image_url: string; image_path?: string }>; // For seller listings
   bid_count: number;
   watcher_count: number;
   is_featured: boolean;
+  featured?: boolean; // Alias for is_featured
   is_reserve_met: boolean;
   time_remaining: number;
+  auction_ended?: boolean;
 }
 
 interface Category {
@@ -423,6 +428,34 @@ class ApiService {
       method: 'POST',
       body: JSON.stringify(auctionData)
     });
+  }
+
+  /**
+   * Seller Auction Methods
+   */
+
+  async getSellerAuctions(params: {
+    sellerId: number;
+    status?: string;
+    page?: number;
+    limit?: number;
+  }): Promise<ApiResponse<{
+    auctions: Auction[];
+    pagination: {
+      page: number;
+      limit: number;
+      total: number;
+      pages: number;
+    };
+  }>> {
+    const queryParams = new URLSearchParams({
+      seller_id: params.sellerId.toString(),
+      status: params.status || 'all',
+      page: (params.page || 1).toString(),
+      limit: (params.limit || 10).toString()
+    });
+
+    return this.makeRequest(`/seller-auctions.php?${queryParams.toString()}`);
   }
 }
 
