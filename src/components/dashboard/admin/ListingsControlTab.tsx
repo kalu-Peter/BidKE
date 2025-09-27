@@ -3,14 +3,20 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { 
-  FileText, 
-  Search, 
-  Eye, 
-  CheckCircle, 
-  XCircle, 
+import {
+  FileText,
+  Search,
+  Eye,
+  CheckCircle,
+  XCircle,
   AlertTriangle,
   Calendar,
   DollarSign,
@@ -20,7 +26,7 @@ import {
   Image as ImageIcon,
   ShieldCheck,
   Loader2,
-  RefreshCw
+  RefreshCw,
 } from "lucide-react";
 
 // Types
@@ -42,7 +48,7 @@ interface Listing {
   seller_email: string;
   category_name: string;
   category_slug: string;
-  item_type: 'vehicle' | 'electronics' | 'other';
+  item_type: "vehicle" | "electronics" | "other";
   make_brand: string;
   model: string;
   year: number | null;
@@ -81,7 +87,7 @@ const ListingsControlTab: React.FC = () => {
   const [showRequestInfoModal, setShowRequestInfoModal] = useState(false);
   const [rejectReason, setRejectReason] = useState("");
   const [infoRequest, setInfoRequest] = useState("");
-  
+
   // API state
   const [listings, setListings] = useState<Listing[]>([]);
   const [stats, setStats] = useState<Stats>({
@@ -92,13 +98,13 @@ const ListingsControlTab: React.FC = () => {
     approved: 0,
     live: 0,
     ended: 0,
-    rejected: 0
+    rejected: 0,
   });
   const [pagination, setPagination] = useState<PaginationInfo>({
     page: 1,
     limit: 20,
     total: 0,
-    pages: 0
+    pages: 0,
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -107,78 +113,101 @@ const ListingsControlTab: React.FC = () => {
   const fetchListings = async (page: number = 1) => {
     setLoading(true);
     setError(null);
-    
+
     try {
+      // map UI status to backend-friendly values
+      const effectiveStatus =
+        statusFilter === "pending_review" ? "pending" : statusFilter;
       const params = new URLSearchParams({
         page: page.toString(),
         limit: pagination.limit.toString(),
-        status: statusFilter,
+        status: effectiveStatus,
         category: categoryFilter,
-        search: searchTerm
+        search: searchTerm,
       });
-      
-      const response = await fetch(`http://localhost:8000/admin/listings.php?${params}`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include'
-      });
-      
+
+      const response = await fetch(
+        `http://localhost:8000/admin/listings.php?${params}`,
+        {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          credentials: "include",
+        }
+      );
+
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
-      
+
       const data = await response.json();
-      
+
       if (data.success) {
         setListings(data.data || []);
-        setStats(data.stats || stats);
+        // normalize stats back to UI-friendly keys if backend used 'pending'->'pending_review'
+        const s = data.stats || {};
+        const normalizedStats = {
+          total: s.total || 0,
+          draft: s.draft || 0,
+          pending_review: s.pending_review || s.pending || 0,
+          needs_info: s.needs_info || 0,
+          approved: s.approved || 0,
+          live: s.live || 0,
+          ended: s.ended || 0,
+          rejected: s.rejected || 0,
+        };
+        setStats(normalizedStats);
         setPagination(data.pagination || pagination);
       } else {
-        throw new Error(data.message || 'Failed to fetch listings');
+        throw new Error(data.message || "Failed to fetch listings");
       }
     } catch (err) {
-      console.error('Error fetching listings:', err);
-      setError(err instanceof Error ? err.message : 'Failed to load listings');
+      console.error("Error fetching listings:", err);
+      setError(err instanceof Error ? err.message : "Failed to load listings");
     } finally {
       setLoading(false);
     }
   };
 
   // Update auction status
-  const updateAuctionStatus = async (auctionId: number, action: string, reason?: string, message?: string) => {
+  const updateAuctionStatus = async (
+    auctionId: number,
+    action: string,
+    reason?: string,
+    message?: string
+  ) => {
     try {
-      const response = await fetch('http://localhost:8000/admin/listings.php', {
-        method: 'PUT',
+      const response = await fetch("http://localhost:8000/admin/listings.php", {
+        method: "PUT",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
-        credentials: 'include',
+        credentials: "include",
         body: JSON.stringify({
           auction_id: auctionId,
           action,
           reason,
-          message
-        })
+          message,
+        }),
       });
-      
+
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
-      
+
       const data = await response.json();
-      
+
       if (data.success) {
         // Refresh listings
         await fetchListings(pagination.page);
         return true;
       } else {
-        throw new Error(data.message || 'Failed to update auction status');
+        throw new Error(data.message || "Failed to update auction status");
       }
     } catch (err) {
-      console.error('Error updating auction status:', err);
-      setError(err instanceof Error ? err.message : 'Failed to update auction');
+      console.error("Error updating auction status:", err);
+      setError(err instanceof Error ? err.message : "Failed to update auction");
       return false;
     }
   };
@@ -237,31 +266,35 @@ const ListingsControlTab: React.FC = () => {
   };
 
   const handleApproveListing = async (listingId: number) => {
-    const success = await updateAuctionStatus(listingId, 'approve');
+    const success = await updateAuctionStatus(listingId, "approve");
     if (success) {
       console.log("Listing approved successfully");
     }
   };
 
   const handleRejectListing = (listingId: number) => {
-    setSelectedListing(listings.find(l => l.id === listingId) || null);
+    setSelectedListing(listings.find((l) => l.id === listingId) || null);
     setShowRejectModal(true);
   };
 
   const handleRequestInfo = (listingId: number) => {
-    setSelectedListing(listings.find(l => l.id === listingId) || null);
+    setSelectedListing(listings.find((l) => l.id === listingId) || null);
     setShowRequestInfoModal(true);
   };
 
   const handleViewDetails = (listingId: number) => {
-    const listing = listings.find(l => l.id === listingId);
+    const listing = listings.find((l) => l.id === listingId);
     setSelectedListing(listing || null);
   };
 
   const submitRejection = async () => {
     if (!selectedListing || !rejectReason.trim()) return;
-    
-    const success = await updateAuctionStatus(selectedListing.id, 'reject', rejectReason);
+
+    const success = await updateAuctionStatus(
+      selectedListing.id,
+      "reject",
+      rejectReason
+    );
     if (success) {
       setShowRejectModal(false);
       setRejectReason("");
@@ -271,8 +304,13 @@ const ListingsControlTab: React.FC = () => {
 
   const submitInfoRequest = async () => {
     if (!selectedListing || !infoRequest.trim()) return;
-    
-    const success = await updateAuctionStatus(selectedListing.id, 'request_info', undefined, infoRequest);
+
+    const success = await updateAuctionStatus(
+      selectedListing.id,
+      "request_info",
+      undefined,
+      infoRequest
+    );
     if (success) {
       setShowRequestInfoModal(false);
       setInfoRequest("");
@@ -281,9 +319,11 @@ const ListingsControlTab: React.FC = () => {
   };
 
   const handleMakeLive = async (listingId: number) => {
-    const proceed = window.confirm('Are you sure you want to make this auction live now? This will set the start time to now and make the auction available for bidding.');
+    const proceed = window.confirm(
+      "Are you sure you want to make this auction live now? This will set the start time to now and make the auction available for bidding."
+    );
     if (!proceed) return;
-    const success = await updateAuctionStatus(listingId, 'make_live');
+    const success = await updateAuctionStatus(listingId, "make_live");
     if (success) {
       console.log("Auction is now live");
     }
@@ -309,9 +349,9 @@ const ListingsControlTab: React.FC = () => {
               <span className="font-medium text-red-800">Error</span>
             </div>
             <p className="text-sm text-red-700 mt-1">{error}</p>
-            <Button 
-              variant="outline" 
-              size="sm" 
+            <Button
+              variant="outline"
+              size="sm"
               onClick={() => fetchListings(pagination.page)}
               className="mt-2"
             >
@@ -328,15 +368,21 @@ const ListingsControlTab: React.FC = () => {
             <p className="text-sm text-blue-600">Total</p>
           </div>
           <div className="bg-yellow-50 p-4 rounded-lg text-center">
-            <p className="text-2xl font-bold text-yellow-800">{stats.pending_review}</p>
+            <p className="text-2xl font-bold text-yellow-800">
+              {stats.pending_review}
+            </p>
             <p className="text-sm text-yellow-600">Pending</p>
           </div>
           <div className="bg-orange-50 p-4 rounded-lg text-center">
-            <p className="text-2xl font-bold text-orange-800">{stats.needs_info || 0}</p>
+            <p className="text-2xl font-bold text-orange-800">
+              {stats.needs_info || 0}
+            </p>
             <p className="text-sm text-orange-600">Needs Info</p>
           </div>
           <div className="bg-green-50 p-4 rounded-lg text-center">
-            <p className="text-2xl font-bold text-green-800">{stats.approved}</p>
+            <p className="text-2xl font-bold text-green-800">
+              {stats.approved}
+            </p>
             <p className="text-sm text-green-600">Approved</p>
           </div>
           <div className="bg-purple-50 p-4 rounded-lg text-center">
@@ -398,14 +444,20 @@ const ListingsControlTab: React.FC = () => {
         {!loading && (
           <div className="space-y-4">
             {listings.map((listing) => (
-              <div key={listing.id} className="border rounded-lg p-4 hover:shadow-md transition-shadow">
+              <div
+                key={listing.id}
+                className="border rounded-lg p-4 hover:shadow-md transition-shadow"
+              >
                 <div className="flex flex-col lg:flex-row gap-4">
                   {/* Listing Image */}
                   <div className="w-full lg:w-32 h-24 flex-shrink-0 bg-gray-100 rounded flex items-center justify-center">
-                    {listing.images.length > 0 ? (
+                    {Array.isArray(listing.images) &&
+                    listing.images.length > 0 ? (
                       <div className="text-center">
                         <ImageIcon className="w-8 h-8 text-gray-400 mx-auto" />
-                        <p className="text-xs text-gray-500">{listing.images.length} images</p>
+                        <p className="text-xs text-gray-500">
+                          {listing.images.length} images
+                        </p>
                       </div>
                     ) : (
                       <div className="text-center">
@@ -419,14 +471,20 @@ const ListingsControlTab: React.FC = () => {
                   <div className="flex-1">
                     <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between mb-2">
                       <div>
-                        <h3 className="font-semibold text-lg">{listing.title}</h3>
-                        <p className="text-sm text-gray-600 mb-1">{listing.description}</p>
+                        <h3 className="font-semibold text-lg">
+                          {listing.title}
+                        </h3>
+                        <p className="text-sm text-gray-600 mb-1">
+                          {listing.description}
+                        </p>
                         <div className="flex items-center space-x-4 text-sm text-gray-500">
                           <span className="flex items-center">
                             <User className="w-4 h-4 mr-1" />
-                            {listing.seller_name || 'Unknown Seller'}
+                            {listing.seller_name || "Unknown Seller"}
                           </span>
-                          <Badge variant="outline">{listing.category_name}</Badge>
+                          <Badge variant="outline">
+                            {listing.category_name}
+                          </Badge>
                           <span className="flex items-center">
                             <Calendar className="w-4 h-4 mr-1" />
                             {new Date(listing.created_at).toLocaleDateString()}
@@ -435,7 +493,7 @@ const ListingsControlTab: React.FC = () => {
                       </div>
                       <div className="flex items-center space-x-2 mt-2 sm:mt-0">
                         <Badge className={getStatusColor(listing.status)}>
-                          {listing.status.replace('_', ' ')}
+                          {listing.status.replace("_", " ")}
                         </Badge>
                         <div className="flex items-center space-x-1">
                           {getVerificationIcon(listing.verification_status)}
@@ -448,7 +506,9 @@ const ListingsControlTab: React.FC = () => {
                       <div>
                         <p className="text-sm text-gray-500">Reserve Price</p>
                         <p className="font-bold text-green-600">
-                          {listing.reserve_price ? `Ksh ${listing.reserve_price.toLocaleString()}` : 'No Reserve'}
+                          {listing.reserve_price
+                            ? `Ksh ${listing.reserve_price.toLocaleString()}`
+                            : "No Reserve"}
                         </p>
                       </div>
                       <div>
@@ -465,12 +525,14 @@ const ListingsControlTab: React.FC = () => {
                       </div>
                       <div>
                         <p className="text-sm text-gray-500">Location</p>
-                        <p className="font-medium text-gray-700">{listing.location || 'N/A'}</p>
+                        <p className="font-medium text-gray-700">
+                          {listing.location || "N/A"}
+                        </p>
                       </div>
                     </div>
 
                     {/* Live Auction Info */}
-                    {listing.status === 'live' && (
+                    {listing.status === "live" && (
                       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4 p-3 bg-blue-50 rounded-lg">
                         <div>
                           <p className="text-sm text-blue-600">Current Bid</p>
@@ -480,11 +542,15 @@ const ListingsControlTab: React.FC = () => {
                         </div>
                         <div>
                           <p className="text-sm text-blue-600">Total Bids</p>
-                          <p className="font-bold text-blue-800">{listing.bid_count}</p>
+                          <p className="font-bold text-blue-800">
+                            {listing.bid_count}
+                          </p>
                         </div>
                         <div>
                           <p className="text-sm text-blue-600">Views</p>
-                          <p className="font-bold text-blue-800">{listing.view_count}</p>
+                          <p className="font-bold text-blue-800">
+                            {listing.view_count}
+                          </p>
                         </div>
                       </div>
                     )}
@@ -493,15 +559,19 @@ const ListingsControlTab: React.FC = () => {
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-4 text-sm">
                       <div>
                         <p className="text-gray-500">Item Type</p>
-                        <p className="font-medium capitalize">{listing.item_type}</p>
+                        <p className="font-medium capitalize">
+                          {listing.item_type}
+                        </p>
                       </div>
                       <div>
                         <p className="text-gray-500">Make/Brand</p>
-                        <p className="font-medium">{listing.make_brand || 'N/A'}</p>
+                        <p className="font-medium">
+                          {listing.make_brand || "N/A"}
+                        </p>
                       </div>
                       <div>
                         <p className="text-gray-500">Model</p>
-                        <p className="font-medium">{listing.model || 'N/A'}</p>
+                        <p className="font-medium">{listing.model || "N/A"}</p>
                       </div>
                       {listing.year && (
                         <div>
@@ -511,7 +581,9 @@ const ListingsControlTab: React.FC = () => {
                       )}
                       <div>
                         <p className="text-gray-500">Condition</p>
-                        <p className="font-medium">{listing.item_condition || 'N/A'}</p>
+                        <p className="font-medium">
+                          {listing.item_condition || "N/A"}
+                        </p>
                       </div>
                     </div>
 
@@ -519,48 +591,69 @@ const ListingsControlTab: React.FC = () => {
                     <div className="flex items-center space-x-4 mb-4 text-sm">
                       <div className="flex items-center space-x-1">
                         <ImageIcon className="w-4 h-4 text-gray-400" />
-                        <span className={listing.images.length > 0 ? "text-green-600" : "text-red-600"}>
-                          {listing.images.length} images
+                        <span
+                          className={
+                            Array.isArray(listing.images) &&
+                            listing.images.length > 0
+                              ? "text-green-600"
+                              : "text-red-600"
+                          }
+                        >
+                          {Array.isArray(listing.images)
+                            ? listing.images.length
+                            : 0}{" "}
+                          images
                         </span>
                       </div>
                       <div className="flex items-center space-x-1">
                         <FileText className="w-4 h-4 text-gray-400" />
-                        <span className={listing.documents.length > 0 ? "text-green-600" : "text-red-600"}>
-                          {listing.documents.length} documents
+                        <span
+                          className={
+                            Array.isArray(listing.documents) &&
+                            listing.documents.length > 0
+                              ? "text-green-600"
+                              : "text-red-600"
+                          }
+                        >
+                          {Array.isArray(listing.documents)
+                            ? listing.documents.length
+                            : 0}{" "}
+                          documents
                         </span>
                       </div>
                     </div>
 
                     {/* Action Buttons */}
                     <div className="flex flex-wrap gap-2">
-                      <Button 
-                        variant="outline" 
+                      <Button
+                        variant="outline"
                         size="sm"
                         onClick={() => handleViewDetails(listing.id)}
                       >
                         <Eye className="w-4 h-4 mr-1" />
                         View Details
                       </Button>
-                      
-                      {(listing.status === 'draft' || listing.status === 'pending_review') && (
+
+                      {(listing.status === "draft" ||
+                        listing.status === "pending_review") && (
                         <>
-                          <Button 
+                          <Button
                             size="sm"
                             onClick={() => handleApproveListing(listing.id)}
                           >
                             <CheckCircle className="w-4 h-4 mr-1" />
                             Approve
                           </Button>
-                          <Button 
-                            variant="outline" 
+                          <Button
+                            variant="outline"
                             size="sm"
                             onClick={() => handleRequestInfo(listing.id)}
                           >
                             <MessageCircle className="w-4 h-4 mr-1" />
                             Request Info
                           </Button>
-                          <Button 
-                            variant="destructive" 
+                          <Button
+                            variant="destructive"
                             size="sm"
                             onClick={() => handleRejectListing(listing.id)}
                           >
@@ -570,17 +663,17 @@ const ListingsControlTab: React.FC = () => {
                         </>
                       )}
 
-                      {listing.status === 'needs_info' && (
+                      {listing.status === "needs_info" && (
                         <>
-                          <Button 
+                          <Button
                             size="sm"
                             onClick={() => handleApproveListing(listing.id)}
                           >
                             <CheckCircle className="w-4 h-4 mr-1" />
                             Approve
                           </Button>
-                          <Button 
-                            variant="destructive" 
+                          <Button
+                            variant="destructive"
                             size="sm"
                             onClick={() => handleRejectListing(listing.id)}
                           >
@@ -590,8 +683,8 @@ const ListingsControlTab: React.FC = () => {
                         </>
                       )}
 
-                      {listing.status === 'approved' && (
-                        <Button 
+                      {listing.status === "approved" && (
+                        <Button
                           size="sm"
                           onClick={() => handleMakeLive(listing.id)}
                           className="bg-purple-600 hover:bg-purple-700"
@@ -612,17 +705,22 @@ const ListingsControlTab: React.FC = () => {
         {!loading && listings.length === 0 && (
           <div className="text-center py-12">
             <FileText className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">No listings found</h3>
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">
+              No listings found
+            </h3>
             <p className="text-gray-600 mb-4">
               {searchTerm || categoryFilter !== "all" || statusFilter !== "all"
                 ? "No listings match your search criteria"
                 : "No listings submitted yet"}
             </p>
-            <Button variant="outline" onClick={() => {
-              setSearchTerm("");
-              setCategoryFilter("all");
-              setStatusFilter("all");
-            }}>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setSearchTerm("");
+                setCategoryFilter("all");
+                setStatusFilter("all");
+              }}
+            >
               Clear Filters
             </Button>
           </div>
@@ -632,7 +730,9 @@ const ListingsControlTab: React.FC = () => {
         {!loading && pagination.pages > 1 && (
           <div className="flex items-center justify-between">
             <div className="text-sm text-gray-600">
-              Showing {((pagination.page - 1) * pagination.limit) + 1} to {Math.min(pagination.page * pagination.limit, pagination.total)} of {pagination.total} results
+              Showing {(pagination.page - 1) * pagination.limit + 1} to{" "}
+              {Math.min(pagination.page * pagination.limit, pagination.total)}{" "}
+              of {pagination.total} results
             </div>
             <div className="flex space-x-2">
               <Button
@@ -649,7 +749,9 @@ const ListingsControlTab: React.FC = () => {
                 return (
                   <Button
                     key={pageNum}
-                    variant={pageNum === pagination.page ? "default" : "outline"}
+                    variant={
+                      pageNum === pagination.page ? "default" : "outline"
+                    }
                     size="sm"
                     onClick={() => fetchListings(pageNum)}
                   >
@@ -675,8 +777,9 @@ const ListingsControlTab: React.FC = () => {
             <div className="bg-white rounded-lg p-6 w-full max-w-md">
               <h3 className="text-lg font-semibold mb-4">Reject Listing</h3>
               <p className="text-sm text-gray-600 mb-4">
-                You are about to reject the listing "<strong>{selectedListing.title}</strong>". 
-                Please provide a reason:
+                You are about to reject the listing "
+                <strong>{selectedListing.title}</strong>". Please provide a
+                reason:
               </p>
               <Textarea
                 placeholder="Enter rejection reason..."
@@ -686,15 +789,15 @@ const ListingsControlTab: React.FC = () => {
                 rows={3}
               />
               <div className="flex space-x-2">
-                <Button 
-                  variant="destructive" 
+                <Button
+                  variant="destructive"
                   onClick={submitRejection}
                   disabled={!rejectReason.trim()}
                 >
                   Reject Listing
                 </Button>
-                <Button 
-                  variant="outline" 
+                <Button
+                  variant="outline"
                   onClick={() => {
                     setShowRejectModal(false);
                     setRejectReason("");
@@ -711,9 +814,12 @@ const ListingsControlTab: React.FC = () => {
         {showRequestInfoModal && selectedListing && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
             <div className="bg-white rounded-lg p-6 w-full max-w-md">
-              <h3 className="text-lg font-semibold mb-4">Request Additional Information</h3>
+              <h3 className="text-lg font-semibold mb-4">
+                Request Additional Information
+              </h3>
               <p className="text-sm text-gray-600 mb-4">
-                Request additional information from the seller for "<strong>{selectedListing.title}</strong>":
+                Request additional information from the seller for "
+                <strong>{selectedListing.title}</strong>":
               </p>
               <Textarea
                 placeholder="Specify what information is needed..."
@@ -723,14 +829,14 @@ const ListingsControlTab: React.FC = () => {
                 rows={3}
               />
               <div className="flex space-x-2">
-                <Button 
+                <Button
                   onClick={submitInfoRequest}
                   disabled={!infoRequest.trim()}
                 >
                   Send Request
                 </Button>
-                <Button 
-                  variant="outline" 
+                <Button
+                  variant="outline"
                   onClick={() => {
                     setShowRequestInfoModal(false);
                     setInfoRequest("");
@@ -746,11 +852,16 @@ const ListingsControlTab: React.FC = () => {
 
         {/* Review Guidelines */}
         <div className="mt-6 p-4 bg-green-50 rounded-lg">
-          <h4 className="font-medium text-green-900 mb-2">Listing Review Guidelines:</h4>
+          <h4 className="font-medium text-green-900 mb-2">
+            Listing Review Guidelines:
+          </h4>
           <ul className="text-sm text-green-800 space-y-1">
             <li>• Verify all images are clear and show the item accurately</li>
             <li>• Check that descriptions are detailed and truthful</li>
-            <li>• Ensure proper documentation is provided (logbooks, receipts, etc.)</li>
+            <li>
+              • Ensure proper documentation is provided (logbooks, receipts,
+              etc.)
+            </li>
             <li>• Confirm reserve prices are reasonable for market value</li>
             <li>• Review seller's history and ratings before approval</li>
           </ul>
