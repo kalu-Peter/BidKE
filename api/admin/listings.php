@@ -192,10 +192,148 @@ try {
     }
 
     if ($_SERVER['REQUEST_METHOD'] === 'PUT') {
-        // Minimal stub: reuse existing behavior - acknowledge action payload
+        // Handle admin actions: approve, make_live, reject, request_info
         $input = file_get_contents('php://input');
-        $body = json_decode($input, true) ?: [];
-        send_json(['success' => true, 'received' => $body]);
+        // TEMP DEBUG: write raw input to log for investigation
+        file_put_contents(__DIR__ . '/../logs/admin_listings_put_debug.log', date('c') . "\n" . var_export(getallheaders(), true) . "\nRAW:\n" . $input . "\n---\n", FILE_APPEND);
+
+        // Normalize encoding: strip UTF-8 BOM, convert UTF-16 LE/BE -> UTF-8
+        $raw = $input;
+        // UTF-8 BOM
+        if (substr($raw, 0, 3) === "\xEF\xBB\xBF") {
+            $raw = substr($raw, 3);
+        }
+        // UTF-16 LE/BE BOMs
+        $bom2 = substr($raw, 0, 2);
+        if ($bom2 === "\xFF\xFE" || $bom2 === "\xFE\xFF") {
+            // Convert from UTF-16 to UTF-8
+            $raw = mb_convert_encoding($raw, 'UTF-8', 'UTF-16');
+        }
+
+        // Log converted payload for debugging
+        file_put_contents(__DIR__ . '/../logs/admin_listings_put_debug.log', "CONVERTED:\n" . $raw . "\n===\n", FILE_APPEND);
+
+        $body = json_decode($raw, true) ?: [];
+
+        $auction_id = isset($body['auction_id']) ? intval($body['auction_id']) : 0;
+        $action = isset($body['action']) ? trim($body['action']) : '';
+        $reason = isset($body['reason']) ? trim($body['reason']) : null;
+        $message = isset($body['message']) ? trim($body['message']) : null;
+
+        if ($auction_id <= 0 || $action === '') {
+            send_json(['success' => false, 'error' => 'Invalid payload: auction_id and action are required'], 400);
+        }
+
+        try {
+            $pdo->beginTransaction();
+
+            // Lock the row for update
+            $checkStmt = $pdo->prepare("SELECT id, title, status, seller_id, start_time, end_time FROM auctions WHERE id = :id FOR UPDATE");
+            $checkStmt->execute([':id' => $auction_id]);
+            $auction = $checkStmt->fetch(PDO::FETCH_ASSOC);
+
+            if (!$auction) {
+                $pdo->rollBack();
+                send_json(['success' => false, 'error' => 'Listing not found'], 404);
+            }
+
+            $currentStatus = $auction['status'];
+            $newStatus = null;
+            $now = new DateTime('now', new DateTimeZone('UTC'));
+            $updatedFields = [];
+
+            if ($action === 'approve') {
+                // Approve maps to DB status 'pending' so auction will go live at start_time
+                if (!in_array($currentStatus, ['draft', 'pending'])) {
+                    $pdo->rollBack();
+                    send_json(['success' => false, 'error' => 'Listing cannot be approved from current status: ' . $currentStatus], 400);
+                }
+                $newStatus = 'pending';
+                $updateQuery = "UPDATE auctions SET status = :status, updated_at = CURRENT_TIMESTAMP WHERE id = :id";
+                $updateStmt = $pdo->prepare($updateQuery);
+                $updateStmt->execute([':status' => $newStatus, ':id' => $auction_id]);
+            } elseif ($action === 'make_live') {
+                // Only allow make_live if currently pending or draft
+                if (!in_array($currentStatus, ['pending', 'draft'])) {
+                    $pdo->rollBack();
+                    send_json(['success' => false, 'error' => 'Listing must be pending or draft before making live'], 400);
+                }
+
+                // compute duration between existing start and end; fallback to 7 days
+                $durationSeconds = 7 * 24 * 3600;
+                if (!empty($auction['start_time']) && !empty($auction['end_time'])) {
+                    try {
+                        $st = new DateTime($auction['start_time'], new DateTimeZone('UTC'));
+                        $en = new DateTime($auction['end_time'], new DateTimeZone('UTC'));
+                        $diff = $en->getTimestamp() - $st->getTimestamp();
+                        if ($diff > 0) {
+                            $durationSeconds = $diff;
+                        }
+                    } catch (Exception $e) {
+                        // leave fallback duration
+                    }
+                }
+
+                $newStart = $now->format('Y-m-d H:i:s');
+                $newEnd = (new DateTime('@' . ($now->getTimestamp() + $durationSeconds)))->setTimeZone(new DateTimeZone('UTC'))->format('Y-m-d H:i:s');
+
+                $newStatus = 'active';
+                $updateQuery = "UPDATE auctions SET status = :status, start_time = :start_time, end_time = :end_time, updated_at = CURRENT_TIMESTAMP WHERE id = :id";
+                $updateStmt = $pdo->prepare($updateQuery);
+                $updateStmt->execute([':status' => $newStatus, ':start_time' => $newStart, ':end_time' => $newEnd, ':id' => $auction_id]);
+            } elseif ($action === 'reject') {
+                // Map UI 'reject' to DB 'cancelled'
+                $newStatus = 'cancelled';
+                $updateQuery = "UPDATE auctions SET status = :status, updated_at = CURRENT_TIMESTAMP WHERE id = :id";
+                $updateStmt = $pdo->prepare($updateQuery);
+                $updateStmt->execute([':status' => $newStatus, ':id' => $auction_id]);
+            } elseif ($action === 'request_info') {
+                // Map UI 'request_info' to DB 'draft' so seller can update
+                $newStatus = 'draft';
+                $updateQuery = "UPDATE auctions SET status = :status, updated_at = CURRENT_TIMESTAMP WHERE id = :id";
+                $updateStmt = $pdo->prepare($updateQuery);
+                $updateStmt->execute([':status' => $newStatus, ':id' => $auction_id]);
+            } else {
+                $pdo->rollBack();
+                send_json(['success' => false, 'error' => 'Unknown action: ' . $action], 400);
+            }
+
+            // Ensure admin_actions table exists
+            $create_table_query = "
+                CREATE TABLE IF NOT EXISTS admin_actions (
+                    id SERIAL PRIMARY KEY,
+                    admin_id INTEGER NOT NULL,
+                    action VARCHAR(50) NOT NULL,
+                    target_type VARCHAR(50) NOT NULL,
+                    target_id INTEGER NOT NULL,
+                    notes TEXT,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            ";
+            $pdo->exec($create_table_query);
+
+            // log admin action - admin_id=1 used as placeholder
+            $log_query = "INSERT INTO admin_actions (admin_id, action, target_type, target_id, notes, created_at) VALUES (?, ?, 'auction', ?, ?, CURRENT_TIMESTAMP)";
+            $log_stmt = $pdo->prepare($log_query);
+            $notes = $reason ?: $message ?: null;
+            $log_stmt->execute([1, $action, $auction_id, $notes]);
+
+            $pdo->commit();
+
+            send_json(['success' => true, 'message' => 'Action performed', 'data' => ['auction_id' => $auction_id, 'action' => $action, 'new_status' => $newStatus ?? $currentStatus]]);
+        } catch (PDOException $e) {
+            if ($pdo->inTransaction()) $pdo->rollBack();
+            $msg = "PDOException: " . $e->getMessage();
+            error_log("Admin listings action error: " . $e->getMessage());
+            file_put_contents(__DIR__ . '/../logs/admin_listings_put_debug.log', "ERROR: " . $msg . "\n", FILE_APPEND);
+            send_json(['success' => false, 'error' => 'Database error while performing action'], 500);
+        } catch (Exception $e) {
+            if ($pdo->inTransaction()) $pdo->rollBack();
+            $msg = "Exception: " . $e->getMessage();
+            error_log("Admin listings action error: " . $e->getMessage());
+            file_put_contents(__DIR__ . '/../logs/admin_listings_put_debug.log', "ERROR: " . $msg . "\n", FILE_APPEND);
+            send_json(['success' => false, 'error' => 'Error while performing action'], 500);
+        }
     }
 
     send_json(['success' => false, 'error' => 'Method not allowed'], 405);

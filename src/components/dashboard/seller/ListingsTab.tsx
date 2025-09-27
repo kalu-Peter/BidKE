@@ -232,9 +232,7 @@ const ListingsTab: React.FC = () => {
                   primaryImage.file_path ||
                   primaryImage.image_path)) ||
               "/placeholder.svg";
-            const currentPrice = (listing.current_bid ??
-              listing.current_price ??
-              0) as number;
+            const currentPrice = (listing.current_bid ?? 0) as number;
             const bidsCount = listing.bid_count ?? 0;
             const timeRemaining = listing.time_remaining ?? 0;
             const createdAt = listing.created_at
