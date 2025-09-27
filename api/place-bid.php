@@ -49,7 +49,7 @@ try {
     // Get current auction details
     $auctionQuery = "
         SELECT 
-            id, title, current_bid, bid_increment, end_time, status, seller_id
+            id, title, current_price as current_bid, bid_increment, end_time, status, seller_id
         FROM auctions 
         WHERE id = :auction_id
     ";
@@ -131,10 +131,10 @@ try {
         'bid_amount' => $bidAmount
     ]);
 
-    // Update auction with new current bid and increment bid count
+    // Update auction with new current price and increment bid count
     $updateAuctionQuery = "
         UPDATE auctions 
-        SET current_bid = :bid_amount, 
+        SET current_price = :bid_amount, 
             bid_count = bid_count + 1,
             updated_at = NOW()
         WHERE id = :auction_id

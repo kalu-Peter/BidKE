@@ -125,7 +125,7 @@ try {
             SELECT 
                 w.auction_id,
                 a.title,
-                a.current_bid,
+                COALESCE(a.current_price, 0) as current_bid,
                 a.end_time,
                 a.status,
                 c.name as category_name

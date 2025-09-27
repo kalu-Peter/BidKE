@@ -18,7 +18,8 @@ if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
 }
 
 // Database connection
-function getDBConnection() {
+function getDBConnection()
+{
     try {
         $dsn = "pgsql:host=localhost;port=5054;dbname=bidlode";
         $connection = new PDO($dsn, 'postgres', 'webwiz', [
@@ -35,15 +36,15 @@ function getDBConnection() {
 
 try {
     $auctionId = $_GET['id'] ?? null;
-    
+
     if (!$auctionId) {
         http_response_code(400);
         echo json_encode(['success' => false, 'message' => 'Auction ID is required']);
         exit();
     }
-    
+
     $pdo = getDBConnection();
-    
+
     // Get detailed auction information
     $query = "
         SELECT 
@@ -71,17 +72,17 @@ try {
         LEFT JOIN electronics e ON a.id = e.auction_id
         WHERE a.id = :auction_id
     ";
-    
+
     $stmt = $pdo->prepare($query);
     $stmt->execute(['auction_id' => $auctionId]);
     $auction = $stmt->fetch();
-    
+
     if (!$auction) {
         http_response_code(404);
         echo json_encode(['success' => false, 'message' => 'Auction not found']);
         exit();
     }
-    
+
     // Format the response based on item type
     $response = [
         'id' => (int)$auction['id'],
@@ -113,7 +114,7 @@ try {
             'slug' => $auction['category_slug']
         ]
     ];
-    
+
     // Add item-specific details
     if ($auction['item_type'] === 'vehicle') {
         $response['vehicle_details'] = [
@@ -142,17 +143,17 @@ try {
             'location' => $auction['electronics_location']
         ];
     }
-    
+
     // Calculate auction duration
     $start = new DateTime($response['start_time']);
     $end = new DateTime($response['end_time']);
     $response['auction_duration'] = $start->diff($end)->days;
-    
+
     // TODO: Get actual images and documents
     $response['images'] = [];
     $response['documents'] = [];
     $response['verification_status'] = 'documents_uploaded';
-    
+
     // Get bidding history if auction is live
     if ($response['status'] === 'live') {
         $bidQuery = "
@@ -165,9 +166,9 @@ try {
         $bidStmt = $pdo->prepare($bidQuery);
         $bidStmt->execute(['auction_id' => $auctionId]);
         $bidStats = $bidStmt->fetch();
-        
+
         $response['bid_stats'] = $bidStats;
-        
+
         // Calculate time remaining
         $now = new DateTime();
         $endTime = new DateTime($response['end_time']);
@@ -184,15 +185,13 @@ try {
             $response['status'] = 'ended'; // Auto-update status if expired
         }
     }
-    
+
     echo json_encode([
         'success' => true,
         'data' => $response
     ]);
-    
 } catch (Exception $e) {
     error_log("Auction details error: " . $e->getMessage());
     http_response_code(500);
     echo json_encode(['success' => false, 'message' => 'Failed to fetch auction details']);
 }
-?>

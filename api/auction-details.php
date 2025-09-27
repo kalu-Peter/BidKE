@@ -35,6 +35,14 @@ try {
             exit();
         }
 
+        // Detect whether auctions table has view_count / bid_count columns
+        $colStmt = $db->prepare("SELECT column_name FROM information_schema.columns WHERE table_name = 'auctions' AND column_name IN ('view_count','bid_count')");
+        $colStmt->execute();
+        $existingCols = $colStmt->fetchAll(PDO::FETCH_COLUMN);
+
+        $viewSelect = in_array('view_count', $existingCols) ? 'a.view_count' : '0 AS view_count';
+        $bidSelect = in_array('bid_count', $existingCols) ? 'a.bid_count' : '0 AS bid_count';
+
         // Get auction details with seller and category info
         $query = "
             SELECT 
@@ -42,19 +50,19 @@ try {
                 a.title,
                 a.description,
                 a.starting_price,
-                a.current_bid,
+                COALESCE(a.current_price, 0) as current_bid,
                 a.reserve_price,
                 a.bid_increment,
                 a.start_time,
                 a.end_time,
                 a.status,
                 a.featured,
-                a.view_count,
-                a.bid_count,
+                {$viewSelect},
+                {$bidSelect},
                 a.created_at,
                 c.name as category_name,
                 c.name as category_slug,
-                COALESCE(u.full_name, u.fullname, u.username) as seller_name,
+                COALESCE(u.full_name, u.username) as seller_name,
                 u.email as seller_email,
                 u.phone as seller_phone
             FROM auctions a
@@ -76,17 +84,61 @@ try {
             exit();
         }
 
-        // Get images for the auction
-        $imageQuery = "SELECT file_path FROM auction_files WHERE auction_id = :auction_id AND file_type = 'image' ORDER BY id ASC";
-        $imageStmt = $db->prepare($imageQuery);
-        $imageStmt->execute([':auction_id' => $auctionId]);
-        $images = $imageStmt->fetchAll(PDO::FETCH_COLUMN);
+        // Load images/documents from auction_files or auction_images
+        $auction['images'] = [];
+        $auction['documents'] = [];
+        $auction['primary_image'] = null;
 
-        $auction['images'] = array_map(function ($path) {
-            return 'http://localhost:8000' . $path;
-        }, $images);
+        $tblStmt = $db->prepare("SELECT table_name FROM information_schema.tables WHERE table_name IN ('auction_files','auction_images','auction_documents')");
+        $tblStmt->execute();
+        $tbls = $tblStmt->fetchAll(PDO::FETCH_COLUMN);
 
-        // If no images, add default based on category
+        $useFiles = in_array('auction_files', $tbls);
+        $useImages = in_array('auction_images', $tbls) && !$useFiles;
+
+        if ($useFiles) {
+            $fstmt = $db->prepare("SELECT file_path, file_type FROM auction_files WHERE auction_id = :auction_id ORDER BY id ASC");
+            $fstmt->execute([':auction_id' => $auctionId]);
+            $rows = $fstmt->fetchAll(PDO::FETCH_ASSOC);
+            foreach ($rows as $r) {
+                $path = $r['file_path'] ?? '';
+                if (!$path) continue;
+                if (preg_match('#^https?://#i', $path)) {
+                    $url = $path;
+                } elseif (strpos($path, '/') === 0) {
+                    $url = 'http://localhost:8000' . $path;
+                } else {
+                    $url = 'http://localhost:8000/' . $path;
+                }
+                if (strtolower($r['file_type'] ?? '') === 'image') {
+                    $auction['images'][] = $url;
+                    if ($auction['primary_image'] === null) $auction['primary_image'] = $url;
+                } else {
+                    $auction['documents'][] = $url;
+                }
+            }
+        } elseif ($useImages) {
+            $istmt = $db->prepare("SELECT image_url, is_primary FROM auction_images WHERE auction_id = :auction_id AND is_active = TRUE ORDER BY sort_order ASC, is_primary DESC");
+            $istmt->execute([':auction_id' => $auctionId]);
+            $rows = $istmt->fetchAll(PDO::FETCH_ASSOC);
+            foreach ($rows as $r) {
+                $path = $r['image_url'] ?? '';
+                if (!$path) continue;
+                if (preg_match('#^https?://#i', $path)) {
+                    $url = $path;
+                } elseif (strpos($path, '/') === 0) {
+                    $url = 'http://localhost:8000' . $path;
+                } else {
+                    $url = 'http://localhost:8000/' . $path;
+                }
+                $auction['images'][] = $url;
+                if (!empty($r['is_primary']) && $auction['primary_image'] === null) {
+                    $auction['primary_image'] = $url;
+                }
+            }
+        }
+
+        // Fallback to category placeholder if no images
         if (empty($auction['images'])) {
             switch (strtolower($auction['category_name'])) {
                 case 'cars':
@@ -100,6 +152,15 @@ try {
                     break;
                 default:
                     $auction['images'] = ['/placeholder.svg'];
+            }
+            // Normalize placeholders to absolute if needed
+            $auction['images'] = array_map(function ($p) {
+                return preg_match('#^https?://#i', $p) ? $p : 'http://localhost:8000' . $p;
+            }, $auction['images']);
+        } else {
+            // ensure primary image set
+            if (empty($auction['primary_image'])) {
+                $auction['primary_image'] = $auction['images'][0];
             }
         }
 
@@ -139,10 +200,12 @@ try {
         $auction['view_count'] = (int)$auction['view_count'];
         $auction['bid_count'] = (int)$auction['bid_count'];
 
-        // Increment view count
-        $updateViewQuery = "UPDATE auctions SET view_count = view_count + 1 WHERE id = :auction_id";
-        $updateViewStmt = $db->prepare($updateViewQuery);
-        $updateViewStmt->execute([':auction_id' => $auctionId]);
+        // Increment view count if column exists
+        if (in_array('view_count', $existingCols)) {
+            $updateViewQuery = "UPDATE auctions SET view_count = view_count + 1 WHERE id = :auction_id";
+            $updateViewStmt = $db->prepare($updateViewQuery);
+            $updateViewStmt->execute([':auction_id' => $auctionId]);
+        }
 
         echo json_encode([
             'success' => true,
@@ -156,10 +219,13 @@ try {
         ]);
     }
 } catch (Exception $e) {
+    // Development: include error details in response and log for quick debugging
     error_log("Auction Details API Error: " . $e->getMessage());
+    file_put_contents(__DIR__ . '/logs/auction_details_error.log', date('c') . " - " . $e->getMessage() . "\n", FILE_APPEND);
     http_response_code(500);
     echo json_encode([
         'success' => false,
-        'message' => 'Internal server error: ' . $e->getMessage()
+        'message' => 'Internal server error: ' . $e->getMessage(),
+        'trace' => $e->getTraceAsString()
     ]);
 }
