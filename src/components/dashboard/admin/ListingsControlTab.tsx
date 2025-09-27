@@ -788,6 +788,193 @@ const ListingsControlTab: React.FC = () => {
         )}
 
         {/* Modals */}
+        {/* Details Modal */}
+        {selectedListing && (
+          <div
+            className={`fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50`}
+          >
+            <div className="bg-white rounded-lg p-6 w-full max-w-4xl overflow-auto">
+              <div className="flex items-start justify-between mb-4">
+                <div>
+                  <h3 className="text-xl font-semibold">
+                    {selectedListing.title}
+                  </h3>
+                  <p className="text-sm text-gray-600">
+                    {selectedListing.description}
+                  </p>
+                  <div className="text-sm text-gray-500 mt-2">
+                    <span className="mr-4">
+                      Seller: {selectedListing.seller_name || "N/A"}
+                    </span>
+                    <span>Email: {selectedListing.seller_email || "N/A"}</span>
+                  </div>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setSelectedListing(null)}
+                  >
+                    Close
+                  </Button>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div className="col-span-2">
+                  {/* Primary image */}
+                  <div className="w-full h-80 bg-gray-100 rounded overflow-hidden mb-4">
+                    {selectedListing.primary_image ? (
+                      <img
+                        src={
+                          selectedListing.primary_image.startsWith("http") ||
+                          selectedListing.primary_image.startsWith("/")
+                            ? selectedListing.primary_image
+                            : `http://localhost:8000/${selectedListing.primary_image}`
+                        }
+                        alt={selectedListing.title}
+                        className="object-cover w-full h-full"
+                      />
+                    ) : (
+                      <div className="flex items-center justify-center h-full">
+                        <ImageIcon className="w-12 h-12 text-gray-400" />
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Thumbnails */}
+                  <div className="flex items-center space-x-2 overflow-x-auto">
+                    {(Array.isArray(selectedListing.images)
+                      ? selectedListing.images
+                      : []
+                    ).map((img, idx) => (
+                      <div
+                        key={idx}
+                        className="w-24 h-16 rounded overflow-hidden bg-gray-50 flex-shrink-0"
+                      >
+                        <img
+                          src={
+                            img.startsWith("http") || img.startsWith("/")
+                              ? img
+                              : `http://localhost:8000/${img}`
+                          }
+                          alt={`thumb-${idx}`}
+                          className="object-cover w-full h-full"
+                        />
+                      </div>
+                    ))}
+                    {Array.isArray(selectedListing.documents) &&
+                      selectedListing.documents.length > 0 && (
+                        <div className="ml-4 text-sm text-gray-600">
+                          {selectedListing.documents.length} documents attached
+                        </div>
+                      )}
+                  </div>
+                </div>
+
+                <aside className="col-span-1">
+                  <div className="mb-4 p-4 bg-gray-50 rounded">
+                    <p className="text-sm text-gray-500">Category</p>
+                    <p className="font-medium">
+                      {selectedListing.category_name}
+                    </p>
+                  </div>
+
+                  <div className="mb-4 p-4 bg-gray-50 rounded">
+                    <p className="text-sm text-gray-500">Make / Model</p>
+                    <p className="font-medium">
+                      {selectedListing.item_make || selectedListing.item_model
+                        ? `${selectedListing.item_make || ""} ${
+                            selectedListing.item_model ||
+                            selectedListing.model ||
+                            ""
+                          }`.trim()
+                        : "N/A"}
+                    </p>
+                    <p className="text-sm text-gray-500 mt-2">
+                      Condition:{" "}
+                      <span className="font-medium">
+                        {selectedListing.item_condition || "N/A"}
+                      </span>
+                    </p>
+                  </div>
+
+                  <div className="mb-4 p-4 bg-gray-50 rounded">
+                    <p className="text-sm text-gray-500">Times</p>
+                    <p className="font-medium">
+                      Starts:{" "}
+                      {new Date(selectedListing.start_time).toLocaleString()}
+                    </p>
+                    <p className="font-medium">
+                      Ends:{" "}
+                      {new Date(selectedListing.end_time).toLocaleString()}
+                    </p>
+                  </div>
+
+                  <div className="mb-4 p-4 bg-gray-50 rounded">
+                    <p className="text-sm text-gray-500">Pricing</p>
+                    <p className="font-medium">
+                      Starting: Ksh{" "}
+                      {selectedListing.starting_price.toLocaleString()}
+                    </p>
+                    <p className="font-medium">
+                      Reserve:{" "}
+                      {selectedListing.reserve_price
+                        ? `Ksh ${selectedListing.reserve_price.toLocaleString()}`
+                        : "None"}
+                    </p>
+                  </div>
+
+                  {/* Action buttons in aside */}
+                  <div className="flex flex-col space-y-2">
+                    {(selectedListing.status === "draft" ||
+                      selectedListing.status === "pending" ||
+                      selectedListing.status === "pending_review") && (
+                      <>
+                        <Button
+                          onClick={() => {
+                            handleApproveListing(selectedListing.id);
+                            setSelectedListing(null);
+                          }}
+                        >
+                          Approve
+                        </Button>
+                        <Button
+                          variant="outline"
+                          onClick={() => {
+                            setShowRequestInfoModal(true);
+                          }}
+                        >
+                          Request Info
+                        </Button>
+                        <Button
+                          variant="destructive"
+                          onClick={() => {
+                            setShowRejectModal(true);
+                          }}
+                        >
+                          Reject
+                        </Button>
+                      </>
+                    )}
+
+                    {selectedListing.status === "approved" && (
+                      <Button
+                        onClick={() => {
+                          handleMakeLive(selectedListing.id);
+                          setSelectedListing(null);
+                        }}
+                        className="bg-purple-600 hover:bg-purple-700"
+                      >
+                        Make Live
+                      </Button>
+                    )}
+                  </div>
+                </aside>
+              </div>
+            </div>
+          </div>
+        )}
         {showRejectModal && selectedListing && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
             <div className="bg-white rounded-lg p-6 w-full max-w-md">
