@@ -8,7 +8,7 @@ ini_set('display_startup_errors', 0);
 ini_set('log_errors', 1);
 
 // Register shutdown function to catch fatal errors
-register_shutdown_function(function() {
+register_shutdown_function(function () {
     $error = error_get_last();
     if ($error && in_array($error['type'], [E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR])) {
         http_response_code(500);
@@ -22,7 +22,7 @@ register_shutdown_function(function() {
 });
 
 // Basic headers with dynamic CORS
-$origin = $_SERVER['HTTP_ORIGIN'] ?? 'http://localhost:8081';
+$origin = $_SERVER['HTTP_ORIGIN'] ?? 'http://localhost:8080';
 header("Access-Control-Allow-Origin: $origin");
 header('Access-Control-Allow-Methods: POST, OPTIONS');
 header('Access-Control-Allow-Headers: Content-Type, Authorization');
@@ -41,8 +41,7 @@ try {
     require_once '../models/Auction.php';
     require_once '../models/Vehicle.php';
     require_once '../models/Electronics.php';
-    // Skip Auth for now to avoid authentication issues
-    // require_once '../models/Auth.php';
+    require_once '../models/Auth.php';
 } catch (Exception $e) {
     http_response_code(500);
     echo json_encode(['success' => false, 'error' => 'Server configuration error: ' . $e->getMessage()]);
@@ -55,7 +54,16 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 }
 
 // Get JSON input
-$json = file_get_contents('php://input');
+$json = null;
+// If a debug payload is provided via environment (used by CLI runner), use it
+$cliPayload = getenv('__CLI_PAYLOAD');
+if (!empty($cliPayload)) {
+    $decoded = base64_decode($cliPayload);
+    $json = $decoded !== false ? $decoded : null;
+} else {
+    $json = file_get_contents('php://input');
+}
+
 $data = json_decode($json, true);
 
 if (!$data) {
@@ -106,8 +114,22 @@ if (!empty($missing_fields)) {
 }
 
 try {
-    // For now, use a dummy seller ID since we skipped auth
-    $seller_id = 1; // You would get this from Auth::verifyToken($token)['user_id'];
+    // Require authentication (allow CLI debug override)
+    $seller_id = null;
+    $cliUser = getenv('__CLI_USER');
+    if (!empty($cliUser)) {
+        $decodedUser = json_decode(base64_decode($cliUser), true);
+        if (!empty($decodedUser['user_id'])) {
+            $seller_id = $decodedUser['user_id'];
+        }
+    }
+
+    if ($seller_id === null) {
+        $user = Auth::requireAuth();
+        $seller_id = $user['user_id'];
+    }
+
+    error_log("Auction creation: authenticated user_id = $seller_id");
 
     // Use shared Database connection for consistency
     $dbInstance = Database::getInstance();
@@ -115,17 +137,18 @@ try {
 
     // Start transaction
     $connection->beginTransaction();
+    error_log("Auction creation: transaction started");
 
     // Get category ID
     $category_query = "SELECT id FROM categories WHERE (slug = ? OR name = ?) AND is_active = true LIMIT 1";
     $category_stmt = $connection->prepare($category_query);
-    
+
     if ($data['itemType'] === 'vehicle') {
         $category_stmt->execute(['cars', 'Cars']);
     } else {
         $category_stmt->execute(['electronics', 'Electronics']);
     }
-    
+
     $category_result = $category_stmt->fetch();
     if (!$category_result) {
         throw new Exception('Category not found for item type: ' . $data['itemType']);
@@ -136,52 +159,54 @@ try {
     $start_datetime = $data['auctionStartDate'] . ' ' . $data['auctionStartTime'];
     $end_datetime = $data['auctionEndDate'] . ' ' . $data['auctionEndTime'];
 
-        // Determine status: allow caller to specify 'draft' or 'pending' (submit for review)
-        $allowed_statuses = ['draft', 'pending', 'approved', 'active', 'ended', 'cancelled'];
-        $status = 'draft';
-        if (!empty($data['status']) && in_array($data['status'], $allowed_statuses)) {
-            $status = $data['status'];
-        }
+    // Determine status: allow caller to specify 'draft' or 'pending' (submit for review)
+    $allowed_statuses = ['draft', 'pending', 'approved', 'active', 'ended', 'cancelled'];
+    $status = 'draft';
+    if (!empty($data['status']) && in_array($data['status'], $allowed_statuses)) {
+        $status = $data['status'];
+    }
 
-        // Create auction directly
-        $auction_query = "INSERT INTO auctions (seller_id, category_id, title, description, starting_price, reserve_price, bid_increment, start_time, end_time, status) 
+    // Create auction directly
+    $auction_query = "INSERT INTO auctions (seller_id, category_id, title, description, starting_price, reserve_price, bid_increment, start_time, end_time, status) 
                           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id";
-    
-        $auction_stmt = $connection->prepare($auction_query);
-        if (!$auction_stmt->execute([
-            $seller_id,
-            $category_id,
-            trim($data['title']),
-            trim($data['description']),
-            floatval($data['startingPrice']),
-            !empty($data['reservePrice']) ? floatval($data['reservePrice']) : null,
-            1000, // Default bid increment
-            $start_datetime,
-            $end_datetime,
-            $status
-        ])) {
-            $err = $auction_stmt->errorInfo();
-            throw new Exception('Auction insert failed: ' . json_encode($err));
-        }
 
-        // Fetch returned ID (RETURNING id)
-        $auction_result = $auction_stmt->fetch(PDO::FETCH_ASSOC);
-        if ($auction_result && isset($auction_result['id'])) {
-            $auction_id = $auction_result['id'];
-        } else {
-            // Fallback to lastInsertId
-            $auction_id = $connection->lastInsertId() ?: null;
-        }
+    $auction_stmt = $connection->prepare($auction_query);
+    if (!$auction_stmt->execute([
+        $seller_id,
+        $category_id,
+        trim($data['title']),
+        trim($data['description']),
+        floatval($data['startingPrice']),
+        !empty($data['reservePrice']) ? floatval($data['reservePrice']) : null,
+        1000, // Default bid increment
+        $start_datetime,
+        $end_datetime,
+        $status
+    ])) {
+        $err = $auction_stmt->errorInfo();
+        throw new Exception('Auction insert failed: ' . json_encode($err));
+    }
 
-        if (empty($auction_id)) {
-            throw new Exception('Failed to obtain auction ID after insert');
-        }
+    // Fetch returned ID (RETURNING id)
+    $auction_result = $auction_stmt->fetch(PDO::FETCH_ASSOC);
+    if ($auction_result && isset($auction_result['id'])) {
+        $auction_id = $auction_result['id'];
+    } else {
+        // Fallback to lastInsertId
+        $auction_id = $connection->lastInsertId() ?: null;
+    }
+
+    if (empty($auction_id)) {
+        throw new Exception('Failed to obtain auction ID after insert');
+    }
+
+    error_log("Auction creation: inserted auction with id = $auction_id");
 
     // Create item-specific record
     if ($data['itemType'] === 'vehicle') {
         $vehicle_query = "INSERT INTO vehicles (auction_id, vehicle_type, make, model, year, mileage, condition, registration_number, engine_capacity, fuel_type, transmission, color, location) 
                           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
-        
+
         $vehicle_stmt = $connection->prepare($vehicle_query);
         $vehicle_stmt->execute([
             $auction_id,
@@ -198,15 +223,16 @@ try {
             $data['color'] ?? null,
             $data['location'] ?? null
         ]);
+        error_log("Auction creation: inserted vehicle record for auction $auction_id");
     } else {
         $specs = ['year' => $data['electronicsYear']];
         if (!empty($data['specifications'])) {
             $specs['specifications'] = $data['specifications'];
         }
-        
+
         $electronics_query = "INSERT INTO electronics (auction_id, category, brand, model, condition, specs, serial_number, warranty, location) 
                               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
-        
+
         $electronics_stmt = $connection->prepare($electronics_query);
         $electronics_stmt->execute([
             $auction_id,
@@ -219,6 +245,7 @@ try {
             !empty($data['warranty']) ? 't' : 'f',
             $data['location'] ?? null
         ]);
+        error_log("Auction creation: inserted electronics record for auction $auction_id");
     }
 
     // Handle images if provided
@@ -251,6 +278,8 @@ try {
         }
     }
 
+    error_log("Auction creation: processed images for auction $auction_id");
+
     // Prepare response
     $response_data = [
         'auction_id' => $auction_id,
@@ -264,8 +293,12 @@ try {
         'files_inserted' => isset($file_stmt) ? count($data['images']) : 0
     ];
 
+    error_log("Auction creation: committing transaction for auction $auction_id");
+    // Commit transaction so inserts persist
+    if (isset($connection) && $connection->inTransaction()) {
+        $connection->commit();
+    }
     sendSuccess($response_data, 'Auction created successfully and saved to database');
-
 } catch (Exception $e) {
     // Rollback transaction on error
     if (isset($connection) && $connection->inTransaction()) {
@@ -278,4 +311,3 @@ try {
     error_log("Auction creation error: " . $e->getMessage());
     sendError('Failed to create auction: ' . $e->getMessage(), 500);
 }
-?>

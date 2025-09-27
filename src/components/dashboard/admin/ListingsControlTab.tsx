@@ -281,6 +281,8 @@ const ListingsControlTab: React.FC = () => {
   };
 
   const handleMakeLive = async (listingId: number) => {
+    const proceed = window.confirm('Are you sure you want to make this auction live now? This will set the start time to now and make the auction available for bidding.');
+    if (!proceed) return;
     const success = await updateAuctionStatus(listingId, 'make_live');
     if (success) {
       console.log("Auction is now live");

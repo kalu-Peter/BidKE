@@ -17,10 +17,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     exit(0);
 }
 
-require_once 'config/database.php';
+require_once 'config/connect.php';
 
 try {
-    $database = new Database();
+    $database = Database::getInstance();
     $db = $database->getConnection();
 
     if ($_SERVER['REQUEST_METHOD'] === 'GET') {
@@ -67,19 +67,33 @@ try {
             $params[':category'] = $category;
         }
 
-        // Add price filters
+        // Add price filters (use current_price column present in DB)
         if ($min_price !== null) {
-            $conditions[] = "a.current_bid >= :min_price";
+            $conditions[] = "a.current_price >= :min_price";
             $params[':min_price'] = $min_price;
         }
         if ($max_price !== null) {
-            $conditions[] = "a.current_bid <= :max_price";
+            $conditions[] = "a.current_price <= :max_price";
             $params[':max_price'] = $max_price;
         }
 
         // Combine conditions
         if (!empty($conditions)) {
             $baseQuery .= " AND " . implode(" AND ", $conditions);
+        }
+
+        // Detect whether auctions table has view_count / bid_count / total_bids columns
+        $colStmt = $db->prepare("SELECT column_name FROM information_schema.columns WHERE table_name = 'auctions' AND column_name IN ('view_count','bid_count','total_bids')");
+        $colStmt->execute();
+        $existingCols = $colStmt->fetchAll(PDO::FETCH_COLUMN);
+
+        $viewSelect = in_array('view_count', $existingCols) ? 'a.view_count' : '0 AS view_count';
+        if (in_array('bid_count', $existingCols)) {
+            $bidSelect = 'a.bid_count';
+        } elseif (in_array('total_bids', $existingCols)) {
+            $bidSelect = 'a.total_bids AS bid_count';
+        } else {
+            $bidSelect = '0 AS bid_count';
         }
 
         // Count total records
@@ -95,17 +109,17 @@ try {
                 a.title,
                 a.description,
                 a.starting_price,
-                a.current_bid,
+                a.current_price,
                 a.reserve_price,
                 a.start_time,
                 a.end_time,
                 a.status,
                 a.featured,
-                a.view_count,
-                a.bid_count,
+                " . $viewSelect . ",
+                " . $bidSelect . ",
                 c.name as category_name,
                 c.name as category_slug,
-                COALESCE(u.full_name, u.fullname, u.username) as seller_name,
+                COALESCE(u.full_name, u.username) as seller_name,
                 u.email as seller_email
             " . $baseQuery . "
             ORDER BY a.featured DESC, a.created_at DESC
@@ -113,36 +127,56 @@ try {
         ";
 
         $stmt = $db->prepare($query);
-        
+
         // Bind pagination parameters
         $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
         $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
-        
+
         // Bind other parameters
         foreach ($params as $key => $value) {
             $stmt->bindValue($key, $value);
         }
-        
+
         $stmt->execute();
         $auctions = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
+        // Determine image table/column available
+        $tablesStmt = $db->prepare("SELECT table_name FROM information_schema.tables WHERE table_name IN ('auction_files','auction_images')");
+        $tablesStmt->execute();
+        $tables = $tablesStmt->fetchAll(PDO::FETCH_COLUMN);
+
+        $useAuctionFiles = in_array('auction_files', $tables);
+        $useAuctionImages = in_array('auction_images', $tables) && !$useAuctionFiles;
+
         // Get images for each auction
         foreach ($auctions as &$auction) {
-            $imageQuery = "SELECT file_path FROM auction_files WHERE auction_id = :auction_id AND file_type = 'image' ORDER BY id ASC";
-            $imageStmt = $db->prepare($imageQuery);
-            $imageStmt->execute([':auction_id' => $auction['id']]);
-            $images = $imageStmt->fetchAll(PDO::FETCH_COLUMN);
-            
+            if ($useAuctionFiles) {
+                $imageQuery = "SELECT file_path FROM auction_files WHERE auction_id = :auction_id AND file_type = 'image' ORDER BY id ASC";
+            } elseif ($useAuctionImages) {
+                // auction_images uses image_url and has is_active/sort_order
+                $imageQuery = "SELECT image_url as file_path FROM auction_images WHERE auction_id = :auction_id AND is_active = TRUE ORDER BY sort_order ASC, is_primary DESC";
+            } else {
+                $imageQuery = null;
+            }
+
+            $images = [];
+            if ($imageQuery) {
+                $imageStmt = $db->prepare($imageQuery);
+                $imageStmt->execute([':auction_id' => $auction['id']]);
+                $images = $imageStmt->fetchAll(PDO::FETCH_COLUMN);
+            }
+
             $auction['images'] = $images;
-            
+
             // Convert numeric fields
             $auction['id'] = (int)$auction['id'];
             $auction['starting_price'] = (float)$auction['starting_price'];
-            $auction['current_bid'] = (float)$auction['current_bid'];
+            // current_price exists in DB schema
+            $auction['current_price'] = isset($auction['current_price']) ? (float)$auction['current_price'] : null;
             $auction['reserve_price'] = $auction['reserve_price'] ? (float)$auction['reserve_price'] : null;
             $auction['featured'] = (bool)$auction['featured'];
-            $auction['view_count'] = (int)$auction['view_count'];
-            $auction['bid_count'] = (int)$auction['bid_count'];
+            $auction['view_count'] = isset($auction['view_count']) ? (int)$auction['view_count'] : 0;
+            $auction['bid_count'] = isset($auction['bid_count']) ? (int)$auction['bid_count'] : 0;
         }
 
         // Calculate pagination info
@@ -158,7 +192,6 @@ try {
                 'pages' => (int)$totalPages
             ]
         ]);
-
     } else {
         http_response_code(405);
         echo json_encode([
@@ -166,7 +199,6 @@ try {
             'message' => 'Method not allowed'
         ]);
     }
-
 } catch (Exception $e) {
     error_log("Auctions API Error: " . $e->getMessage());
     http_response_code(500);
@@ -175,4 +207,3 @@ try {
         'message' => 'Internal server error: ' . $e->getMessage()
     ]);
 }
-?>

@@ -120,22 +120,55 @@ class ApiService {
         credentials: 'include'
       });
 
-      const data = await response.json();
+      const contentType = response.headers.get('content-type') || '';
+      let data: any = null;
 
-      if (!response.ok) {
-        // Return the server payload so callers can access structured details
-        // (e.g., validation errors returned in `details`)
-        console.error('API Error response:', data);
-        return data;
+      if (contentType.includes('application/json')) {
+        // Read raw text once, then parse JSON to avoid double-reading the body stream
+        const raw = await response.text();
+        try {
+          data = JSON.parse(raw);
+        } catch (jsonErr) {
+          console.error('Failed to parse JSON response', { url, raw, jsonErr });
+          return {
+            success: false,
+            error: 'Invalid JSON response from server',
+            raw
+          } as ApiResponse;
+        }
+      } else {
+        // Non-JSON response (likely HTML error page). Capture raw text for debugging.
+        const raw = await response.text();
+        // Try to parse JSON in case server mis-set content-type
+        try {
+          data = JSON.parse(raw);
+        } catch (_) {
+          data = null;
+        }
+
+        if (data === null) {
+          console.error('Non-JSON response from API', { url, status: response.status, raw });
+          return {
+            success: false,
+            error: `Non-JSON response from server (HTTP ${response.status})`,
+            raw
+          } as ApiResponse;
+        }
       }
 
-      return data;
+      if (!response.ok) {
+        // Normalize error shape
+        console.error('API Error response:', data);
+        return Object.assign({ success: false, error: data?.error || data?.message || `HTTP ${response.status}` }, data || {});
+      }
+
+      return data as ApiResponse<T>;
     } catch (error) {
       console.error('API Request failed:', error);
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Request failed'
-      };
+      } as ApiResponse;
     }
   }
 
@@ -247,7 +280,7 @@ class ApiService {
       }
     });
 
-    return this.makeRequest(`/auctions/list.php?${queryParams.toString()}`);
+    return this.makeRequest(`/auctions/create.php?${queryParams.toString()}`);
   }
 
   async getAuction(id: number): Promise<ApiResponse<Auction>> {
@@ -274,18 +307,18 @@ class ApiService {
    */
 
   async getWatchlist(): Promise<ApiResponse<{ auction_id: number }[]>> {
-    return this.makeRequest('/auctions/watchlist.php');
+    return this.makeRequest('/watchlist.php');
   }
 
   async addToWatchlist(auctionId: number): Promise<ApiResponse> {
-    return this.makeRequest('/auctions/watchlist.php', {
+    return this.makeRequest('/watchlist.php', {
       method: 'POST',
       body: JSON.stringify({ auction_id: auctionId, action: 'add' })
     });
   }
 
   async removeFromWatchlist(auctionId: number): Promise<ApiResponse> {
-    return this.makeRequest('/auctions/watchlist.php', {
+    return this.makeRequest('watchlist.php', {
       method: 'POST',
       body: JSON.stringify({ auction_id: auctionId, action: 'remove' })
     });
@@ -533,7 +566,8 @@ class ApiService {
       limit: (params.limit || 10).toString()
     });
 
-    return this.makeRequest(`/seller-auctions.php?${queryParams.toString()}`);
+  // seller-auctions endpoint lives under /auctions on the API server
+  return this.makeRequest(`/auctions/seller-auctions.php?${queryParams.toString()}`);
   }
 
   async updateAuction(auctionId: number, data: any): Promise<ApiResponse> {

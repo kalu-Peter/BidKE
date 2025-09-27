@@ -17,10 +17,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     exit(0);
 }
 
-require_once 'config/database.php';
+require_once 'config/connect.php';
 
 try {
-    $database = new Database();
+    $database = Database::getInstance();
     $db = $database->getConnection();
 
     $input = json_decode(file_get_contents('php://input'), true);
@@ -75,7 +75,6 @@ try {
                 'message' => 'Failed to add to watchlist'
             ]);
         }
-
     } elseif ($_SERVER['REQUEST_METHOD'] === 'DELETE') {
         // Remove from watchlist
         $user_id = $input['user_id'] ?? null;
@@ -109,7 +108,6 @@ try {
                 'message' => 'Failed to remove from watchlist'
             ]);
         }
-
     } elseif ($_SERVER['REQUEST_METHOD'] === 'GET') {
         // Get user's watchlist
         $user_id = $_GET['user_id'] ?? null;
@@ -146,7 +144,6 @@ try {
             'success' => true,
             'data' => $watchlist
         ]);
-
     } else {
         http_response_code(405);
         echo json_encode([
@@ -154,7 +151,6 @@ try {
             'message' => 'Method not allowed'
         ]);
     }
-
 } catch (Exception $e) {
     error_log("Watchlist API Error: " . $e->getMessage());
     http_response_code(500);
@@ -163,4 +159,3 @@ try {
         'message' => 'Internal server error: ' . $e->getMessage()
     ]);
 }
-?>

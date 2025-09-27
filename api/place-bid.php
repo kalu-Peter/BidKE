@@ -17,7 +17,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     exit(0);
 }
 
-require_once 'config/database.php';
+require_once 'config/connect.php';
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     http_response_code(405);
@@ -26,26 +26,26 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 }
 
 try {
-    $database = new Database();
+    $database = Database::getInstance();
     $db = $database->getConnection();
-    
+
     $input = json_decode(file_get_contents('php://input'), true);
-    
+
     $auctionId = $input['auction_id'] ?? null;
     $bidAmount = $input['bid_amount'] ?? null;
     $userId = $input['user_id'] ?? null;
-    
+
     if (!$auctionId || !$bidAmount || !$userId) {
         http_response_code(400);
         echo json_encode(['success' => false, 'message' => 'Missing required fields']);
         exit();
     }
-    
+
     $bidAmount = (float)$bidAmount;
-    
+
     // Start transaction
     $db->beginTransaction();
-    
+
     // Get current auction details
     $auctionQuery = "
         SELECT 
@@ -56,25 +56,25 @@ try {
     $auctionStmt = $db->prepare($auctionQuery);
     $auctionStmt->execute(['auction_id' => $auctionId]);
     $auction = $auctionStmt->fetch(PDO::FETCH_ASSOC);
-    
+
     if (!$auction) {
         $db->rollBack();
         http_response_code(404);
         echo json_encode(['success' => false, 'message' => 'Auction not found']);
         exit();
     }
-    
+
     // Check if auction is still active
     $now = new DateTime();
     $endTime = new DateTime($auction['end_time']);
-    
+
     if ($now >= $endTime) {
         $db->rollBack();
         http_response_code(400);
         echo json_encode(['success' => false, 'message' => 'Auction has ended']);
         exit();
     }
-    
+
     // Check if auction is live
     if ($auction['status'] !== 'live' && $auction['status'] !== 'approved') {
         $db->rollBack();
@@ -82,7 +82,7 @@ try {
         echo json_encode(['success' => false, 'message' => 'Auction is not currently active']);
         exit();
     }
-    
+
     // Check if user is not the seller
     if ($auction['seller_id'] == $userId) {
         $db->rollBack();
@@ -90,20 +90,20 @@ try {
         echo json_encode(['success' => false, 'message' => 'You cannot bid on your own auction']);
         exit();
     }
-    
+
     // Check minimum bid amount
     $minimumBid = $auction['current_bid'] + ($auction['bid_increment'] ?: 1000);
-    
+
     if ($bidAmount < $minimumBid) {
         $db->rollBack();
         http_response_code(400);
         echo json_encode([
-            'success' => false, 
+            'success' => false,
             'message' => "Bid must be at least KES " . number_format($minimumBid)
         ]);
         exit();
     }
-    
+
     // Create bids table if it doesn't exist
     $createBidsTable = "
         CREATE TABLE IF NOT EXISTS bids (
@@ -118,7 +118,7 @@ try {
         )
     ";
     $db->exec($createBidsTable);
-    
+
     // Insert new bid
     $bidQuery = "
         INSERT INTO bids (auction_id, user_id, bid_amount, bid_time, status)
@@ -130,7 +130,7 @@ try {
         'user_id' => $userId,
         'bid_amount' => $bidAmount
     ]);
-    
+
     // Update auction with new current bid and increment bid count
     $updateAuctionQuery = "
         UPDATE auctions 
@@ -144,7 +144,7 @@ try {
         'bid_amount' => $bidAmount,
         'auction_id' => $auctionId
     ]);
-    
+
     // Mark previous bids as outbid
     $outbidQuery = "
         UPDATE bids 
@@ -158,9 +158,9 @@ try {
         'auction_id' => $auctionId,
         'user_id' => $userId
     ]);
-    
+
     $db->commit();
-    
+
     echo json_encode([
         'success' => true,
         'message' => 'Bid placed successfully',
@@ -171,7 +171,6 @@ try {
             'bid_count' => $auction['bid_count'] + 1
         ]
     ]);
-    
 } catch (Exception $e) {
     if ($db->inTransaction()) {
         $db->rollBack();
@@ -183,4 +182,3 @@ try {
         'message' => 'Failed to place bid: ' . $e->getMessage()
     ]);
 }
-?>

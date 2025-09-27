@@ -2,14 +2,24 @@
 // Admin approve listing endpoint
 
 error_reporting(E_ALL);
-ini_set('display_errors', 1);
-ini_set('display_startup_errors', 1);
+// Do not display raw PHP errors; rely on centralized JSON error handler included via connect.php
+ini_set('display_errors', 0);
+ini_set('display_startup_errors', 0);
 
-// CORS headers
-header('Access-Control-Allow-Origin: *');
+// CORS headers - mirror allowed origins and support credentials
+header('Content-Type: application/json');
+$allowed_origins = ['http://localhost:3000', 'http://localhost:3001', 'http://localhost:8080', 'http://localhost:8081', 'http://localhost:8082'];
+$origin = $_SERVER['HTTP_ORIGIN'] ?? '';
+if (in_array($origin, $allowed_origins)) {
+    header('Access-Control-Allow-Origin: ' . $origin);
+    header('Vary: Origin');
+} else {
+    // Optionally you can set a default allowed origin for dev, or leave unset to block
+    // header('Access-Control-Allow-Origin: http://localhost:8080');
+}
 header('Access-Control-Allow-Methods: POST, OPTIONS');
 header('Access-Control-Allow-Headers: Content-Type, Authorization');
-header('Content-Type: application/json');
+header('Access-Control-Allow-Credentials: true');
 
 // Handle preflight
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
@@ -24,7 +34,8 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     exit;
 }
 
-function sendError($message, $code = 400) {
+function sendError($message, $code = 400)
+{
     http_response_code($code);
     echo json_encode(['success' => false, 'error' => $message]);
     exit;
@@ -116,7 +127,6 @@ try {
             'approved_at' => date('Y-m-d H:i:s')
         ]
     ]);
-
 } catch (PDOException $e) {
     if (isset($pdo)) {
         $pdo->rollBack();
@@ -130,4 +140,3 @@ try {
     error_log("General error in approve listing: " . $e->getMessage());
     sendError('An error occurred while approving the listing', 500);
 }
-?>

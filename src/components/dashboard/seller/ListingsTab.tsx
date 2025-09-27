@@ -2,7 +2,17 @@ import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { FileText, Eye, Edit, Trash2, CheckCircle, Clock, XCircle, Plus, Upload } from "lucide-react";
+import {
+  FileText,
+  Eye,
+  Edit,
+  Trash2,
+  CheckCircle,
+  Clock,
+  XCircle,
+  Plus,
+  Upload,
+} from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { apiService } from "@/services/api";
 import { Auction } from "../../../services/api";
@@ -15,7 +25,7 @@ const ListingsTab: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
-  const [statusFilter, setStatusFilter] = useState('all');
+  const [statusFilter, setStatusFilter] = useState("all");
 
   // Fetch seller's listings
   useEffect(() => {
@@ -34,18 +44,20 @@ const ListingsTab: React.FC = () => {
           sellerId: user.id,
           status: statusFilter,
           page: currentPage,
-          limit: 10
+          limit: 10,
         });
 
         if (response.success && response.data) {
           setListings(response.data.auctions || []);
           setTotalPages(response.data.pagination?.pages || 1);
         } else {
-          throw new Error(response.error || 'Failed to fetch listings');
+          throw new Error(response.error || "Failed to fetch listings");
         }
       } catch (err) {
-        console.error('Error fetching listings:', err);
-        setError(err instanceof Error ? err.message : 'Failed to load listings');
+        console.error("Error fetching listings:", err);
+        setError(
+          err instanceof Error ? err.message : "Failed to load listings"
+        );
       } finally {
         setLoading(false);
       }
@@ -62,11 +74,31 @@ const ListingsTab: React.FC = () => {
 
   const getStatusBadge = (status: string) => {
     const configs = {
-      live: { label: "Live", color: "bg-green-100 text-green-800", icon: <CheckCircle className="w-3 h-3" /> },
-      approved: { label: "Approved", color: "bg-blue-100 text-blue-800", icon: <CheckCircle className="w-3 h-3" /> },
-      pending: { label: "Pending Review", color: "bg-yellow-100 text-yellow-800", icon: <Clock className="w-3 h-3" /> },
-      ended: { label: "Ended", color: "bg-gray-100 text-gray-800", icon: <XCircle className="w-3 h-3" /> },
-      sold: { label: "Sold", color: "bg-purple-100 text-purple-800", icon: <CheckCircle className="w-3 h-3" /> }
+      live: {
+        label: "Live",
+        color: "bg-green-100 text-green-800",
+        icon: <CheckCircle className="w-3 h-3" />,
+      },
+      approved: {
+        label: "Approved",
+        color: "bg-blue-100 text-blue-800",
+        icon: <CheckCircle className="w-3 h-3" />,
+      },
+      pending: {
+        label: "Pending Review",
+        color: "bg-yellow-100 text-yellow-800",
+        icon: <Clock className="w-3 h-3" />,
+      },
+      ended: {
+        label: "Ended",
+        color: "bg-gray-100 text-gray-800",
+        icon: <XCircle className="w-3 h-3" />,
+      },
+      sold: {
+        label: "Sold",
+        color: "bg-purple-100 text-purple-800",
+        icon: <CheckCircle className="w-3 h-3" />,
+      },
     };
     return configs[status as keyof typeof configs] || configs.ended;
   };
@@ -89,7 +121,7 @@ const ListingsTab: React.FC = () => {
 
   const handleViewListing = (id: number) => {
     // Navigate to auction details page
-    window.open(`/auction/${id}`, '_blank');
+    window.open(`/auction/${id}`, "_blank");
   };
 
   const handleEditListing = (id: number) => {
@@ -137,9 +169,7 @@ const ListingsTab: React.FC = () => {
           <div className="text-center">
             <XCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
             <p className="text-red-600 mb-4">{error}</p>
-            <Button onClick={() => window.location.reload()}>
-              Try Again
-            </Button>
+            <Button onClick={() => window.location.reload()}>Try Again</Button>
           </div>
         </CardContent>
       </Card>
@@ -157,125 +187,178 @@ const ListingsTab: React.FC = () => {
           <p className="text-sm text-gray-600">
             Manage your auction items and track their performance
           </p>
-          <Badge variant="outline">
-            {listings.length} Total Listings
-          </Badge>
+          <Badge variant="outline">{listings.length} Total Listings</Badge>
         </div>
 
         {/* Status Filter */}
         <div className="flex space-x-2 mt-4">
-          {['all', 'live', 'approved', 'pending', 'ended', 'sold'].map((status) => (
-            <Button
-              key={status}
-              variant={statusFilter === status ? "default" : "outline"}
-              size="sm"
-              onClick={() => handleStatusFilter(status)}
-            >
-              {status === 'all' ? 'All' : status.charAt(0).toUpperCase() + status.slice(1)}
-            </Button>
-          ))}
+          {(() => {
+            const statuses = [
+              "all",
+              "live",
+              "approved",
+              "pending",
+              "ended",
+              "sold",
+            ];
+            return statuses.map((status) => {
+              return (
+                <Button
+                  key={status}
+                  variant={statusFilter === status ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => handleStatusFilter(status)}
+                >
+                  {status === "all"
+                    ? "All"
+                    : status.charAt(0).toUpperCase() + status.slice(1)}
+                </Button>
+              );
+            });
+          })()}
         </div>
       </CardHeader>
       <CardContent>
         <div className="grid gap-6">
-          {listings.map((listing) => (
-            <div key={listing.id} className="flex items-center space-x-4 p-4 border rounded-lg hover:shadow-md transition-shadow">
-              <img
-                src={listing.images[0]?.image_url || listing.images[0]?.image_path || '/placeholder.svg'}
-                alt={listing.title}
-                className="w-20 h-20 object-cover rounded"
-                onError={(e) => {
-                  const target = e.target as HTMLImageElement;
-                  target.src = '/placeholder.svg';
-                }}
-              />
-              <div className="flex-1">
-                <div className="flex items-center space-x-2 mb-1">
-                  <h3 className="font-semibold text-lg">{listing.title}</h3>
-                  <Badge variant="outline">{listing.category_name || listing.category}</Badge>
-                </div>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm text-gray-600">
-                  <span>Starting: Ksh {listing.starting_price.toLocaleString()}</span>
-                  <span>
-                    Current: {listing.current_bid > 0
-                      ? `Ksh ${listing.current_bid.toLocaleString()}`
-                      : "No bids yet"
-                    }
-                  </span>
-                  <span>Bids: {listing.bid_count}</span>
-                  <span>Time: {formatTimeLeft(listing.time_remaining)}</span>
-                </div>
-                <div className="flex items-center space-x-2 mt-2">
-                  <span className="text-xs text-gray-500">
-                    Created: {new Date(listing.created_at).toLocaleDateString()}
-                  </span>
-                  {listing.featured && (
-                    <Badge variant="secondary" className="text-xs">Featured</Badge>
-                  )}
-                </div>
-              </div>
-              <div className="flex items-center space-x-2">
-                <Badge className={getStatusBadge(listing.status).color}>
-                  <div className="flex items-center space-x-1">
-                    {getStatusBadge(listing.status).icon}
-                    <span>{getStatusBadge(listing.status).label}</span>
+          {listings.map((listing) => {
+            // images may be undefined, an array of strings or objects
+            let primaryImage: any = null;
+            if (Array.isArray(listing.images) && listing.images.length > 0) {
+              primaryImage = listing.images[0];
+            }
+            const imageSrc =
+              (primaryImage &&
+                (primaryImage.image_url ||
+                  primaryImage.file_path ||
+                  primaryImage.image_path)) ||
+              "/placeholder.svg";
+            const currentPrice = (listing.current_bid ??
+              listing.current_price ??
+              0) as number;
+            const bidsCount = listing.bid_count ?? 0;
+            const timeRemaining = listing.time_remaining ?? 0;
+            const createdAt = listing.created_at
+              ? new Date(listing.created_at).toLocaleDateString()
+              : "";
+
+            return (
+              <div
+                key={listing.id}
+                className="flex items-center space-x-4 p-4 border rounded-lg hover:shadow-md transition-shadow"
+              >
+                <img
+                  src={imageSrc}
+                  alt={listing.title}
+                  className="w-20 h-20 object-cover rounded"
+                  onError={(e) => {
+                    const target = e.target as HTMLImageElement;
+                    target.src = "/placeholder.svg";
+                  }}
+                />
+                <div className="flex-1">
+                  <div className="flex items-center space-x-2 mb-1">
+                    <h3 className="font-semibold text-lg">{listing.title}</h3>
+                    <Badge variant="outline">
+                      {listing.category_name || listing.category}
+                    </Badge>
                   </div>
-                </Badge>
-              </div>
-              <div className="flex space-x-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleViewListing(listing.id)}
-                  title="View listing"
-                >
-                  <Eye className="w-4 h-4" />
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleEditListing(listing.id)}
-                  title="Edit listing"
-                  disabled={listing.status === 'sold' || (listing.auction_ended ?? false)}
-                >
-                  <Edit className="w-4 h-4" />
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleAddImages(listing.id)}
-                  title="Add images"
-                  disabled={listing.status === 'sold' || (listing.auction_ended ?? false)}
-                >
-                  <Upload className="w-4 h-4" />
-                </Button>
-                {listing.status === 'pending' && (
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm text-gray-600">
+                    <span>
+                      Starting: Ksh{" "}
+                      {Number(listing.starting_price || 0).toLocaleString()}
+                    </span>
+                    <span>
+                      Current:{" "}
+                      {currentPrice > 0
+                        ? `Ksh ${currentPrice.toLocaleString()}`
+                        : "No bids yet"}
+                    </span>
+                    <span>Bids: {bidsCount}</span>
+                    <span>Time: {formatTimeLeft(timeRemaining)}</span>
+                  </div>
+                  <div className="flex items-center space-x-2 mt-2">
+                    <span className="text-xs text-gray-500">
+                      Created: {createdAt}
+                    </span>
+                    {listing.featured && (
+                      <Badge variant="secondary" className="text-xs">
+                        Featured
+                      </Badge>
+                    )}
+                  </div>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Badge className={getStatusBadge(listing.status).color}>
+                    <div className="flex items-center space-x-1">
+                      {getStatusBadge(listing.status).icon}
+                      <span>{getStatusBadge(listing.status).label}</span>
+                    </div>
+                  </Badge>
+                </div>
+                <div className="flex space-x-2">
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => handleDeleteListing(listing.id)}
-                    title="Delete listing"
-                    className="text-red-600 hover:text-red-700"
+                    onClick={() => handleViewListing(listing.id)}
+                    title="View listing"
                   >
-                    <Trash2 className="w-4 h-4" />
+                    <Eye className="w-4 h-4" />
                   </Button>
-                )}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleEditListing(listing.id)}
+                    title="Edit listing"
+                    disabled={
+                      listing.status === "sold" ||
+                      (listing.auction_ended ?? false)
+                    }
+                  >
+                    <Edit className="w-4 h-4" />
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleAddImages(listing.id)}
+                    title="Add images"
+                    disabled={
+                      listing.status === "sold" ||
+                      (listing.auction_ended ?? false)
+                    }
+                  >
+                    <Upload className="w-4 h-4" />
+                  </Button>
+                  {listing.status === "pending" && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleDeleteListing(listing.id)}
+                      title="Delete listing"
+                      className="text-red-600 hover:text-red-700"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  )}
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
 
         {listings.length === 0 && (
           <div className="text-center py-12">
             <FileText className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">No listings found</h3>
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">
+              No listings found
+            </h3>
             <p className="text-gray-600 mb-4">
-              {statusFilter === 'all'
+              {statusFilter === "all"
                 ? "You haven't posted any auctions yet"
-                : `No ${statusFilter} auctions found`
-              }
+                : `No ${statusFilter} auctions found`}
             </p>
-            <Button onClick={() => window.location.href = '/dashboard/post-item'}>
+            <Button
+              onClick={() => (window.location.href = "/dashboard/post-item")}
+            >
               <Plus className="w-4 h-4 mr-2" />
               Post New Item
             </Button>
@@ -288,7 +371,7 @@ const ListingsTab: React.FC = () => {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+              onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
               disabled={currentPage === 1}
             >
               Previous
@@ -299,7 +382,9 @@ const ListingsTab: React.FC = () => {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+              onClick={() =>
+                setCurrentPage((prev) => Math.min(totalPages, prev + 1))
+              }
               disabled={currentPage === totalPages}
             >
               Next

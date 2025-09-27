@@ -17,15 +17,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     exit(0);
 }
 
-require_once 'config/database.php';
+require_once 'config/connect.php';
 
 try {
-    $database = new Database();
+    $database = Database::getInstance();
     $db = $database->getConnection();
 
     if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         $auctionId = isset($_GET['id']) ? (int)$_GET['id'] : null;
-        
+
         if (!$auctionId) {
             http_response_code(400);
             echo json_encode([
@@ -81,8 +81,8 @@ try {
         $imageStmt = $db->prepare($imageQuery);
         $imageStmt->execute([':auction_id' => $auctionId]);
         $images = $imageStmt->fetchAll(PDO::FETCH_COLUMN);
-        
-        $auction['images'] = array_map(function($path) {
+
+        $auction['images'] = array_map(function ($path) {
             return 'http://localhost:8000' . $path;
         }, $images);
 
@@ -125,7 +125,7 @@ try {
         $endTime = new DateTime($auction['end_time']);
         $now = new DateTime();
         $timeRemaining = $now < $endTime ? $endTime->getTimestamp() - $now->getTimestamp() : 0;
-        
+
         $auction['time_remaining'] = $timeRemaining;
         $auction['auction_ended'] = $timeRemaining <= 0;
 
@@ -148,7 +148,6 @@ try {
             'success' => true,
             'data' => $auction
         ]);
-
     } else {
         http_response_code(405);
         echo json_encode([
@@ -156,7 +155,6 @@ try {
             'message' => 'Method not allowed'
         ]);
     }
-
 } catch (Exception $e) {
     error_log("Auction Details API Error: " . $e->getMessage());
     http_response_code(500);
@@ -165,4 +163,3 @@ try {
         'message' => 'Internal server error: ' . $e->getMessage()
     ]);
 }
-?>

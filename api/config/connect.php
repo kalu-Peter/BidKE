@@ -1,4 +1,5 @@
 <?php
+
 /**
  * PostgreSQL Database Connection
  * BidKE Auction Platform
@@ -13,33 +14,68 @@ define('DB_PASS', 'webwiz');
 
 // Error reporting
 error_reporting(E_ALL);
-ini_set('display_errors', 1);
+// Do not display PHP errors as HTML; use centralized JSON error handler
+ini_set('display_errors', 0);
+
+// Load central JSON error handler so uncaught errors/exceptions are returned as JSON
+// Path assumes endpoints require this config via '../config/connect.php'
+$jsonErrorPath = __DIR__ . '/../utils/json_error.php';
+if (file_exists($jsonErrorPath)) {
+    require_once $jsonErrorPath;
+}
 
 // Note: CORS headers are set per endpoint for better control
 // This allows each endpoint to set specific CORS policies
 
-// Handle preflight requests
-if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
-    http_response_code(200);
-    exit();
+// Apply a safe development-friendly CORS policy by mirroring Origin and
+// allowing credentials. Endpoints may still override or tighten these rules.
+// This mirrors the requesting Origin (not '*') and sets Vary: Origin so
+// caches don't serve the same response to different origins.
+if (php_sapi_name() !== 'cli' && isset($_SERVER['REQUEST_METHOD'])) {
+    if (isset($_SERVER['HTTP_ORIGIN'])) {
+        // Mirror the origin back, don't allow wildcard when credentials are used
+        header('Access-Control-Allow-Origin: ' . $_SERVER['HTTP_ORIGIN']);
+        header('Vary: Origin');
+    } else {
+        // Fallback - no origin present (server-to-server), allow localhost for dev
+        header('Access-Control-Allow-Origin: http://localhost:8080');
+    }
+
+    // Allow cookies/authorization headers in cross-site requests
+    header('Access-Control-Allow-Credentials: true');
+
+    // CORS preflight response settings
+    header('Access-Control-Allow-Methods: GET, POST, PUT, PATCH, DELETE, OPTIONS');
+    header('Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With');
+
+    // Respond to OPTIONS (preflight) and exit early
+    if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+        // short-circuit for preflight
+        http_response_code(204);
+        exit();
+    }
 }
 
-class Database {
+class Database
+{
     private $connection;
     private static $instance = null;
-    
-    private function __construct() {
+
+    private function __construct()
+    {
         $this->connect();
     }
-    
-    public static function getInstance() {
+
+    public static function getInstance()
+    {
         if (self::$instance === null) {
             self::$instance = new Database();
         }
         return self::$instance;
     }
-    
-    private function connect() {
+
+    private function connect()
+    {
         try {
             $dsn = "pgsql:host=" . DB_HOST . ";port=" . DB_PORT . ";dbname=" . DB_NAME;
             $this->connection = new PDO($dsn, DB_USER, DB_PASS, [
@@ -47,37 +83,39 @@ class Database {
                 PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
                 PDO::ATTR_EMULATE_PREPARES => false,
             ]);
-            
+
             // Set timezone
             $this->connection->exec("SET timezone = 'UTC'");
-            
         } catch (PDOException $e) {
             $this->handleConnectionError($e);
         }
     }
-    
-    private function handleConnectionError($e) {
+
+    private function handleConnectionError($e)
+    {
         $error = [
             'success' => false,
             'error' => 'Database connection failed',
             'message' => $e->getMessage(),
             'code' => $e->getCode()
         ];
-        
+
         // Log error (in production, use proper logging)
         error_log("Database Connection Error: " . $e->getMessage());
-        
+
         // Return error response
         http_response_code(500);
         echo json_encode($error);
         exit();
     }
-    
-    public function getConnection() {
+
+    public function getConnection()
+    {
         return $this->connection;
     }
-    
-    public function testConnection() {
+
+    public function testConnection()
+    {
         try {
             $stmt = $this->connection->query("SELECT version()");
             $result = $stmt->fetch();
@@ -94,59 +132,68 @@ class Database {
             ];
         }
     }
-    
-    public function beginTransaction() {
+
+    public function beginTransaction()
+    {
         return $this->connection->beginTransaction();
     }
-    
-    public function commit() {
+
+    public function commit()
+    {
         return $this->connection->commit();
     }
-    
-    public function rollback() {
+
+    public function rollback()
+    {
         return $this->connection->rollback();
     }
-    
-    public function prepare($sql) {
+
+    public function prepare($sql)
+    {
         return $this->connection->prepare($sql);
     }
-    
-    public function query($sql) {
+
+    public function query($sql)
+    {
         return $this->connection->query($sql);
     }
-    
-    public function lastInsertId($name = null) {
+
+    public function lastInsertId($name = null)
+    {
         return $this->connection->lastInsertId($name);
     }
 }
 
 // Utility functions
-function sendResponse($data, $status = 200) {
+function sendResponse($data, $status = 200)
+{
     http_response_code($status);
     echo json_encode($data);
     exit();
 }
 
-function sendError($message, $status = 400, $details = null) {
+function sendError($message, $status = 400, $details = null)
+{
     $error = [
         'success' => false,
         'error' => $message
     ];
-    
+
     if ($details) {
         $error['details'] = $details;
     }
-    
+
     sendResponse($error, $status);
 }
 
-function sendSuccess($data, $message = 'Success') {
+function sendSuccess($data, $message = 'Success')
+{
     $response = [
         'success' => true,
         'message' => $message,
         'data' => $data
     ];
-    
+
     sendResponse($response);
 }
 
@@ -156,5 +203,3 @@ if (basename($_SERVER['PHP_SELF']) === 'connect.php') {
     $test = $db->testConnection();
     sendResponse($test);
 }
-
-?>

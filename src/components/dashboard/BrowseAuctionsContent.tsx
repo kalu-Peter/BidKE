@@ -3,9 +3,15 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { 
+import {
   Search,
   Grid3X3,
   List,
@@ -13,7 +19,7 @@ import {
   Heart,
   Clock,
   AlertCircle,
-  Loader2
+  Loader2,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -72,43 +78,50 @@ const BrowseAuctionsContent = () => {
   const [totalAuctions, setTotalAuctions] = useState(0);
 
   // Fetch auctions from API
-  const fetchAuctions = async (page = 1, search = "", categoryFilter = "all", priceFilter = "all") => {
+  const fetchAuctions = async (
+    page = 1,
+    search = "",
+    categoryFilter = "all",
+    priceFilter = "all"
+  ) => {
     try {
       setLoading(true);
       setError(null);
-      
+
       const params = new URLSearchParams({
         page: page.toString(),
-        limit: '12',
-        status: 'live', // Only fetch live auctions
+        limit: "12",
+        status: "live", // Only fetch live auctions
         search: search,
       });
 
       if (categoryFilter !== "all") {
-        params.append('category', categoryFilter);
+        params.append("category", categoryFilter);
       }
 
       if (priceFilter !== "all") {
-        const [min, max] = priceFilter.split('-');
-        if (min) params.append('min_price', min);
-        if (max && max !== '+') params.append('max_price', max);
+        const [min, max] = priceFilter.split("-");
+        if (min) params.append("min_price", min);
+        if (max && max !== "+") params.append("max_price", max);
       }
 
-      const response = await fetch(`http://localhost:8000/auctions.php?${params}`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          'Origin': 'http://localhost:8082'
-        },
-        credentials: 'include'
-      });
+      const response = await fetch(
+        `http://localhost:8000/auctions.php?${params}`,
+        {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          credentials: "include",
+        }
+      );
 
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
       const data: ApiResponse = await response.json();
-      
+
       if (data.success) {
         setAuctions(data.data || []);
         if (data.pagination) {
@@ -117,11 +130,11 @@ const BrowseAuctionsContent = () => {
           setTotalAuctions(data.pagination.total);
         }
       } else {
-        setError(data.message || 'Failed to fetch auctions');
+        setError(data.message || "Failed to fetch auctions");
       }
     } catch (err) {
-      console.error('Error fetching auctions:', err);
-      setError('Failed to load auctions. Please try again.');
+      console.error("Error fetching auctions:", err);
+      setError("Failed to load auctions. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -136,7 +149,9 @@ const BrowseAuctionsContent = () => {
     if (timeLeft <= 0) return "Ended";
 
     const days = Math.floor(timeLeft / (1000 * 60 * 60 * 24));
-    const hours = Math.floor((timeLeft % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+    const hours = Math.floor(
+      (timeLeft % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)
+    );
     const minutes = Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60));
 
     if (days > 0) return `${days}d ${hours}h`;
@@ -146,19 +161,38 @@ const BrowseAuctionsContent = () => {
 
   // Get auction image
   const getAuctionImage = (auction: Auction) => {
-    if (auction.images && auction.images.length > 0) {
-      return `http://localhost:8000${auction.images[0]}`;
+    // images may be an array of strings or objects, or the API may provide image_path/image_url
+    const firstImage = (auction as any).images?.[0];
+    if (firstImage) {
+      if (typeof firstImage === "string")
+        return `http://localhost:8000${firstImage}`;
+      if (typeof firstImage === "object") {
+        return firstImage.image_url
+          ? `http://localhost:8000${firstImage.image_url}`
+          : firstImage.file_path
+          ? firstImage.file_path
+          : "/placeholder.svg";
+      }
     }
+    // Fallbacks if backend returns single image fields
+    const imgPath =
+      (auction as any).image_path ||
+      (auction as any).image_url ||
+      (auction as any).file_path;
+    if (imgPath)
+      return imgPath.startsWith("http")
+        ? imgPath
+        : `http://localhost:8000${imgPath}`;
     // Default image based on category
     switch (auction.category_slug) {
-      case 'cars':
-        return '/src/assets/category-cars.jpg';
-      case 'motorbikes':
-        return '/src/assets/category-motorbikes.jpg';
-      case 'electronics':
-        return '/src/assets/category-electronics.jpg';
+      case "cars":
+        return "/src/assets/category-cars.jpg";
+      case "motorbikes":
+        return "/src/assets/category-motorbikes.jpg";
+      case "electronics":
+        return "/src/assets/category-electronics.jpg";
       default:
-        return '/placeholder.svg';
+        return "/placeholder.svg";
     }
   };
 
@@ -169,9 +203,12 @@ const BrowseAuctionsContent = () => {
 
   // Fetch when filters change (with debounce for search)
   useEffect(() => {
-    const timeoutId = setTimeout(() => {
-      fetchAuctions(1, searchTerm, category, priceRange);
-    }, searchTerm ? 500 : 0); // Debounce search input
+    const timeoutId = setTimeout(
+      () => {
+        fetchAuctions(1, searchTerm, category, priceRange);
+      },
+      searchTerm ? 500 : 0
+    ); // Debounce search input
 
     return () => clearTimeout(timeoutId);
   }, [searchTerm, category, priceRange]);
@@ -179,39 +216,38 @@ const BrowseAuctionsContent = () => {
   // Handler functions
   const handleToggleWatch = async (auctionId: number) => {
     if (!user) return;
-    
+
     try {
-      const auction = auctions.find(a => a.id === auctionId);
+      const auction = auctions.find((a) => a.id === auctionId);
       if (!auction) return;
 
-      const response = await fetch('http://localhost:8000/watchlist.php', {
-        method: auction.isWatched ? 'DELETE' : 'POST',
+      const response = await fetch("http://localhost:8000/watchlist.php", {
+        method: auction.isWatched ? "DELETE" : "POST",
         headers: {
-          'Content-Type': 'application/json',
-          'Origin': 'http://localhost:8082'
+          "Content-Type": "application/json",
         },
-        credentials: 'include',
+        credentials: "include",
         body: JSON.stringify({
           user_id: user.id,
-          auction_id: auctionId
-        })
+          auction_id: auctionId,
+        }),
       });
 
       if (response.ok) {
-        setAuctions(prev => prev.map(a => 
-          a.id === auctionId 
-            ? { ...a, isWatched: !a.isWatched }
-            : a
-        ));
+        setAuctions((prev) =>
+          prev.map((a) =>
+            a.id === auctionId ? { ...a, isWatched: !a.isWatched } : a
+          )
+        );
       }
     } catch (error) {
-      console.error('Error toggling watchlist:', error);
+      console.error("Error toggling watchlist:", error);
     }
   };
 
   const handlePlaceBid = (auctionId: number) => {
     if (!user) {
-      navigate('/login');
+      navigate("/login");
       return;
     }
     navigate(`/auction/${auctionId}#place-bid`);
@@ -224,7 +260,7 @@ const BrowseAuctionsContent = () => {
   const handlePageChange = (page: number) => {
     setCurrentPage(page);
     fetchAuctions(page, searchTerm, category, priceRange);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   return (
@@ -232,10 +268,14 @@ const BrowseAuctionsContent = () => {
       {/* Search and Filters */}
       <div className="space-y-4">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">Browse Live Auctions</h2>
-          <p className="text-gray-600">Discover amazing deals from verified sellers</p>
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">
+            Browse Live Auctions
+          </h2>
+          <p className="text-gray-600">
+            Discover amazing deals from verified sellers
+          </p>
         </div>
-        
+
         {/* Error Alert */}
         {error && (
           <Alert variant="destructive">
@@ -243,19 +283,23 @@ const BrowseAuctionsContent = () => {
             <AlertDescription>{error}</AlertDescription>
           </Alert>
         )}
-        
+
         <div className="flex flex-col lg:flex-row gap-4">
           <div className="flex-1 relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-            <Input 
-              placeholder="Search for items..." 
+            <Input
+              placeholder="Search for items..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="pl-10 h-12"
               disabled={loading}
             />
           </div>
-          <Select value={category} onValueChange={setCategory} disabled={loading}>
+          <Select
+            value={category}
+            onValueChange={setCategory}
+            disabled={loading}
+          >
             <SelectTrigger className="w-full lg:w-48 h-12">
               <SelectValue placeholder="All Categories" />
             </SelectTrigger>
@@ -266,7 +310,11 @@ const BrowseAuctionsContent = () => {
               <SelectItem value="electronics">Electronics</SelectItem>
             </SelectContent>
           </Select>
-          <Select value={priceRange} onValueChange={setPriceRange} disabled={loading}>
+          <Select
+            value={priceRange}
+            onValueChange={setPriceRange}
+            disabled={loading}
+          >
             <SelectTrigger className="w-full lg:w-48 h-12">
               <SelectValue placeholder="All Prices" />
             </SelectTrigger>
@@ -294,20 +342,22 @@ const BrowseAuctionsContent = () => {
         <div className="flex justify-between items-center">
           <div>
             <h3 className="text-lg font-semibold text-gray-900">
-              {searchTerm || category !== "all" || priceRange !== "all" ? "Search Results" : "All Auctions"}
+              {searchTerm || category !== "all" || priceRange !== "all"
+                ? "Search Results"
+                : "All Auctions"}
             </h3>
             <p className="text-gray-600 text-sm">
               Showing {auctions.length} of {totalAuctions} auctions
               {user && (
                 <span className="ml-2">
-                  • {auctions.filter(a => a.isWatched).length} Watched
+                  • {auctions.filter((a) => a.isWatched).length} Watched
                 </span>
               )}
             </p>
           </div>
           <div className="flex gap-2">
-            <Button 
-              variant={viewMode === "grid" ? "default" : "outline"} 
+            <Button
+              variant={viewMode === "grid" ? "default" : "outline"}
               size="sm"
               onClick={() => setViewMode("grid")}
               disabled={loading}
@@ -315,8 +365,8 @@ const BrowseAuctionsContent = () => {
               <Grid3X3 className="w-4 h-4 mr-2" />
               Grid
             </Button>
-            <Button 
-              variant={viewMode === "list" ? "default" : "outline"} 
+            <Button
+              variant={viewMode === "list" ? "default" : "outline"}
               size="sm"
               onClick={() => setViewMode("list")}
               disabled={loading}
@@ -330,21 +380,33 @@ const BrowseAuctionsContent = () => {
 
       {/* Auction Grid */}
       {!loading && (
-        <div className={`grid gap-6 ${viewMode === "grid" ? "grid-cols-1 md:grid-cols-2 lg:grid-cols-3" : "grid-cols-1"}`}>
+        <div
+          className={`grid gap-6 ${
+            viewMode === "grid"
+              ? "grid-cols-1 md:grid-cols-2 lg:grid-cols-3"
+              : "grid-cols-1"
+          }`}
+        >
           {auctions.map((auction) => {
             const timeLeft = calculateTimeLeft(auction.end_time);
-            const isEndingSoon = timeLeft.includes('h') && !timeLeft.includes('d') && timeLeft !== "Ended";
-            
+            const isEndingSoon =
+              timeLeft.includes("h") &&
+              !timeLeft.includes("d") &&
+              timeLeft !== "Ended";
+
             return (
-              <Card key={auction.id} className="group hover:shadow-xl transition-all duration-300">
+              <Card
+                key={auction.id}
+                className="group hover:shadow-xl transition-all duration-300"
+              >
                 <div className="aspect-video bg-gray-200 rounded-t-lg relative overflow-hidden">
-                  <img 
+                  <img
                     src={getAuctionImage(auction)}
                     alt={auction.title}
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                     onError={(e) => {
                       const target = e.target as HTMLImageElement;
-                      target.src = '/placeholder.svg';
+                      target.src = "/placeholder.svg";
                     }}
                   />
                   {auction.featured && (
@@ -353,15 +415,19 @@ const BrowseAuctionsContent = () => {
                     </Badge>
                   )}
                   {user && (
-                    <button 
+                    <button
                       onClick={() => handleToggleWatch(auction.id)}
                       className={`absolute top-3 left-3 p-2 rounded-full transition-colors ${
-                        auction.isWatched 
-                          ? 'bg-accent text-white' 
-                          : 'bg-white/90 text-gray-400 hover:text-accent hover:bg-white'
+                        auction.isWatched
+                          ? "bg-accent text-white"
+                          : "bg-white/90 text-gray-400 hover:text-accent hover:bg-white"
                       }`}
                     >
-                      <Heart className={`w-4 h-4 ${auction.isWatched ? 'fill-current' : ''}`} />
+                      <Heart
+                        className={`w-4 h-4 ${
+                          auction.isWatched ? "fill-current" : ""
+                        }`}
+                      />
                     </button>
                   )}
                 </div>
@@ -372,12 +438,16 @@ const BrowseAuctionsContent = () => {
                     </Badge>
                     <div className="flex items-center text-sm text-gray-500">
                       <Clock className="w-4 h-4 mr-1" />
-                      <span className={isEndingSoon ? 'text-accent font-medium' : ''}>
+                      <span
+                        className={
+                          isEndingSoon ? "text-accent font-medium" : ""
+                        }
+                      >
                         {timeLeft}
                       </span>
                     </div>
                   </div>
-                  <h3 
+                  <h3
                     className="font-semibold text-lg mb-1 group-hover:text-primary transition-colors cursor-pointer line-clamp-2"
                     onClick={() => handleViewDetails(auction.id)}
                   >
@@ -387,7 +457,12 @@ const BrowseAuctionsContent = () => {
                     <div className="flex justify-between text-sm">
                       <span className="text-gray-600">Current bid</span>
                       <span className="font-semibold text-green-600">
-                        Ksh {auction.current_bid.toLocaleString()}
+                        Ksh{" "}
+                        {Number(
+                          auction.current_bid ??
+                            (auction as any).current_price ??
+                            0
+                        ).toLocaleString()}
                       </span>
                     </div>
                     {auction.reserve_price && (
@@ -404,22 +479,30 @@ const BrowseAuctionsContent = () => {
                       <Eye className="w-4 h-4" />
                       <span>{auction.bid_count} bids</span>
                     </div>
-                    <span className={isEndingSoon ? 'text-accent font-medium' : ''}>
-                      {timeLeft === "Ended" ? "Auction ended" : 
-                       isEndingSoon ? 'Ending soon' : `Ending in ${timeLeft}`}
+                    <span
+                      className={isEndingSoon ? "text-accent font-medium" : ""}
+                    >
+                      {timeLeft === "Ended"
+                        ? "Auction ended"
+                        : isEndingSoon
+                        ? "Ending soon"
+                        : `Ending in ${timeLeft}`}
                     </span>
                   </div>
                   <div className="flex space-x-2">
-                    <Button 
-                      className="flex-1" 
+                    <Button
+                      className="flex-1"
                       onClick={() => handlePlaceBid(auction.id)}
                       disabled={timeLeft === "Ended"}
                     >
-                      {timeLeft === "Ended" ? 'Auction Ended' : 
-                       user ? 'Place Bid' : 'Login to Bid'}
+                      {timeLeft === "Ended"
+                        ? "Auction Ended"
+                        : user
+                        ? "Place Bid"
+                        : "Login to Bid"}
                     </Button>
-                    <Button 
-                      variant="outline" 
+                    <Button
+                      variant="outline"
                       size="sm"
                       onClick={() => handleViewDetails(auction.id)}
                     >
@@ -437,15 +520,21 @@ const BrowseAuctionsContent = () => {
       {!loading && auctions.length === 0 && (
         <div className="text-center py-12">
           <Search className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-          <h3 className="text-lg font-semibold text-gray-900 mb-2">No auctions found</h3>
+          <h3 className="text-lg font-semibold text-gray-900 mb-2">
+            No auctions found
+          </h3>
           <p className="text-gray-600 mb-4">
-            Try adjusting your search criteria or check back later for new auctions
+            Try adjusting your search criteria or check back later for new
+            auctions
           </p>
-          <Button variant="outline" onClick={() => {
-            setSearchTerm("");
-            setCategory("all");
-            setPriceRange("all");
-          }}>
+          <Button
+            variant="outline"
+            onClick={() => {
+              setSearchTerm("");
+              setCategory("all");
+              setPriceRange("all");
+            }}
+          >
             Clear Filters
           </Button>
         </div>
@@ -462,11 +551,11 @@ const BrowseAuctionsContent = () => {
           >
             Previous
           </Button>
-          
+
           {[...Array(Math.min(5, totalPages))].map((_, i) => {
             const pageNum = Math.max(1, currentPage - 2) + i;
             if (pageNum > totalPages) return null;
-            
+
             return (
               <Button
                 key={pageNum}
@@ -478,7 +567,7 @@ const BrowseAuctionsContent = () => {
               </Button>
             );
           })}
-          
+
           <Button
             variant="outline"
             size="sm"
@@ -499,7 +588,9 @@ const BrowseAuctionsContent = () => {
             <li>• Watch items to get notifications about price changes</li>
           </ul>
           <ul className="space-y-2">
-            <li>• Bid strategically - consider placing bids closer to auction end</li>
+            <li>
+              • Bid strategically - consider placing bids closer to auction end
+            </li>
             <li>• Check seller ratings and item descriptions carefully</li>
           </ul>
         </div>
