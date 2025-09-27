@@ -243,15 +243,34 @@ try {
             $updatedFields = [];
 
             if ($action === 'approve') {
-                // Approve maps to DB status 'pending' so auction will go live at start_time
+                // Approve now makes the auction active immediately (admin requested behavior)
                 if (!in_array($currentStatus, ['draft', 'pending'])) {
                     $pdo->rollBack();
                     send_json(['success' => false, 'error' => 'Listing cannot be approved from current status: ' . $currentStatus], 400);
                 }
-                $newStatus = 'pending';
-                $updateQuery = "UPDATE auctions SET status = :status, updated_at = CURRENT_TIMESTAMP WHERE id = :id";
+
+                // compute duration between existing start and end; fallback to 7 days
+                $durationSeconds = 7 * 24 * 3600;
+                if (!empty($auction['start_time']) && !empty($auction['end_time'])) {
+                    try {
+                        $st = new DateTime($auction['start_time'], new DateTimeZone('UTC'));
+                        $en = new DateTime($auction['end_time'], new DateTimeZone('UTC'));
+                        $diff = $en->getTimestamp() - $st->getTimestamp();
+                        if ($diff > 0) {
+                            $durationSeconds = $diff;
+                        }
+                    } catch (Exception $e) {
+                        // leave fallback duration
+                    }
+                }
+
+                $newStart = $now->format('Y-m-d H:i:s');
+                $newEnd = (new DateTime('@' . ($now->getTimestamp() + $durationSeconds)))->setTimeZone(new DateTimeZone('UTC'))->format('Y-m-d H:i:s');
+
+                $newStatus = 'active';
+                $updateQuery = "UPDATE auctions SET status = :status, start_time = :start_time, end_time = :end_time, updated_at = CURRENT_TIMESTAMP WHERE id = :id";
                 $updateStmt = $pdo->prepare($updateQuery);
-                $updateStmt->execute([':status' => $newStatus, ':id' => $auction_id]);
+                $updateStmt->execute([':status' => $newStatus, ':start_time' => $newStart, ':end_time' => $newEnd, ':id' => $auction_id]);
             } elseif ($action === 'make_live') {
                 // Only allow make_live if currently pending or draft
                 if (!in_array($currentStatus, ['pending', 'draft'])) {
