@@ -48,7 +48,7 @@ try {
             $status = 'pending';
         }
 
-        $baseQuery = "FROM auctions a LEFT JOIN categories c ON a.category_id = c.id LEFT JOIN users u ON a.seller_id = u.id WHERE 1=1";
+        $baseQuery = "FROM auctions a LEFT JOIN categories c ON a.category_id = c.id LEFT JOIN users u ON a.seller_id = u.id LEFT JOIN vehicles v ON a.id = v.auction_id LEFT JOIN electronics e ON a.id = e.auction_id WHERE 1=1";
         $params = [];
         $conditions = [];
 
@@ -79,7 +79,7 @@ try {
 
         // Select fields (alias current_price -> current_bid for admin UI compatibility)
         // Select a conservative set of fields that are present across schemas
-        $select = "SELECT a.id, a.title, a.description, a.starting_price, COALESCE(a.current_price, 0) as current_bid, a.reserve_price, a.start_time, a.end_time, a.status, a.featured, a.created_at, c.name as category_name, c.name as category_slug, COALESCE(u.full_name, u.username) as seller_name, u.email as seller_email";
+        $select = "SELECT a.id, a.title, a.description, a.starting_price, COALESCE(a.current_price, 0) as current_bid, a.reserve_price, a.start_time, a.end_time, a.status, a.featured, a.created_at, c.name as category_name, c.slug as category_slug, COALESCE(u.full_name, u.username) as seller_name, u.email as seller_email, v.make as vehicle_make, v.model as vehicle_model, v.condition as vehicle_condition, e.brand as electronics_brand, e.model as electronics_model, e.condition as electronics_condition";
 
         $query = $select . ' ' . $baseQuery . " ORDER BY a.created_at DESC LIMIT :limit OFFSET :offset";
         $stmt = $pdo->prepare($query);
@@ -134,6 +134,29 @@ try {
                 $documents = [];
             }
             $listing['documents'] = $documents;
+
+            // primary image: prefer first image if present
+            $listing['primary_image'] = null;
+            if (!empty($images) && is_array($images)) {
+                $listing['primary_image'] = $images[0];
+            }
+
+            // unified item fields for admin: prefer vehicle fields, then electronics
+            $listing['item_type'] = 'unknown';
+            $listing['item_make'] = null;
+            $listing['item_model'] = null;
+            $listing['item_condition'] = null;
+            if (!empty($r['vehicle_make']) || !empty($r['vehicle_model'])) {
+                $listing['item_type'] = 'vehicle';
+                $listing['item_make'] = $r['vehicle_make'] ?? null;
+                $listing['item_model'] = $r['vehicle_model'] ?? null;
+                $listing['item_condition'] = $r['vehicle_condition'] ?? null;
+            } elseif (!empty($r['electronics_brand']) || !empty($r['electronics_model'])) {
+                $listing['item_type'] = 'electronics';
+                $listing['item_make'] = $r['electronics_brand'] ?? null;
+                $listing['item_model'] = $r['electronics_model'] ?? null;
+                $listing['item_condition'] = $r['electronics_condition'] ?? null;
+            }
 
             $listings[] = $listing;
         }

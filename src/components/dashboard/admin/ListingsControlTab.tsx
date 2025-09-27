@@ -48,15 +48,17 @@ interface Listing {
   seller_email: string;
   category_name: string;
   category_slug: string;
-  item_type: "vehicle" | "electronics" | "other";
-  make_brand: string;
-  model: string;
-  year: number | null;
-  item_condition: string;
+  item_type: "vehicle" | "electronics" | "other" | string;
+  item_make?: string | null;
+  item_model?: string | null;
+  model?: string | null;
+  year?: number | null;
+  item_condition?: string | null;
   location: string;
   auction_duration: number;
   images: string[];
   documents: string[];
+  primary_image?: string | null;
   verification_status: string;
 }
 
@@ -450,9 +452,21 @@ const ListingsControlTab: React.FC = () => {
               >
                 <div className="flex flex-col lg:flex-row gap-4">
                   {/* Listing Image */}
-                  <div className="w-full lg:w-32 h-24 flex-shrink-0 bg-gray-100 rounded flex items-center justify-center">
-                    {Array.isArray(listing.images) &&
-                    listing.images.length > 0 ? (
+                  <div className="w-full lg:w-32 h-24 flex-shrink-0 bg-gray-100 rounded overflow-hidden flex items-center justify-center">
+                    {listing.primary_image ? (
+                      // show primary image thumbnail
+                      <img
+                        src={
+                          listing.primary_image.startsWith("http") ||
+                          listing.primary_image.startsWith("/")
+                            ? listing.primary_image
+                            : `http://localhost:8000/${listing.primary_image}`
+                        }
+                        alt={listing.title}
+                        className="object-cover w-full h-full"
+                      />
+                    ) : Array.isArray(listing.images) &&
+                      listing.images.length > 0 ? (
                       <div className="text-center">
                         <ImageIcon className="w-8 h-8 text-gray-400 mx-auto" />
                         <p className="text-xs text-gray-500">
@@ -566,12 +580,14 @@ const ListingsControlTab: React.FC = () => {
                       <div>
                         <p className="text-gray-500">Make/Brand</p>
                         <p className="font-medium">
-                          {listing.make_brand || "N/A"}
+                          {listing.item_make || "N/A"}
                         </p>
                       </div>
                       <div>
                         <p className="text-gray-500">Model</p>
-                        <p className="font-medium">{listing.model || "N/A"}</p>
+                        <p className="font-medium">
+                          {listing.item_model || listing.model || "N/A"}
+                        </p>
                       </div>
                       {listing.year && (
                         <div>
