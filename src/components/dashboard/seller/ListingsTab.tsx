@@ -226,12 +226,33 @@ const ListingsTab: React.FC = () => {
             if (Array.isArray(listing.images) && listing.images.length > 0) {
               primaryImage = listing.images[0];
             }
-            const imageSrc =
-              (primaryImage &&
-                (primaryImage.image_url ||
+            let imageSrc = "/placeholder.svg";
+            if (primaryImage) {
+              if (typeof primaryImage === "string") {
+                if (
+                  primaryImage.startsWith("http://") ||
+                  primaryImage.startsWith("https://")
+                ) {
+                  imageSrc = primaryImage;
+                } else if (primaryImage.startsWith("/")) {
+                  imageSrc = `http://localhost:8000${primaryImage}`;
+                } else {
+                  imageSrc = `http://localhost:8000/${primaryImage}`;
+                }
+              } else if (typeof primaryImage === "object") {
+                const p =
+                  primaryImage.image_url ||
                   primaryImage.file_path ||
-                  primaryImage.image_path)) ||
-              "/placeholder.svg";
+                  primaryImage.image_path;
+                if (p) {
+                  if (p.startsWith("http://") || p.startsWith("https://"))
+                    imageSrc = p;
+                  else if (p.startsWith("/"))
+                    imageSrc = `http://localhost:8000${p}`;
+                  else imageSrc = `http://localhost:8000/${p}`;
+                }
+              }
+            }
             const currentPrice = (listing.current_bid ?? 0) as number;
             const bidsCount = listing.bid_count ?? 0;
             const timeRemaining = listing.time_remaining ?? 0;

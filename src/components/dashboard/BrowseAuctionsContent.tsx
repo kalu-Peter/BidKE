@@ -164,14 +164,30 @@ const BrowseAuctionsContent = () => {
     // images may be an array of strings or objects, or the API may provide image_path/image_url
     const firstImage = (auction as any).images?.[0];
     if (firstImage) {
-      if (typeof firstImage === "string")
-        return `http://localhost:8000${firstImage}`;
+      // If API returned a plain string
+      if (typeof firstImage === "string") {
+        if (
+          firstImage.startsWith("http://") ||
+          firstImage.startsWith("https://")
+        ) {
+          return firstImage;
+        }
+        if (firstImage.startsWith("/"))
+          return `http://localhost:8000${firstImage}`;
+        return `http://localhost:8000/${firstImage}`;
+      }
+
+      // If API returned an object with various possible fields
       if (typeof firstImage === "object") {
-        return firstImage.image_url
-          ? `http://localhost:8000${firstImage.image_url}`
-          : firstImage.file_path
-          ? firstImage.file_path
-          : "/placeholder.svg";
+        const path =
+          firstImage.image_url || firstImage.file_path || firstImage.image_path;
+        if (path) {
+          if (path.startsWith("http://") || path.startsWith("https://"))
+            return path;
+          if (path.startsWith("/")) return `http://localhost:8000${path}`;
+          return `http://localhost:8000/${path}`;
+        }
+        return "/placeholder.svg";
       }
     }
     // Fallbacks if backend returns single image fields
@@ -179,10 +195,12 @@ const BrowseAuctionsContent = () => {
       (auction as any).image_path ||
       (auction as any).image_url ||
       (auction as any).file_path;
-    if (imgPath)
-      return imgPath.startsWith("http")
-        ? imgPath
-        : `http://localhost:8000${imgPath}`;
+    if (imgPath) {
+      if (imgPath.startsWith("http://") || imgPath.startsWith("https://"))
+        return imgPath;
+      if (imgPath.startsWith("/")) return `http://localhost:8000${imgPath}`;
+      return `http://localhost:8000/${imgPath}`;
+    }
     // Default image based on category
     switch (auction.category_slug) {
       case "cars":
