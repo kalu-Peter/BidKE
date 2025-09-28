@@ -28,6 +28,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
+import { useState } from "react";
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
@@ -129,26 +130,14 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({
     },
   ];
 
-  const adminNavItems = [
-    {
-      icon: BarChart3,
-      label: "Overview & Analytics",
-      path: "/dashboard/overview",
-    },
-    { icon: Users, label: "User Management", path: "/dashboard/users" },
-    {
-      icon: FileText,
-      label: "Listings Control",
-      path: "/dashboard/listings-control",
-    },
-    {
-      icon: DollarSign,
-      label: "Transactions & Payments",
-      path: "/dashboard/transactions",
-    },
-    { icon: FileText, label: "Reports", path: "/dashboard/reports" },
-    { icon: Bell, label: "Notifications", path: "/dashboard/notifications" },
-  ];
+  // Admin uses header-only tabs; remove previous admin nav items to avoid duplication
+  // Use correct type for adminNavItems to match getNavItems return type
+  const adminNavItems: Array<{
+    icon: any;
+    label: string;
+    path: string;
+    section?: string;
+  }> = [];
 
   const getNavItems = (): Array<{
     icon: any;
@@ -156,15 +145,29 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({
     path: string;
     section?: string;
   }> => {
-    switch (userRole) {
-      case "buyer":
-        return buyerNavItems;
-      case "seller":
-        return sellerNavItems;
-      case "admin":
-        return adminNavItems;
-      default:
-        return [];
+    // Defensive: ensure we always return an array. Log in dev to help
+    // diagnose unexpected userRole values.
+    try {
+      switch (userRole) {
+        case "buyer":
+          return buyerNavItems || [];
+        case "seller":
+          return sellerNavItems || [];
+        case "admin":
+          return [];
+        default:
+          if (process.env.NODE_ENV === "development") {
+            // eslint-disable-next-line no-console
+            console.warn("Unknown userRole in DashboardLayout:", userRole);
+          }
+          return [];
+      }
+    } catch (err) {
+      if (process.env.NODE_ENV === "development") {
+        // eslint-disable-next-line no-console
+        console.error("getNavItems error:", err, { userRole, adminNavItems });
+      }
+      return [];
     }
   };
 
@@ -236,7 +239,10 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({
     }
   };
 
-  return (
+  // no client-side Tabs state here — admin header uses route Links
+
+  // Build the layout markup once and return it either wrapped by Tabs for admin
+  const layout = (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
       <header className="bg-white shadow-sm border-b">
@@ -322,6 +328,55 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({
                   </nav>
                 )}
               </div>
+              {/* Admin horizontal TabsList (render only for admin) */}
+              {userRole === "admin" && (
+                <div className="hidden lg:block ml-8">
+                  <div className="flex space-x-2">
+                    <Link
+                      to="/dashboard/overview"
+                      className="px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-100"
+                    >
+                      Overview
+                    </Link>
+                    <Link
+                      to="/dashboard/users"
+                      className="px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-100"
+                    >
+                      User Management
+                    </Link>
+                    <Link
+                      to="/dashboard/listings-control"
+                      className="px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-100"
+                    >
+                      Listings Control
+                    </Link>
+                    <Link
+                      to="/dashboard/transactions"
+                      className="px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-100"
+                    >
+                      Transactions
+                    </Link>
+                    <Link
+                      to="/dashboard/reports"
+                      className="px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-100"
+                    >
+                      Reports
+                    </Link>
+                    <Link
+                      to="/dashboard/verifications"
+                      className="px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-100"
+                    >
+                      Verifications
+                    </Link>
+                    <Link
+                      to="/dashboard/admin-signup"
+                      className="px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-100"
+                    >
+                      Add Admin
+                    </Link>
+                  </div>
+                </div>
+              )}
             </div>
 
             <div className="flex items-center space-x-4">
@@ -351,15 +406,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({
                     <DropdownMenuItem asChild>
                       <Link to="/dashboard/profile">Profile</Link>
                     </DropdownMenuItem>
-                    {userRole === "admin" ? (
-                      <>
-                        <DropdownMenuItem asChild>
-                          <Link to="/dashboard/notifications">
-                            Notifications
-                          </Link>
-                        </DropdownMenuItem>
-                      </>
-                    ) : (
+                    {userRole !== "admin" ? (
                       <>
                         <DropdownMenuItem asChild>
                           <Link to="/dashboard/bids">My Bids</Link>
@@ -368,6 +415,8 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({
                           <Link to="/dashboard/watchlist">Watchlist</Link>
                         </DropdownMenuItem>
                       </>
+                    ) : (
+                      <>{/* Admin: no additional items in avatar dropdown */}</>
                     )}
                     <DropdownMenuSeparator />
                     <DropdownMenuItem onClick={handleLogout}>
@@ -409,6 +458,37 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({
                               <Link to={item.path}>{item.label}</Link>
                             </DropdownMenuItem>
                           ))}
+                      </>
+                    ) : userRole === "admin" ? (
+                      <>
+                        <DropdownMenuLabel className="mt-1">
+                          Admin
+                        </DropdownMenuLabel>
+                        <DropdownMenuItem asChild>
+                          <Link to="/dashboard/overview">Overview</Link>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem asChild>
+                          <Link to="/dashboard/users">User Management</Link>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem asChild>
+                          <Link to="/dashboard/listings-control">
+                            Listings Control
+                          </Link>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem asChild>
+                          <Link to="/dashboard/transactions">Transactions</Link>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem asChild>
+                          <Link to="/dashboard/reports">Reports</Link>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem asChild>
+                          <Link to="/dashboard/verifications">
+                            Verifications
+                          </Link>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem asChild>
+                          <Link to="/dashboard/admin-signup">Add Admin</Link>
+                        </DropdownMenuItem>
                       </>
                     ) : (
                       getNavItems().map((item, index) => (
@@ -474,6 +554,8 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({
       </div>
     </div>
   );
+
+  return layout;
 };
 
 export default DashboardLayout;

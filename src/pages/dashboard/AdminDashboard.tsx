@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React from "react";
 import { useLocation } from "react-router-dom";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import OverviewTab from "@/components/dashboard/admin/OverviewTab";
@@ -8,71 +8,33 @@ import TransactionsTab from "@/components/dashboard/admin/TransactionsTab";
 import ReportsTab from "@/components/dashboard/admin/ReportsTab";
 import AdminSignUpTab from "@/components/dashboard/admin/AdminSignUpTab";
 import SellerVerificationsTab from "@/components/dashboard/admin/SellerVerificationsTab";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+
 const AdminDashboard = () => {
-  const location = useLocation();
+  const { pathname } = useLocation();
 
-  // Determine active tab based on current URL
-  const getActiveTab = () => {
-    const path = location.pathname;
-    if (path.includes("/dashboard/users")) return "users";
-    if (path.includes("/dashboard/listings-control")) return "listings";
-    if (path.includes("/dashboard/transactions")) return "transactions";
-    if (path.includes("/dashboard/reports")) return "reports";
-    if (path.includes("/dashboard/notifications")) return "overview"; // Notifications in overview
-    return "overview"; // Default to overview
+  // Determine which admin panel to show based on the current route.
+  const renderPanel = () => {
+    if (pathname.startsWith("/dashboard/users")) return <UserManagementTab />;
+    if (pathname.startsWith("/dashboard/listings-control"))
+      return <ListingsControlTab />;
+    if (pathname.startsWith("/dashboard/transactions"))
+      return <TransactionsTab />;
+    if (pathname.startsWith("/dashboard/reports")) return <ReportsTab />;
+    if (pathname.startsWith("/dashboard/verifications"))
+      return <SellerVerificationsTab />;
+    if (
+      pathname.startsWith("/dashboard/admin-signup") ||
+      pathname.startsWith("/admin-signup")
+    )
+      return <AdminSignUpTab />;
+
+    // Default to Overview
+    return <OverviewTab />;
   };
-
-  const [activeTab, setActiveTab] = useState(getActiveTab());
-
-  // Update tab when URL changes
-  useEffect(() => {
-    setActiveTab(getActiveTab());
-  }, [location.pathname]);
 
   return (
     <DashboardLayout userRole="admin" userName="Admin User">
-      <div className="space-y-8">
-        <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-6">
-            <TabsTrigger value="overview">Overview</TabsTrigger>
-            <TabsTrigger value="users">User Management</TabsTrigger>
-            <TabsTrigger value="listings">Listings Control</TabsTrigger>
-            <TabsTrigger value="transactions">Transactions</TabsTrigger>
-            <TabsTrigger value="reports">Reports</TabsTrigger>
-            <TabsTrigger value="verifications">Verifications</TabsTrigger>
-            <TabsTrigger value="signup">Add Admin</TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="overview" className="space-y-6">
-            <OverviewTab />
-          </TabsContent>
-
-          <TabsContent value="users">
-            <UserManagementTab />
-          </TabsContent>
-
-          <TabsContent value="listings">
-            <ListingsControlTab />
-          </TabsContent>
-
-          <TabsContent value="transactions">
-            <TransactionsTab />
-          </TabsContent>
-
-          <TabsContent value="reports">
-            <ReportsTab />
-          </TabsContent>
-
-          <TabsContent value="verifications">
-            <SellerVerificationsTab />
-          </TabsContent>
-
-          <TabsContent value="signup">
-            <AdminSignUpTab />
-          </TabsContent>
-        </Tabs>
-      </div>
+      <div className="space-y-8">{renderPanel()}</div>
     </DashboardLayout>
   );
 };

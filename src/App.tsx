@@ -41,225 +41,250 @@ const App = () => (
             <Route path="/browse-auctions" element={<BrowseAuctions />} />
             <Route path="/auction/:id" element={<AuctionDetails />} />
             {/* Redirect old browse-categories route to new browse-auctions route */}
-            <Route path="/browse-categories" element={<Navigate to="/browse-auctions" replace />} />
+            <Route
+              path="/browse-categories"
+              element={<Navigate to="/browse-auctions" replace />}
+            />
             <Route path="/how-it-works" element={<HowItWorks />} />
             <Route path="/trust-security" element={<TrustSecurity />} />
             <Route path="/contact" element={<Contact />} />
             <Route path="/signup" element={<SignUp />} />
             <Route path="/admin-signup" element={<AdminSignUp />} />
             {/* Redirect old signup routes to new unified signup */}
-            <Route path="/signup/buyer" element={<Navigate to="/signup" replace />} />
-            <Route path="/signup/seller" element={<Navigate to="/signup" replace />} />
+            <Route
+              path="/signup/buyer"
+              element={<Navigate to="/signup" replace />}
+            />
+            <Route
+              path="/signup/seller"
+              element={<Navigate to="/signup" replace />}
+            />
             <Route path="/login" element={<Login />} />
-            
+
             {/* Dashboard Routes */}
-            <Route 
-              path="/dashboard/buyer" 
-              element={<Navigate to="/dashboard/browse" replace />} 
+            <Route
+              path="/dashboard/buyer"
+              element={<Navigate to="/dashboard/browse" replace />}
             />
-            <Route 
-              path="/dashboard/browse" 
+            <Route
+              path="/dashboard/browse"
               element={
                 <ProtectedRoute>
                   <BuyerDashboard />
                 </ProtectedRoute>
-              } 
+              }
             />
-            <Route 
-              path="/dashboard/bids" 
+            <Route
+              path="/dashboard/bids"
               element={
                 <ProtectedRoute>
                   <BuyerDashboard />
                 </ProtectedRoute>
-              } 
+              }
             />
-            <Route 
-              path="/dashboard/watchlist" 
+            <Route
+              path="/dashboard/watchlist"
               element={
                 <ProtectedRoute>
                   <BuyerDashboard />
                 </ProtectedRoute>
-              } 
+              }
             />
-            <Route 
-              path="/dashboard/won" 
+            <Route
+              path="/dashboard/won"
               element={
                 <ProtectedRoute>
                   <BuyerDashboard />
                 </ProtectedRoute>
-              } 
+              }
             />
-            <Route 
-              path="/dashboard/profile" 
+            <Route
+              path="/dashboard/profile"
               element={
                 <ProtectedRoute>
                   <BuyerProfile />
                 </ProtectedRoute>
-              } 
+              }
             />
-            
+
             {/* Profile Routes */}
-            <Route 
-              path="/profile/buyer" 
+            <Route
+              path="/profile/buyer"
               element={
                 <ProtectedRoute>
                   <BuyerProfile />
                 </ProtectedRoute>
-              } 
+              }
             />
-            <Route 
-              path="/profile/seller" 
+            <Route
+              path="/profile/seller"
               element={
                 <ProtectedRoute requiredRole="seller">
                   <SellerProfile />
                 </ProtectedRoute>
-              } 
+              }
             />
-            <Route 
-              path="/dashboard/seller" 
+            <Route
+              path="/dashboard/seller"
               element={
                 <ProtectedRoute requiredRole="seller">
                   <SellerDashboard />
                 </ProtectedRoute>
-              } 
+              }
             />
-            <Route 
-              path="/dashboard/post-item" 
+            <Route
+              path="/dashboard/post-item"
               element={
                 <ProtectedRoute requiredRole="seller">
                   <SellerDashboard />
                 </ProtectedRoute>
-              } 
+              }
             />
-            <Route 
-              path="/dashboard/drafts" 
+            <Route
+              path="/dashboard/drafts"
               element={
                 <ProtectedRoute requiredRole="seller">
                   <SellerDashboard />
                 </ProtectedRoute>
-              } 
+              }
             />
-            <Route 
-              path="/dashboard/listings" 
+            <Route
+              path="/dashboard/listings"
               element={
                 <ProtectedRoute requiredRole="seller">
                   <SellerDashboard />
                 </ProtectedRoute>
-              } 
+              }
             />
-            <Route 
-              path="/dashboard/sales" 
+            <Route
+              path="/dashboard/sales"
               element={
                 <ProtectedRoute requiredRole="seller">
                   <SellerDashboard />
                 </ProtectedRoute>
-              } 
+              }
             />
-            <Route 
-              path="/dashboard/payouts" 
+            <Route
+              path="/dashboard/payouts"
               element={
                 <ProtectedRoute requiredRole="seller">
                   <SellerDashboard />
                 </ProtectedRoute>
-              } 
+              }
             />
-            <Route 
-              path="/dashboard/company" 
+            <Route
+              path="/dashboard/company"
               element={
                 <ProtectedRoute requiredRole="seller">
                   <SellerProfile />
                 </ProtectedRoute>
-              } 
+              }
             />
-            <Route 
-              path="/dashboard/seller-browse" 
+            <Route
+              path="/dashboard/seller-browse"
               element={
                 <ProtectedRoute requiredRole="seller">
                   <SellerDashboard />
                 </ProtectedRoute>
-              } 
+              }
             />
-            <Route 
-              path="/dashboard/seller-bids" 
+            <Route
+              path="/dashboard/seller-bids"
               element={
                 <ProtectedRoute requiredRole="seller">
                   <SellerDashboard />
                 </ProtectedRoute>
-              } 
+              }
             />
-            <Route 
-              path="/dashboard/seller-watchlist" 
+            <Route
+              path="/dashboard/seller-watchlist"
               element={
                 <ProtectedRoute requiredRole="seller">
                   <SellerDashboard />
                 </ProtectedRoute>
-              } 
+              }
             />
-            <Route 
-              path="/dashboard/seller-won" 
+            <Route
+              path="/dashboard/seller-won"
               element={
                 <ProtectedRoute requiredRole="seller">
                   <SellerDashboard />
                 </ProtectedRoute>
-              } 
+              }
             />
-            <Route 
-              path="/dashboard/admin" 
+            <Route
+              path="/dashboard/admin"
               element={
                 <ProtectedRoute requiredRole="admin">
                   <AdminDashboard />
                 </ProtectedRoute>
-              } 
+              }
             />
-            <Route 
-              path="/dashboard/overview" 
+            <Route
+              path="/dashboard/overview"
               element={
                 <ProtectedRoute requiredRole="admin">
                   <AdminDashboard />
                 </ProtectedRoute>
-              } 
+              }
             />
-            <Route 
-              path="/dashboard/users" 
+            <Route
+              path="/dashboard/users"
               element={
                 <ProtectedRoute requiredRole="admin">
                   <AdminDashboard />
                 </ProtectedRoute>
-              } 
+              }
             />
-            <Route 
-              path="/dashboard/listings-control" 
+            <Route
+              path="/dashboard/listings-control"
               element={
                 <ProtectedRoute requiredRole="admin">
                   <AdminDashboard />
                 </ProtectedRoute>
-              } 
+              }
             />
-            <Route 
-              path="/dashboard/transactions" 
+            <Route
+              path="/dashboard/transactions"
               element={
                 <ProtectedRoute requiredRole="admin">
                   <AdminDashboard />
                 </ProtectedRoute>
-              } 
+              }
             />
-            <Route 
-              path="/dashboard/reports" 
+            <Route
+              path="/dashboard/reports"
               element={
                 <ProtectedRoute requiredRole="admin">
                   <AdminDashboard />
                 </ProtectedRoute>
-              } 
+              }
             />
-            <Route 
-              path="/dashboard/notifications" 
+            <Route
+              path="/dashboard/verifications"
               element={
                 <ProtectedRoute requiredRole="admin">
                   <AdminDashboard />
                 </ProtectedRoute>
-              } 
+              }
             />
-            
+            <Route
+              path="/dashboard/admin-signup"
+              element={
+                <ProtectedRoute requiredRole="admin">
+                  <AdminDashboard />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/dashboard/notifications"
+              element={
+                <ProtectedRoute requiredRole="admin">
+                  <AdminDashboard />
+                </ProtectedRoute>
+              }
+            />
+
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
