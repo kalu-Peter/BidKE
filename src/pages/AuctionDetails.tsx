@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import Header from "@/components/Header";
+import UserHeader from "@/components/UserHeader";
 import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -172,7 +173,7 @@ const AuctionDetails = () => {
         // If the user is authenticated, check if this auction is on their watchlist
         try {
           if (user && user.id) {
-            const wl = await apiService.getWatchlist();
+            const wl = await apiService.getWatchlist(user?.id);
             if (wl.success && Array.isArray(wl.data)) {
               const found = (wl.data as any[]).some(
                 (w) => Number(w.auction_id) === Number(id)
@@ -421,7 +422,7 @@ const AuctionDetails = () => {
   if (loading) {
     return (
       <>
-        <Header />
+        <UserHeader />
         <div className="min-h-screen bg-gray-50 pt-20 flex items-center justify-center">
           <div className="text-center">
             <Loader2 className="w-12 h-12 animate-spin mx-auto mb-4 text-primary" />
@@ -441,7 +442,7 @@ const AuctionDetails = () => {
   if (error) {
     return (
       <>
-        <Header />
+        <UserHeader />
         <div className="min-h-screen bg-gray-50 pt-20 flex items-center justify-center">
           <div className="text-center max-w-md mx-auto">
             <AlertTriangle className="w-16 h-16 text-red-500 mx-auto mb-4" />
@@ -462,7 +463,7 @@ const AuctionDetails = () => {
   if (!auction) {
     return (
       <>
-        <Header />
+        <UserHeader />
         <div className="min-h-screen bg-gray-50 pt-20 flex items-center justify-center">
           <div className="text-center">
             <h2 className="text-xl font-semibold text-gray-900 mb-2">
@@ -483,7 +484,7 @@ const AuctionDetails = () => {
 
   return (
     <>
-      <Header />
+      <UserHeader />
 
       {/* Notification Container */}
       <NotificationContainer
