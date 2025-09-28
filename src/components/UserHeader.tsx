@@ -78,12 +78,49 @@ const UserHeader: React.FC = () => {
           </div>
 
           <div className="flex items-center space-x-4">
-            <div className="text-sm">
-              <span className="text-gray-600">Welcome, </span>
-              <span className="font-medium">
-                {user?.name || user?.username || "User"}
-              </span>
-            </div>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center text-sm font-medium text-primary">
+                  {(() => {
+                    const name = user?.name || user?.username || "User";
+                    const parts = name.split(" ").filter(Boolean);
+                    const initials =
+                      parts.length === 1
+                        ? parts[0].slice(0, 2)
+                        : parts[0][0] + parts[1][0];
+                    return initials.toUpperCase();
+                  })()}
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <div className="px-4 py-3">
+                  <div className="font-medium">
+                    {user?.name || user?.username}
+                  </div>
+                  <div className="text-xs text-muted-foreground">
+                    {user?.role}
+                  </div>
+                </div>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem asChild>
+                  <Link to="/dashboard/profile">Profile</Link>
+                </DropdownMenuItem>
+                {user?.role !== "admin" && (
+                  <>
+                    <DropdownMenuItem asChild>
+                      <Link to="/dashboard/bids">My Bids</Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link to="/dashboard/watchlist">Watchlist</Link>
+                    </DropdownMenuItem>
+                  </>
+                )}
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={handleLogout}>
+                  Logout
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
 
             <Badge className={getRoleDisplay().color}>
               {getRoleDisplay().label}
@@ -93,11 +130,6 @@ const UserHeader: React.FC = () => {
                 {getStatusBadge().label}
               </Badge>
             )}
-
-            <Button variant="ghost" size="sm" onClick={handleLogout}>
-              <LogOut className="w-4 h-4 mr-2" />
-              Logout
-            </Button>
           </div>
         </div>
       </div>

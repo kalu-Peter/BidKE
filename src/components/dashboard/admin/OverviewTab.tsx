@@ -1,14 +1,15 @@
 import React from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { 
-  BarChart3, 
-  Users, 
-  FileText, 
+import StatsCard from "@/components/dashboard/StatsCard";
+import {
+  BarChart3,
+  Users,
+  FileText,
   DollarSign,
   TrendingUp,
   AlertTriangle,
-  CheckCircle
+  CheckCircle,
 } from "lucide-react";
 
 const OverviewTab: React.FC = () => {
@@ -21,7 +22,7 @@ const OverviewTab: React.FC = () => {
       time: "15 minutes ago",
       icon: CheckCircle,
       bgColor: "bg-green-50",
-      iconColor: "text-green-600"
+      iconColor: "text-green-600",
     },
     {
       id: 2,
@@ -30,7 +31,7 @@ const OverviewTab: React.FC = () => {
       time: "2 hours ago",
       icon: DollarSign,
       bgColor: "bg-blue-50",
-      iconColor: "text-blue-600"
+      iconColor: "text-blue-600",
     },
     {
       id: 3,
@@ -39,7 +40,7 @@ const OverviewTab: React.FC = () => {
       time: "3 hours ago",
       icon: AlertTriangle,
       bgColor: "bg-yellow-50",
-      iconColor: "text-yellow-600"
+      iconColor: "text-yellow-600",
     },
     {
       id: 4,
@@ -48,7 +49,7 @@ const OverviewTab: React.FC = () => {
       time: "5 hours ago",
       icon: Users,
       bgColor: "bg-purple-50",
-      iconColor: "text-purple-600"
+      iconColor: "text-purple-600",
     },
     {
       id: 5,
@@ -57,8 +58,8 @@ const OverviewTab: React.FC = () => {
       time: "1 day ago",
       icon: TrendingUp,
       bgColor: "bg-emerald-50",
-      iconColor: "text-emerald-600"
-    }
+      iconColor: "text-emerald-600",
+    },
   ];
 
   const quickActions = [
@@ -69,7 +70,7 @@ const OverviewTab: React.FC = () => {
       icon: Users,
       color: "text-blue-600",
       bgColor: "hover:bg-blue-50",
-      action: "users"
+      action: "users",
     },
     {
       id: 2,
@@ -78,7 +79,7 @@ const OverviewTab: React.FC = () => {
       icon: FileText,
       color: "text-green-600",
       bgColor: "hover:bg-green-50",
-      action: "listings"
+      action: "listings",
     },
     {
       id: 3,
@@ -87,7 +88,7 @@ const OverviewTab: React.FC = () => {
       icon: DollarSign,
       color: "text-yellow-600",
       bgColor: "hover:bg-yellow-50",
-      action: "transactions"
+      action: "transactions",
     },
     {
       id: 4,
@@ -96,8 +97,8 @@ const OverviewTab: React.FC = () => {
       icon: BarChart3,
       color: "text-purple-600",
       bgColor: "hover:bg-purple-50",
-      action: "reports"
-    }
+      action: "reports",
+    },
   ];
 
   const systemMetrics = [
@@ -107,7 +108,7 @@ const OverviewTab: React.FC = () => {
       value: "99.9%",
       subtitle: "Last 30 days",
       icon: CheckCircle,
-      color: "text-green-600"
+      color: "text-green-600",
     },
     {
       id: 2,
@@ -115,7 +116,7 @@ const OverviewTab: React.FC = () => {
       value: "892",
       subtitle: "Currently online",
       icon: Users,
-      color: "text-blue-600"
+      color: "text-blue-600",
     },
     {
       id: 3,
@@ -123,7 +124,7 @@ const OverviewTab: React.FC = () => {
       value: "142ms",
       subtitle: "Average API response",
       icon: TrendingUp,
-      color: "text-green-600"
+      color: "text-green-600",
     },
     {
       id: 4,
@@ -131,9 +132,19 @@ const OverviewTab: React.FC = () => {
       value: "67%",
       subtitle: "Of allocated space",
       icon: BarChart3,
-      color: "text-orange-600"
-    }
+      color: "text-orange-600",
+    },
   ];
+
+  // Admin summary stats (moved from AdminDashboard)
+  const stats = {
+    totalUsers: 1247,
+    activeListings: 156,
+    todayRevenue: 45000,
+    totalRevenue: 2340000,
+    pendingApprovals: 12,
+    completedTransactions: 89,
+  };
 
   const handleQuickAction = (action: string) => {
     console.log("Quick action:", action);
@@ -142,6 +153,92 @@ const OverviewTab: React.FC = () => {
 
   return (
     <div className="space-y-6">
+      {/* Admin Summary (Welcome + Alerts + Stats) */}
+      <div>
+        <h1 className="text-3xl font-bold text-gray-900 mb-2">
+          Admin Dashboard
+        </h1>
+        <p className="text-gray-600">
+          Monitor platform activity, manage users, and oversee all auction
+          operations.
+        </p>
+      </div>
+
+      {/* Alert Section (from AdminDashboard) */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <Card className="border-yellow-200 bg-yellow-50">
+          <CardContent className="p-4">
+            <div className="flex items-center space-x-3">
+              <AlertTriangle className="w-5 h-5 text-yellow-600" />
+              <div>
+                <h3 className="font-medium text-yellow-800">
+                  Pending Approvals
+                </h3>
+                <p className="text-sm text-yellow-700">
+                  {stats.pendingApprovals} items require your attention
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="border-blue-200 bg-blue-50">
+          <CardContent className="p-4">
+            <div className="flex items-center space-x-3">
+              <TrendingUp className="w-5 h-5 text-blue-600" />
+              <div>
+                <h3 className="font-medium text-blue-800">Revenue Growth</h3>
+                <p className="text-sm text-blue-700">
+                  +15% increase this month
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Stats Cards (from AdminDashboard) */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <StatsCard
+          title="Total Users"
+          value={stats.totalUsers}
+          icon={<Users className="w-6 h-6" />}
+          change="+24 this week"
+          changeType="positive"
+        />
+        <StatsCard
+          title="Active Listings"
+          value={stats.activeListings}
+          icon={<FileText className="w-6 h-6" />}
+          change="+12 today"
+          changeType="positive"
+        />
+        <StatsCard
+          title="Today's Revenue"
+          value={`Ksh ${stats.todayRevenue.toLocaleString()}`}
+          icon={<DollarSign className="w-6 h-6" />}
+          change="+8% vs yesterday"
+          changeType="positive"
+        />
+        <StatsCard
+          title="Total Revenue"
+          value={`Ksh ${stats.totalRevenue.toLocaleString()}`}
+          icon={<BarChart3 className="w-6 h-6" />}
+          subtitle="All-time platform earnings"
+        />
+        <StatsCard
+          title="Pending Approvals"
+          value={stats.pendingApprovals}
+          icon={<AlertTriangle className="w-6 h-6" />}
+          subtitle="Require immediate attention"
+        />
+        <StatsCard
+          title="Completed Transactions"
+          value={stats.completedTransactions}
+          icon={<CheckCircle className="w-6 h-6" />}
+          subtitle="This month"
+        />
+      </div>
+
       {/* Recent Activity */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card>
@@ -156,10 +253,17 @@ const OverviewTab: React.FC = () => {
               {recentActivity.map((activity) => {
                 const IconComponent = activity.icon;
                 return (
-                  <div key={activity.id} className={`flex items-center space-x-4 p-3 ${activity.bgColor} rounded-lg`}>
-                    <IconComponent className={`w-5 h-5 ${activity.iconColor}`} />
+                  <div
+                    key={activity.id}
+                    className={`flex items-center space-x-4 p-3 ${activity.bgColor} rounded-lg`}
+                  >
+                    <IconComponent
+                      className={`w-5 h-5 ${activity.iconColor}`}
+                    />
                     <div className="flex-1">
-                      <p className="font-medium text-gray-900">{activity.message}</p>
+                      <p className="font-medium text-gray-900">
+                        {activity.message}
+                      </p>
                       <p className="text-sm text-gray-600">{activity.time}</p>
                     </div>
                   </div>
@@ -215,11 +319,18 @@ const OverviewTab: React.FC = () => {
             {systemMetrics.map((metric) => {
               const IconComponent = metric.icon;
               return (
-                <div key={metric.id} className="flex items-center space-x-4 p-4 border rounded-lg">
+                <div
+                  key={metric.id}
+                  className="flex items-center space-x-4 p-4 border rounded-lg"
+                >
                   <IconComponent className={`w-8 h-8 ${metric.color}`} />
                   <div>
-                    <p className="text-2xl font-bold text-gray-900">{metric.value}</p>
-                    <p className="text-sm font-medium text-gray-900">{metric.title}</p>
+                    <p className="text-2xl font-bold text-gray-900">
+                      {metric.value}
+                    </p>
+                    <p className="text-sm font-medium text-gray-900">
+                      {metric.title}
+                    </p>
                     <p className="text-xs text-gray-600">{metric.subtitle}</p>
                   </div>
                 </div>
@@ -241,7 +352,10 @@ const OverviewTab: React.FC = () => {
                 <span className="text-sm font-medium">Cars</span>
                 <div className="flex items-center space-x-2">
                   <div className="w-24 bg-gray-200 rounded-full h-2">
-                    <div className="bg-blue-500 h-2 rounded-full" style={{ width: '65%' }}></div>
+                    <div
+                      className="bg-blue-500 h-2 rounded-full"
+                      style={{ width: "65%" }}
+                    ></div>
                   </div>
                   <span className="text-sm text-gray-600">65%</span>
                 </div>
@@ -250,7 +364,10 @@ const OverviewTab: React.FC = () => {
                 <span className="text-sm font-medium">Electronics</span>
                 <div className="flex items-center space-x-2">
                   <div className="w-24 bg-gray-200 rounded-full h-2">
-                    <div className="bg-green-500 h-2 rounded-full" style={{ width: '45%' }}></div>
+                    <div
+                      className="bg-green-500 h-2 rounded-full"
+                      style={{ width: "45%" }}
+                    ></div>
                   </div>
                   <span className="text-sm text-gray-600">45%</span>
                 </div>
@@ -259,7 +376,10 @@ const OverviewTab: React.FC = () => {
                 <span className="text-sm font-medium">Motorbikes</span>
                 <div className="flex items-center space-x-2">
                   <div className="w-24 bg-gray-200 rounded-full h-2">
-                    <div className="bg-yellow-500 h-2 rounded-full" style={{ width: '30%' }}></div>
+                    <div
+                      className="bg-yellow-500 h-2 rounded-full"
+                      style={{ width: "30%" }}
+                    ></div>
                   </div>
                   <span className="text-sm text-gray-600">30%</span>
                 </div>
@@ -317,7 +437,9 @@ const OverviewTab: React.FC = () => {
               <div className="pt-2 border-t">
                 <div className="flex justify-between">
                   <span className="text-sm font-medium">Commission</span>
-                  <span className="font-semibold text-blue-600">Ksh 124,500</span>
+                  <span className="font-semibold text-blue-600">
+                    Ksh 124,500
+                  </span>
                 </div>
               </div>
             </div>
@@ -339,11 +461,15 @@ const OverviewTab: React.FC = () => {
               <div className="flex items-center space-x-3">
                 <AlertTriangle className="w-5 h-5 text-red-600" />
                 <div>
-                  <p className="font-medium text-red-900">12 users awaiting approval</p>
-                  <p className="text-sm text-red-700">Some registrations are over 48 hours old</p>
+                  <p className="font-medium text-red-900">
+                    12 users awaiting approval
+                  </p>
+                  <p className="text-sm text-red-700">
+                    Some registrations are over 48 hours old
+                  </p>
                 </div>
               </div>
-              <Button size="sm" onClick={() => handleQuickAction('users')}>
+              <Button size="sm" onClick={() => handleQuickAction("users")}>
                 Review Now
               </Button>
             </div>
@@ -351,11 +477,19 @@ const OverviewTab: React.FC = () => {
               <div className="flex items-center space-x-3">
                 <FileText className="w-5 h-5 text-yellow-600" />
                 <div>
-                  <p className="font-medium text-yellow-900">3 high-value listings need review</p>
-                  <p className="text-sm text-yellow-700">Items worth over Ksh 500,000 each</p>
+                  <p className="font-medium text-yellow-900">
+                    3 high-value listings need review
+                  </p>
+                  <p className="text-sm text-yellow-700">
+                    Items worth over Ksh 500,000 each
+                  </p>
                 </div>
               </div>
-              <Button size="sm" variant="outline" onClick={() => handleQuickAction('listings')}>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => handleQuickAction("listings")}
+              >
                 Review
               </Button>
             </div>
