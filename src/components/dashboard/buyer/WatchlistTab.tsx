@@ -1,4 +1,6 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { apiService } from "@/services/api";
+import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -8,99 +10,142 @@ import { Heart, Clock, Eye, X, Bell, Search } from "lucide-react";
 const WatchlistTab: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState("");
 
-  // Mock data for watchlist items
-  const watchlistItems = [
-    {
-      id: 1,
-      title: "MacBook Pro 2020",
-      seller: "Digital Solutions",
-      currentBid: 97000,
-      timeLeft: "3d 8h",
-      category: "Electronics",
-      bidsCount: 22,
-      addedDate: "2024-01-20",
-      priceWhenAdded: 85000,
-      priceChange: 12000,
-      image: "https://images.unsplash.com/photo-1517336714731-489689fd1ca8?auto=format&fit=crop&w=400&q=80",
-      notifications: true,
-      endingSoon: false
-    },
-    {
-      id: 2,
-      title: "Samsung 55'' 4K TV",
-      seller: "TechHub Kenya",
-      currentBid: 47000,
-      timeLeft: "1h 15m",
-      category: "Electronics",
-      bidsCount: 9,
-      addedDate: "2024-01-22",
-      priceWhenAdded: 40000,
-      priceChange: 7000,
-      image: "https://images.unsplash.com/photo-1519125323398-675f0ddb6308?auto=format&fit=crop&w=400&q=80",
-      notifications: true,
-      endingSoon: true
-    },
-    {
-      id: 3,
-      title: "iPhone 13 Pro Max",
-      seller: "Mobile World",
-      currentBid: 72000,
-      timeLeft: "2d 6h",
-      category: "Electronics",
-      bidsCount: 15,
-      addedDate: "2024-01-18",
-      priceWhenAdded: 65000,
-      priceChange: 7000,
-      image: "https://images.unsplash.com/photo-1592750475338-74b7b21085ab?auto=format&fit=crop&w=400&q=80",
-      notifications: false,
-      endingSoon: false
-    },
-    {
-      id: 4,
-      title: "Honda CB300F",
-      seller: "Moto Elite",
-      currentBid: 125000,
-      timeLeft: "4d 12h",
-      category: "Motorbikes",
-      bidsCount: 8,
-      addedDate: "2024-01-21",
-      priceWhenAdded: 120000,
-      priceChange: 5000,
-      image: "https://images.unsplash.com/photo-1558618047-3c8c76ca7d13?auto=format&fit=crop&w=400&q=80",
-      notifications: true,
-      endingSoon: false
-    },
-    {
-      id: 5,
-      title: "Subaru Impreza 2020",
-      seller: "Auto Dealers Ltd",
-      currentBid: 1450000,
-      timeLeft: "6h 30m",
-      category: "Cars",
-      bidsCount: 31,
-      addedDate: "2024-01-19",
-      priceWhenAdded: 1300000,
-      priceChange: 150000,
-      image: "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?auto=format&fit=crop&w=400&q=80",
-      notifications: true,
-      endingSoon: true
-    }
-  ];
+  const { user } = useAuth();
 
-  const filteredWatchlist = watchlistItems.filter(item => 
-    item.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    item.category.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    item.seller.toLowerCase().includes(searchTerm.toLowerCase())
+  // Live watchlist state (loaded from API)
+  const [watchlistItems, setWatchlistItems] = useState<any[] | null>(null);
+  const [loading, setLoading] = useState<boolean>(true);
+
+  const filteredWatchlist = (watchlistItems || []).filter(
+    (item: any) =>
+      (item.title || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (item.category || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (item.seller || "").toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const handleRemoveFromWatchlist = (itemId: number) => {
-    console.log("Remove from watchlist:", itemId);
-    // Handle removal logic
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      setLoading(true);
+      try {
+        const res = await apiService.getWatchlist(user?.id);
+        if (!mounted) return;
+        if (res.success && Array.isArray(res.data)) {
+          // Map backend shape to UI-friendly shape if necessary
+          const items = res.data.map((d: any) => ({
+            id: Number(d.auction_id),
+            title: d.title || d.auction_title || `Auction #${d.auction_id}`,
+            seller: d.seller_name || d.seller || "Unknown",
+            currentBid: d.current_bid ?? d.current_price ?? 0,
+            timeLeft: d.time_remaining
+              ? `${Math.floor(d.time_remaining / 3600)}h`
+              : "",
+            category: d.category_name || d.category || "",
+            bidsCount: d.bid_count ?? 0,
+            addedDate: d.added_at || d.added_date || null,
+            priceWhenAdded: d.price_when_added || 0,
+            priceChange:
+              (d.current_price ?? d.current_bid ?? 0) -
+              (d.price_when_added ?? 0),
+            image:
+              d.primary_image && d.primary_image.startsWith("http")
+                ? d.primary_image
+                : `http://localhost:8000${
+                    d.primary_image || d.image_path || "/placeholder.svg"
+                  }`,
+            notifications: !!d.notifications,
+            endingSoon: !!(d.time_remaining && d.time_remaining < 3600 * 24),
+          }));
+
+          // Set initial items
+          setWatchlistItems(items);
+
+          // Refresh when watchlist changes elsewhere in the app
+          const onChange = async (e: any) => {
+            try {
+              const res2 = await apiService.getWatchlist(user?.id);
+              if (!mounted) return;
+              if (res2.success && Array.isArray(res2.data)) {
+                const updated = res2.data.map((d: any) => ({
+                  id: Number(d.auction_id),
+                  title:
+                    d.title || d.auction_title || `Auction #${d.auction_id}`,
+                  seller: d.seller_name || d.seller || "Unknown",
+                  currentBid: d.current_bid ?? d.current_price ?? 0,
+                  timeLeft: d.time_remaining
+                    ? `${Math.floor(d.time_remaining / 3600)}h`
+                    : "",
+                  category: d.category_name || d.category || "",
+                  bidsCount: d.bid_count ?? 0,
+                  addedDate: d.added_at || d.added_date || null,
+                  priceWhenAdded: d.price_when_added || 0,
+                  priceChange:
+                    (d.current_price ?? d.current_bid ?? 0) -
+                    (d.price_when_added ?? 0),
+                  image:
+                    d.primary_image && d.primary_image.startsWith("http")
+                      ? d.primary_image
+                      : `http://localhost:8000${
+                          d.primary_image || d.image_path || "/placeholder.svg"
+                        }`,
+                  notifications: !!d.notifications,
+                  endingSoon: !!(
+                    d.time_remaining && d.time_remaining < 3600 * 24
+                  ),
+                }));
+
+                setWatchlistItems(updated);
+              } else {
+                setWatchlistItems([]);
+              }
+            } catch (err) {
+              console.error("Failed to refresh watchlist after change:", err);
+            }
+          };
+
+          window.addEventListener(
+            "watchlist:changed",
+            onChange as EventListener
+          );
+        }
+      } catch (err) {
+        console.error("Failed to load watchlist:", err);
+        setWatchlistItems([]);
+      } finally {
+        if (mounted) setLoading(false);
+      }
+    })();
+
+    return () => {
+      mounted = false;
+      window.removeEventListener(
+        "watchlist:changed",
+        (window as any).onChange as EventListener
+      );
+    };
+  }, []);
+
+  const handleRemoveFromWatchlist = async (itemId: number) => {
+    // Optimistic removal
+    const prev = watchlistItems;
+    setWatchlistItems(prev ? prev.filter((i) => i.id !== itemId) : prev);
+    try {
+      const res = await apiService.removeFromWatchlist(itemId, user?.id);
+      if (!res.success) {
+        throw new Error(
+          res.message || res.error || "Failed to remove from watchlist"
+        );
+      }
+    } catch (err) {
+      console.error("Failed to remove from watchlist:", err);
+      // Rollback
+      setWatchlistItems(prev ?? []);
+    }
   };
 
   const handleToggleNotifications = (itemId: number) => {
     console.log("Toggle notifications for:", itemId);
-    // Handle notification toggle logic
+    // Placeholder - notifications API not implemented yet
   };
 
   const handlePlaceBid = (itemId: number) => {
@@ -110,7 +155,7 @@ const WatchlistTab: React.FC = () => {
 
   const handleViewDetails = (itemId: number) => {
     console.log("View details for:", itemId);
-    // Handle view details logic
+    // Handle view details logic - e.g. navigate to /auction/:id
   };
 
   const getPriceChangeIndicator = (change: number) => {
@@ -131,10 +176,20 @@ const WatchlistTab: React.FC = () => {
   };
 
   // Statistics
-  const totalItems = watchlistItems.length;
-  const endingSoonCount = watchlistItems.filter(item => item.endingSoon).length;
-  const avgPriceIncrease = watchlistItems.reduce((sum, item) => sum + item.priceChange, 0) / totalItems;
-  const notificationsEnabled = watchlistItems.filter(item => item.notifications).length;
+  const totalItems = (watchlistItems || []).length;
+  const endingSoonCount = (watchlistItems || []).filter(
+    (item: any) => item.endingSoon
+  ).length;
+  const avgPriceIncrease =
+    (watchlistItems || []).length > 0
+      ? (watchlistItems || []).reduce(
+          (sum: number, item: any) => sum + (item.priceChange || 0),
+          0
+        ) / (watchlistItems || []).length
+      : 0;
+  const notificationsEnabled = (watchlistItems || []).filter(
+    (item: any) => item.notifications
+  ).length;
 
   return (
     <Card>
@@ -144,7 +199,8 @@ const WatchlistTab: React.FC = () => {
           <span>My Watchlist</span>
         </CardTitle>
         <p className="text-sm text-gray-600">
-          Keep track of interesting auctions and get notified about price changes
+          Keep track of interesting auctions and get notified about price
+          changes
         </p>
       </CardHeader>
       <CardContent className="space-y-6">
@@ -154,7 +210,9 @@ const WatchlistTab: React.FC = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-purple-600">Watched Items</p>
-                <p className="text-2xl font-bold text-purple-800">{totalItems}</p>
+                <p className="text-2xl font-bold text-purple-800">
+                  {totalItems}
+                </p>
               </div>
               <Heart className="w-8 h-8 text-purple-600" />
             </div>
@@ -163,7 +221,9 @@ const WatchlistTab: React.FC = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-red-600">Ending Soon</p>
-                <p className="text-2xl font-bold text-red-800">{endingSoonCount}</p>
+                <p className="text-2xl font-bold text-red-800">
+                  {endingSoonCount}
+                </p>
               </div>
               <Clock className="w-8 h-8 text-red-600" />
             </div>
@@ -172,7 +232,9 @@ const WatchlistTab: React.FC = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-blue-600">Notifications On</p>
-                <p className="text-2xl font-bold text-blue-800">{notificationsEnabled}</p>
+                <p className="text-2xl font-bold text-blue-800">
+                  {notificationsEnabled}
+                </p>
               </div>
               <Bell className="w-8 h-8 text-blue-600" />
             </div>
@@ -182,7 +244,8 @@ const WatchlistTab: React.FC = () => {
               <div>
                 <p className="text-sm text-green-600">Avg. Price Change</p>
                 <p className="text-lg font-bold text-green-800">
-                  {avgPriceIncrease >= 0 ? '+' : ''}Ksh {avgPriceIncrease.toLocaleString()}
+                  {avgPriceIncrease >= 0 ? "+" : ""}Ksh{" "}
+                  {avgPriceIncrease.toLocaleString()}
                 </p>
               </div>
               <Search className="w-8 h-8 text-green-600" />
@@ -201,29 +264,29 @@ const WatchlistTab: React.FC = () => {
 
         {/* Quick Filters */}
         <div className="flex flex-wrap gap-2">
-          <Badge 
-            variant="outline" 
+          <Badge
+            variant="outline"
             className="cursor-pointer hover:bg-red-50"
             onClick={() => setSearchTerm("ending soon")}
           >
             Ending Soon ({endingSoonCount})
           </Badge>
-          <Badge 
-            variant="outline" 
+          <Badge
+            variant="outline"
             className="cursor-pointer hover:bg-blue-50"
             onClick={() => setSearchTerm("electronics")}
           >
             Electronics
           </Badge>
-          <Badge 
-            variant="outline" 
+          <Badge
+            variant="outline"
             className="cursor-pointer hover:bg-green-50"
             onClick={() => setSearchTerm("cars")}
           >
             Cars
           </Badge>
-          <Badge 
-            variant="outline" 
+          <Badge
+            variant="outline"
             className="cursor-pointer hover:bg-purple-50"
             onClick={() => setSearchTerm("motorbikes")}
           >
@@ -234,13 +297,16 @@ const WatchlistTab: React.FC = () => {
         {/* Watchlist Items */}
         <div className="space-y-4">
           {filteredWatchlist.map((item) => (
-            <div key={item.id} className="border rounded-lg p-4 hover:shadow-md transition-shadow">
+            <div
+              key={item.id}
+              className="border rounded-lg p-4 hover:shadow-md transition-shadow"
+            >
               <div className="flex flex-col lg:flex-row gap-4">
                 {/* Image */}
                 <div className="w-full lg:w-32 h-24 flex-shrink-0 relative">
-                  <img 
-                    src={item.image} 
-                    alt={item.title} 
+                  <img
+                    src={item.image}
+                    alt={item.title}
                     className="w-full h-full object-cover rounded"
                   />
                   {item.endingSoon && (
@@ -291,10 +357,20 @@ const WatchlistTab: React.FC = () => {
                   {/* Additional Info */}
                   <div className="flex flex-wrap items-center gap-4 mb-4 text-sm text-gray-600">
                     <span>{item.bidsCount} bids</span>
-                    <span>Added on {new Date(item.addedDate).toLocaleDateString()}</span>
+                    <span>
+                      Added on {new Date(item.addedDate).toLocaleDateString()}
+                    </span>
                     <div className="flex items-center">
-                      <Bell className={`w-4 h-4 mr-1 ${item.notifications ? 'text-blue-500' : 'text-gray-400'}`} />
-                      <span>{item.notifications ? 'Notifications On' : 'Notifications Off'}</span>
+                      <Bell
+                        className={`w-4 h-4 mr-1 ${
+                          item.notifications ? "text-blue-500" : "text-gray-400"
+                        }`}
+                      />
+                      <span>
+                        {item.notifications
+                          ? "Notifications On"
+                          : "Notifications Off"}
+                      </span>
                     </div>
                   </div>
 
@@ -303,20 +379,24 @@ const WatchlistTab: React.FC = () => {
                     <Button size="sm" onClick={() => handlePlaceBid(item.id)}>
                       Place Bid
                     </Button>
-                    <Button size="sm" variant="outline" onClick={() => handleViewDetails(item.id)}>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handleViewDetails(item.id)}
+                    >
                       <Eye className="w-4 h-4 mr-1" />
                       View Details
                     </Button>
-                    <Button 
-                      size="sm" 
+                    <Button
+                      size="sm"
                       variant="outline"
                       onClick={() => handleToggleNotifications(item.id)}
                     >
                       <Bell className="w-4 h-4 mr-1" />
-                      {item.notifications ? 'Disable' : 'Enable'} Alerts
+                      {item.notifications ? "Disable" : "Enable"} Alerts
                     </Button>
-                    <Button 
-                      size="sm" 
+                    <Button
+                      size="sm"
                       variant="destructive"
                       onClick={() => handleRemoveFromWatchlist(item.id)}
                     >
@@ -331,7 +411,8 @@ const WatchlistTab: React.FC = () => {
                       <div className="flex items-center">
                         <Clock className="w-4 h-4 text-red-600 mr-2" />
                         <p className="text-sm text-red-800">
-                          This auction is ending soon! Only {item.timeLeft} remaining.
+                          This auction is ending soon! Only {item.timeLeft}{" "}
+                          remaining.
                         </p>
                       </div>
                     </div>
@@ -343,7 +424,9 @@ const WatchlistTab: React.FC = () => {
                       <div className="flex items-center">
                         <Search className="w-4 h-4 text-amber-600 mr-2" />
                         <p className="text-sm text-amber-800">
-                          Price has increased by Ksh {item.priceChange.toLocaleString()} since you added it to watchlist.
+                          Price has increased by Ksh{" "}
+                          {item.priceChange.toLocaleString()} since you added it
+                          to watchlist.
                         </p>
                       </div>
                     </div>
@@ -358,9 +441,13 @@ const WatchlistTab: React.FC = () => {
         {filteredWatchlist.length === 0 && (
           <div className="text-center py-12">
             <Heart className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">No items in watchlist</h3>
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">
+              No items in watchlist
+            </h3>
             <p className="text-gray-600 mb-4">
-              {searchTerm ? "No items match your search criteria" : "Start watching auctions to track their progress"}
+              {searchTerm
+                ? "No items match your search criteria"
+                : "Start watching auctions to track their progress"}
             </p>
             <Button variant="outline" onClick={() => setSearchTerm("")}>
               {searchTerm ? "Clear Search" : "Browse Auctions"}
@@ -374,7 +461,9 @@ const WatchlistTab: React.FC = () => {
           <ul className="text-sm text-purple-800 space-y-1">
             <li>• Enable notifications to get alerts when prices change</li>
             <li>• Items ending soon are highlighted for quick action</li>
-            <li>• Track price changes since you added items to your watchlist</li>
+            <li>
+              • Track price changes since you added items to your watchlist
+            </li>
             <li>• You can watch up to 50 items at once</li>
           </ul>
         </div>

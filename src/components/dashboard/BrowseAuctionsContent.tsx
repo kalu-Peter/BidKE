@@ -23,6 +23,8 @@ import {
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
+import { apiService } from "@/services/api";
+import { useNotifications } from "@/components/notifications/BidNotification";
 
 interface Auction {
   id: number;
@@ -232,34 +234,46 @@ const BrowseAuctionsContent = () => {
   }, [searchTerm, category, priceRange]);
 
   // Handler functions
+  const { notifyWinning } = useNotifications();
+
   const handleToggleWatch = async (auctionId: number) => {
     if (!user) return;
 
+    const auction = auctions.find((a) => a.id === auctionId);
+    if (!auction) return;
+
+    // Optimistic update
+    const prev = auctions.map((a) => ({ ...a }));
+    setAuctions((prevList) =>
+      prevList.map((a) =>
+        a.id === auctionId ? { ...a, isWatched: !a.isWatched } : a
+      )
+    );
+
     try {
-      const auction = auctions.find((a) => a.id === auctionId);
-      if (!auction) return;
+      const res = await apiService.toggleWatch(auctionId, user?.id);
+      if (!res.success) {
+        throw new Error(res.message || "Watch toggle failed");
+      }
 
-      const response = await fetch("http://localhost:8000/watchlist.php", {
-        method: auction.isWatched ? "DELETE" : "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        credentials: "include",
-        body: JSON.stringify({
-          user_id: user.id,
-          auction_id: auctionId,
-        }),
-      });
-
-      if (response.ok) {
-        setAuctions((prev) =>
-          prev.map((a) =>
-            a.id === auctionId ? { ...a, isWatched: !a.isWatched } : a
+      // Apply server-provided watched flag when available
+      const watched = (res.data as any)?.watched;
+      if (typeof watched === "boolean") {
+        setAuctions((list) =>
+          list.map((a) =>
+            a.id === auctionId ? { ...a, isWatched: watched } : a
           )
         );
       }
-    } catch (error) {
-      console.error("Error toggling watchlist:", error);
+
+      // Optionally show a small notification (reuse notifyWinning for demo)
+      if (watched) {
+        notifyWinning(auctionId, auction.title);
+      }
+    } catch (err) {
+      console.error("Error toggling watchlist:", err);
+      // rollback
+      setAuctions(prev);
     }
   };
 

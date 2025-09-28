@@ -1,0 +1,1 @@
+{"success":false,"message":"Internal server error: SQLSTATE[42703]: Undefined column: 7 ERROR:  column a.bid_count does not exist\nLINE 8:                 COALESCE(a.bid_count, 0) as bid_count,\n                                 ^"}

@@ -120,49 +120,35 @@ class ApiService {
         credentials: 'include'
       });
 
-      const contentType = response.headers.get('content-type') || '';
+      // Read raw text once (response.text() can only be read once) and try to parse JSON
+      const raw = await response.text();
       let data: any = null;
-
-      if (contentType.includes('application/json')) {
-        // Read raw text once, then parse JSON to avoid double-reading the body stream
-        const raw = await response.text();
-        try {
-          data = JSON.parse(raw);
-        } catch (jsonErr) {
-          console.error('Failed to parse JSON response', { url, raw, jsonErr });
-          return {
-            success: false,
-            error: 'Invalid JSON response from server',
-            raw
-          } as ApiResponse;
-        }
-      } else {
-        // Non-JSON response (likely HTML error page). Capture raw text for debugging.
-        const raw = await response.text();
-        // Try to parse JSON in case server mis-set content-type
-        try {
-          data = JSON.parse(raw);
-        } catch (_) {
-          data = null;
-        }
-
-        if (data === null) {
-          console.error('Non-JSON response from API', { url, status: response.status, raw });
-          return {
-            success: false,
-            error: `Non-JSON response from server (HTTP ${response.status})`,
-            raw
-          } as ApiResponse;
-        }
+      try {
+        data = raw ? JSON.parse(raw) : null;
+      } catch (jsonErr) {
+        // Not JSON - leave data as null but keep raw for debugging
+        data = null;
       }
 
       if (!response.ok) {
-        // Normalize error shape
-        console.error('API Error response:', data);
-        return Object.assign({ success: false, error: data?.error || data?.message || `HTTP ${response.status}` }, data || {});
+        // Detailed error logging for failed responses
+        console.error('API Error response', {
+          url,
+          status: response.status,
+          statusText: response.statusText,
+          raw,
+          data
+        });
+
+        // If we parsed JSON with error details, include them; otherwise include raw
+        const errorMsg = data?.error || data?.message || `HTTP ${response.status}`;
+        return Object.assign({ success: false, error: errorMsg, raw }, data || {});
       }
 
-      return data as ApiResponse<T>;
+      // Successful response: prefer parsed data when available, otherwise return raw
+      if (data !== null) return data as ApiResponse<T>;
+      // If response had no JSON body but was OK, return a generic success
+      return { success: true, data: (raw ? raw : undefined) } as ApiResponse<any>;
     } catch (error) {
       console.error('API Request failed:', error);
       return {
@@ -306,22 +292,109 @@ class ApiService {
    * Watchlist Methods
    */
 
-  async getWatchlist(): Promise<ApiResponse<{ auction_id: number }[]>> {
-    return this.makeRequest('/watchlist.php');
+  async getWatchlist(userId?: number): Promise<ApiResponse<{ auction_id: number }[]>> {
+    // If userId provided by caller, use it. Otherwise fall back to session or localStorage for dev.
+    const storedUserRaw = localStorage.getItem('bidlode_user');
+    const storedUser = storedUserRaw ? JSON.parse(storedUserRaw) : null;
+    let url = '/watchlist.php';
+    if (userId) {
+      url += `?user_id=${encodeURIComponent(userId)}`;
+    } else if (!this.sessionToken && storedUser && storedUser.id) {
+      url += `?user_id=${encodeURIComponent(storedUser.id)}`;
+    }
+    return this.makeRequest(url);
   }
 
-  async addToWatchlist(auctionId: number): Promise<ApiResponse> {
-    return this.makeRequest('/watchlist.php', {
+  async addToWatchlist(auctionId: number, userId?: number): Promise<ApiResponse> {
+    // POST with auction_id; server prefers session-based user_id when present
+    // Dev fallback: if there's no PHP session (server-side), include locally stored user id
+    const storedUserRaw = localStorage.getItem('bidlode_user');
+    const storedUser = storedUserRaw ? JSON.parse(storedUserRaw) : null;
+    const body: any = { auction_id: auctionId };
+    if (userId) {
+      body.user_id = userId;
+    } else if (!this.sessionToken && storedUser && storedUser.id) {
+      // NOTE: including user_id from localStorage is a development convenience only.
+      // Remove this in production and rely on server-side sessions or proper auth tokens.
+      body.user_id = storedUser.id;
+    }
+
+    const res = await this.makeRequest('/watchlist.php', {
       method: 'POST',
-      body: JSON.stringify({ auction_id: auctionId, action: 'add' })
+      body: JSON.stringify(body)
     });
+    if (res && res.success) {
+      try {
+        this.dispatchWatchlistChanged({ auction_id: auctionId, watched: true });
+      } catch (_) {}
+    }
+    return res;
   }
 
-  async removeFromWatchlist(auctionId: number): Promise<ApiResponse> {
-    return this.makeRequest('watchlist.php', {
-      method: 'POST',
-      body: JSON.stringify({ auction_id: auctionId, action: 'remove' })
+  async removeFromWatchlist(auctionId: number, userId?: number): Promise<ApiResponse> {
+    // DELETE: send auction_id and user_id in JSON body. PHP reads user_id from $input for DELETE.
+    const storedUserRaw = localStorage.getItem('bidlode_user');
+    const storedUser = storedUserRaw ? JSON.parse(storedUserRaw) : null;
+
+    const payload: any = { auction_id: auctionId };
+    if (userId) {
+      payload.user_id = userId;
+    } else if (!this.sessionToken && storedUser && storedUser.id) {
+      payload.user_id = storedUser.id;
+    }
+
+    // Keep auction_id in query string for compatibility, but include body so PHP can read user_id
+    const url = `/watchlist.php?auction_id=${encodeURIComponent(auctionId)}`;
+    const res = await this.makeRequest(url, {
+      method: 'DELETE',
+      body: JSON.stringify(payload)
     });
+    if (res && res.success) {
+      try {
+        this.dispatchWatchlistChanged({ auction_id: auctionId, watched: false });
+      } catch (_) {}
+    }
+    return res;
+  }
+
+  /**
+   * Toggle watchlist state for an auction. Server will insert or delete as needed.
+   */
+  async toggleWatch(auctionId: number, userId?: number): Promise<ApiResponse<any>> {
+    // Prefer an explicit userId passed by caller (from auth context); fall back to session token or localStorage for dev
+    const storedUserRaw = localStorage.getItem('bidlode_user');
+    const storedUser = storedUserRaw ? JSON.parse(storedUserRaw) : null;
+    const payload: any = { auction_id: auctionId, toggle: true };
+
+    if (userId) {
+      payload.user_id = userId;
+    } else if (!this.sessionToken && storedUser && storedUser.id) {
+      payload.user_id = storedUser.id; // dev-only fallback
+    }
+
+    const res = await this.makeRequest('/watchlist.php', {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    });
+    if (res && res.success && res.data) {
+      try {
+        const d: any = res.data;
+        this.dispatchWatchlistChanged({ auction_id: d.auction_id, watched: !!d.watched });
+      } catch (_) {}
+    }
+    return res;
+  }
+
+  // Helper to dispatch a global event when watchlist changes so other components can refresh
+  dispatchWatchlistChanged(detail: { auction_id: number; watched: boolean }) {
+    try {
+      if (typeof window !== 'undefined' && (window as any).dispatchEvent) {
+        const ev = new CustomEvent('watchlist:changed', { detail });
+        (window as any).dispatchEvent(ev);
+      }
+    } catch (err) {
+      // ignore in non-browser environments
+    }
   }
 
   /**
