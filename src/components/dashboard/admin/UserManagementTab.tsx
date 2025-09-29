@@ -38,6 +38,11 @@ const UserManagementTab: React.FC = () => {
   const [selectedUser, setSelectedUser] = useState<any>(null);
   const [showRejectModal, setShowRejectModal] = useState(false);
   const [rejectReason, setRejectReason] = useState("");
+  const [viewingDetails, setViewingDetails] = useState<{
+    loading: boolean;
+    error?: string | null;
+    data?: any | null;
+  }>({ loading: false, error: null, data: null });
 
   // Users loaded from the admin API (pending verifications and more)
   const [users, setUsers] = useState<any[]>([]);
@@ -121,8 +126,31 @@ const UserManagementTab: React.FC = () => {
   };
 
   const handleViewUserDetails = (userId: number) => {
-    const user = users.find((u: any) => (u.id || u.user_id) === userId);
-    setSelectedUser(user || null);
+    // Fetch full details (user + buyer profile) from admin endpoint
+    setViewingDetails({ loading: true, error: null, data: null });
+    apiService
+      .getUserDetails(userId)
+      .then((res) => {
+        if (res.success) {
+          const payload: any = (res as any).data || res.data || {};
+          setViewingDetails({ loading: false, data: payload, error: null });
+          // also set selectedUser for reuse in reject modal if needed
+          setSelectedUser(payload.user || null);
+        } else {
+          setViewingDetails({
+            loading: false,
+            data: null,
+            error: res.error || "Failed to load details",
+          });
+        }
+      })
+      .catch((err) => {
+        setViewingDetails({
+          loading: false,
+          data: null,
+          error: err instanceof Error ? err.message : String(err),
+        });
+      });
   };
 
   const handleSendMessage = (userId: number) => {
@@ -566,6 +594,124 @@ const UserManagementTab: React.FC = () => {
                   Cancel
                 </Button>
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* View Details Modal */}
+        {viewingDetails.data && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+            <div className="bg-white rounded-lg p-6 w-full max-w-2xl overflow-auto">
+              <div className="flex justify-between items-start">
+                <h3 className="text-lg font-semibold mb-2">User Details</h3>
+                <Button
+                  variant="ghost"
+                  onClick={() =>
+                    setViewingDetails({
+                      loading: false,
+                      data: null,
+                      error: null,
+                    })
+                  }
+                >
+                  Close
+                </Button>
+              </div>
+
+              {viewingDetails.loading && <div>Loading...</div>}
+              {viewingDetails.error && (
+                <div className="text-red-700">{viewingDetails.error}</div>
+              )}
+
+              {viewingDetails.data && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <h4 className="font-medium">Personal</h4>
+                    <p>
+                      <strong>Full name:</strong>{" "}
+                      {viewingDetails.data.user.full_name ||
+                        viewingDetails.data.user.username}
+                    </p>
+                    <p>
+                      <strong>Email:</strong> {viewingDetails.data.user.email}
+                    </p>
+                    <p>
+                      <strong>Phone:</strong> {viewingDetails.data.user.phone}
+                    </p>
+                    <p>
+                      <strong>Address:</strong>{" "}
+                      {viewingDetails.data.user.address || "—"}
+                    </p>
+                    <p>
+                      <strong>City:</strong>{" "}
+                      {viewingDetails.data.user.city || "—"}
+                    </p>
+                    <p>
+                      <strong>State:</strong>{" "}
+                      {viewingDetails.data.user.state || "—"}
+                    </p>
+                    <p>
+                      <strong>Postal code:</strong>{" "}
+                      {viewingDetails.data.user.postal_code ||
+                        viewingDetails.data.user.postalCode ||
+                        "—"}
+                    </p>
+                  </div>
+                  <div>
+                    <h4 className="font-medium">Buyer / KYC</h4>
+                    <p>
+                      <strong>National ID:</strong>{" "}
+                      {viewingDetails.data.profile?.national_id || "—"}
+                    </p>
+                    <p>
+                      <strong>KYC type:</strong>{" "}
+                      {viewingDetails.data.profile?.kyc_type || "—"}
+                    </p>
+                    <div>
+                      <strong>KYC documents:</strong>
+                      <div className="mt-2 space-y-2">
+                        {Array.isArray(
+                          viewingDetails.data.profile?.kyc_documents
+                        ) &&
+                        viewingDetails.data.profile.kyc_documents.length > 0 ? (
+                          viewingDetails.data.profile.kyc_documents.map(
+                            (u: string, i: number) => (
+                              <div
+                                key={i}
+                                className="flex items-center space-x-2"
+                              >
+                                <a
+                                  className="text-blue-600 underline"
+                                  href={u}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                >
+                                  Document {i + 1}
+                                </a>
+                              </div>
+                            )
+                          )
+                        ) : (
+                          <div>—</div>
+                        )}
+                      </div>
+                    </div>
+                    <div className="mt-4">
+                      <strong>Preferred payment methods:</strong>
+                      <div>
+                        {Array.isArray(
+                          viewingDetails.data.profile?.preferred_payment_methods
+                        )
+                          ? viewingDetails.data.profile.preferred_payment_methods.join(
+                              ", "
+                            )
+                          : viewingDetails.data.profile
+                              ?.preferred_payment_methods || "—"}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         )}

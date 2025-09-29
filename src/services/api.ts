@@ -574,6 +574,13 @@ class ApiService {
   }
 
   /**
+   * Admin: get combined user + buyer profile details
+   */
+  async getUserDetails(userId: number): Promise<ApiResponse<{ user: any; profile: any }>> {
+    return this.makeRequest(`/admin/user-details.php?user_id=${encodeURIComponent(userId)}`);
+  }
+
+  /**
    * Admin: approve or reject a seller verification
    */
   async reviewSellerVerification(action: 'approve' | 'reject', userId: number, notes?: string): Promise<ApiResponse> {
