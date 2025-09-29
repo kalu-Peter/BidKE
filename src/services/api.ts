@@ -601,6 +601,16 @@ class ApiService {
   }
 
   /**
+   * Suspend a user (admin only)
+   */
+  async suspendUser(userId: number, reason?: string): Promise<ApiResponse> {
+    return this.makeRequest('/admin/suspend-user.php', {
+      method: 'POST',
+      body: JSON.stringify({ user_id: userId, reason })
+    });
+  }
+
+  /**
    * Admin: fetch overview/dashboard metrics
    */
   async getAdminOverview(): Promise<ApiResponse<any>> {

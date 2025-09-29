@@ -126,8 +126,36 @@ const UserManagementTab: React.FC = () => {
   };
 
   const handleSuspendUser = (userId: number) => {
-    console.log("Suspend user:", userId);
-    // Handle user suspension logic
+    const confirmed = window.confirm(
+      "Are you sure you want to suspend this user? This will prevent them from logging in."
+    );
+    if (!confirmed) return;
+    setLoading(true);
+    apiService
+      .suspendUser(userId)
+      .then((res) => {
+        if (res.success) {
+          // update local users list to reflect suspension
+          setUsers((prev) =>
+            prev.map((u) => {
+              if ((u.id || u.user_id) === userId) {
+                return {
+                  ...u,
+                  status: "suspended",
+                  suspensionReason: res.data?.reason || null,
+                };
+              }
+              return u;
+            })
+          );
+        } else {
+          setError(res.error || "Failed to suspend user");
+        }
+      })
+      .catch((err) => {
+        setError(err instanceof Error ? err.message : String(err));
+      })
+      .finally(() => setLoading(false));
   };
 
   const handleViewUserDetails = (userId: number) => {
@@ -546,7 +574,8 @@ const UserManagementTab: React.FC = () => {
                     </>
                   )}
 
-                  {user.status === "approved" && (
+                  {(user.status === "approved" ||
+                    user.is_verified === true) && (
                     <Button
                       variant="outline"
                       size="sm"
