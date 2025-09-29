@@ -484,6 +484,9 @@ class ApiService {
     outbid_notifications?: boolean;
     winning_notifications?: boolean;
     auction_ending_notifications?: boolean;
+    // KYC fields
+    kyc_type?: 'national_id' | 'passport' | 'driving_license';
+    kyc_documents?: string[]; // array of document URLs
   }): Promise<ApiResponse> {
     return this.makeRequest('/auth/buyer-profile.php', {
       method: 'PUT',

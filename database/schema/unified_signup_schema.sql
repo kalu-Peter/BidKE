@@ -149,7 +149,8 @@ CREATE TABLE buyer_profiles (
     -- KYC Information
     national_id VARCHAR(50) UNIQUE,
     national_id_verified BOOLEAN DEFAULT FALSE,
-    national_id_document_url VARCHAR(500),
+    kyc_documents JSONB DEFAULT '[]'::jsonb,
+    kyc_type VARCHAR(50),
     
     -- Bidding preferences
     preferred_categories TEXT[], -- Array of category names/IDs

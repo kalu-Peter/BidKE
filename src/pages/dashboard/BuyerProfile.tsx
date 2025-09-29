@@ -2,28 +2,40 @@ import React, { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { apiService } from "@/services/api";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { 
-  User, 
-  Mail, 
-  Phone, 
-  MapPin, 
-  CreditCard, 
-  Shield, 
-  CheckCircle, 
+import {
+  User,
+  Mail,
+  Phone,
+  MapPin,
+  CreditCard,
+  Shield,
+  CheckCircle,
   AlertCircle,
   Loader2,
   Save,
-  Upload
+  Upload,
 } from "lucide-react";
 
 interface BuyerProfileData {
@@ -78,28 +90,34 @@ const BuyerProfile: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [profileData, setProfileData] = useState<BuyerProfileData | null>(null);
-  
+
   // Form data
   const [formData, setFormData] = useState({
-    full_name: '',
-    date_of_birth: '',
-    address: '',
-    city: '',
-    state: '',
-    postal_code: '',
-    country: 'Kenya',
-    phone: '',
-    national_id: '',
+    full_name: "",
+    date_of_birth: "",
+    address: "",
+    city: "",
+    state: "",
+    postal_code: "",
+    country: "Kenya",
+    phone: "",
+    national_id: "",
     preferred_categories: [] as string[],
     max_bid_limit: 0,
     auto_bid_enabled: false,
-    default_shipping_address: '',
+    default_shipping_address: "",
     preferred_payment_methods: [] as string[],
     bid_notifications: true,
     outbid_notifications: true,
     winning_notifications: true,
-    auction_ending_notifications: true
+    auction_ending_notifications: true,
   });
+  // KYC state
+  const [kycType, setKycType] = useState<
+    "national_id" | "passport" | "driving_license" | ""
+  >("");
+  const [kycFiles, setKycFiles] = useState<File[]>([]);
+  const [uploading, setUploading] = useState(false);
 
   useEffect(() => {
     fetchProfileData();
@@ -110,48 +128,52 @@ const BuyerProfile: React.FC = () => {
       setLoading(true);
       setError(null);
       const result = await apiService.getBuyerProfile();
-      
+
       if (result.success && result.data) {
         setProfileData(result.data);
-        
+
         // Populate form with existing data
         const profile = result.data.profile || {};
         const userData = result.data.user;
         setFormData({
-          full_name: userData.full_name || '',
-          date_of_birth: userData.date_of_birth || '',
-          address: userData.address || '',
-          city: userData.city || '',
-          state: userData.state || '',
-          postal_code: userData.postal_code || '',
-          country: userData.country || 'Kenya',
-          phone: userData.phone || '',
-          national_id: profile.national_id || '',
+          full_name: userData.full_name || "",
+          date_of_birth: userData.date_of_birth || "",
+          address: userData.address || "",
+          city: userData.city || "",
+          state: userData.state || "",
+          postal_code: userData.postal_code || "",
+          country: userData.country || "Kenya",
+          phone: userData.phone || "",
+          national_id: profile.national_id || "",
           preferred_categories: profile.preferred_categories || [],
           max_bid_limit: profile.max_bid_limit || 0,
           auto_bid_enabled: profile.auto_bid_enabled || false,
-          default_shipping_address: profile.default_shipping_address || '',
+          default_shipping_address: profile.default_shipping_address || "",
           preferred_payment_methods: profile.preferred_payment_methods || [],
           bid_notifications: profile.bid_notifications !== false,
           outbid_notifications: profile.outbid_notifications !== false,
           winning_notifications: profile.winning_notifications !== false,
-          auction_ending_notifications: profile.auction_ending_notifications !== false
+          auction_ending_notifications:
+            profile.auction_ending_notifications !== false,
         });
       } else {
-        setError(result.error || 'Failed to fetch profile data');
+        setError(result.error || "Failed to fetch profile data");
       }
     } catch (err) {
-      setError('Failed to load profile data');
-      console.error('Profile error:', err);
+      setError("Failed to load profile data");
+      console.error("Profile error:", err);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleInputChange = (field: string, value: string | string[] | number | boolean) => {
-    setFormData(prev => ({
+  const handleInputChange = (
+    field: string,
+    value: string | string[] | number | boolean
+  ) => {
+    setFormData((prev) => ({
       ...prev,
-      [field]: value
+      [field]: value,
     }));
     setError(null);
     setSuccess(null);
@@ -165,16 +187,17 @@ const BuyerProfile: React.FC = () => {
 
       // Clean form data before sending - remove empty values
       const cleanedFormData = { ...formData };
-      
+
       // Handle date field - don't send if empty
-      if (cleanedFormData.date_of_birth === '') {
+      if (cleanedFormData.date_of_birth === "") {
         delete cleanedFormData.date_of_birth;
       }
-      
+
       // Handle other empty string fields and empty arrays
-      Object.keys(cleanedFormData).forEach(key => {
+      Object.keys(cleanedFormData).forEach((key) => {
         const value = cleanedFormData[key as keyof typeof cleanedFormData];
-        if (value === '' && key !== 'full_name') { // Keep full_name even if empty
+        if (value === "" && key !== "full_name") {
+          // Keep full_name even if empty
           delete cleanedFormData[key as keyof typeof cleanedFormData];
         }
         // Remove empty arrays to avoid PostgreSQL issues
@@ -184,30 +207,46 @@ const BuyerProfile: React.FC = () => {
       });
 
       const result = await apiService.updateBuyerProfile(cleanedFormData);
-      
+
       if (result.success) {
-        setSuccess('Profile updated successfully!');
+        setSuccess("Profile updated successfully!");
         // Refresh profile data
         await fetchProfileData();
       } else {
-        setError(result.error || 'Failed to update profile');
+        setError(result.error || "Failed to update profile");
       }
     } catch (err) {
-      setError('Failed to save profile');
-      console.error('Save error:', err);
+      setError("Failed to save profile");
+      console.error("Save error:", err);
     } finally {
       setSaving(false);
     }
   };
 
   const getVerificationStatus = () => {
-    const status = profileData?.profile?.national_id_verified ? 'verified' : 'pending';
+    const status = profileData?.profile?.national_id_verified
+      ? "verified"
+      : "pending";
     const statusConfig = {
-      pending: { label: 'Pending Verification', color: 'bg-yellow-100 text-yellow-800', icon: AlertCircle },
-      verified: { label: 'Verified', color: 'bg-green-100 text-green-800', icon: CheckCircle },
-      rejected: { label: 'Verification Failed', color: 'bg-red-100 text-red-800', icon: AlertCircle }
+      pending: {
+        label: "Pending Verification",
+        color: "bg-yellow-100 text-yellow-800",
+        icon: AlertCircle,
+      },
+      verified: {
+        label: "Verified",
+        color: "bg-green-100 text-green-800",
+        icon: CheckCircle,
+      },
+      rejected: {
+        label: "Verification Failed",
+        color: "bg-red-100 text-red-800",
+        icon: AlertCircle,
+      },
     };
-    return statusConfig[status as keyof typeof statusConfig] || statusConfig.pending;
+    return (
+      statusConfig[status as keyof typeof statusConfig] || statusConfig.pending
+    );
   };
 
   if (loading) {
@@ -230,7 +269,9 @@ const BuyerProfile: React.FC = () => {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold">Buyer Profile</h1>
-            <p className="text-gray-600">Manage your personal information and verification status</p>
+            <p className="text-gray-600">
+              Manage your personal information and verification status
+            </p>
           </div>
           <div className="flex items-center gap-2">
             <Badge className={verificationStatus.color}>
@@ -244,14 +285,18 @@ const BuyerProfile: React.FC = () => {
         {error && (
           <Alert className="border-red-200 bg-red-50">
             <AlertCircle className="h-4 w-4 text-red-600" />
-            <AlertDescription className="text-red-700">{error}</AlertDescription>
+            <AlertDescription className="text-red-700">
+              {error}
+            </AlertDescription>
           </Alert>
         )}
 
         {success && (
           <Alert className="border-green-200 bg-green-50">
             <CheckCircle className="h-4 w-4 text-green-600" />
-            <AlertDescription className="text-green-700">{success}</AlertDescription>
+            <AlertDescription className="text-green-700">
+              {success}
+            </AlertDescription>
           </Alert>
         )}
 
@@ -279,11 +324,11 @@ const BuyerProfile: React.FC = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <Label>Username</Label>
-                    <Input value={profileData?.user.username || ''} disabled />
+                    <Input value={profileData?.user.username || ""} disabled />
                   </div>
                   <div>
                     <Label>Email</Label>
-                    <Input value={profileData?.user.email || ''} disabled />
+                    <Input value={profileData?.user.email || ""} disabled />
                   </div>
                 </div>
 
@@ -296,7 +341,9 @@ const BuyerProfile: React.FC = () => {
                     <Input
                       id="full_name"
                       value={formData.full_name}
-                      onChange={(e) => handleInputChange('full_name', e.target.value)}
+                      onChange={(e) =>
+                        handleInputChange("full_name", e.target.value)
+                      }
                       placeholder="Enter your full name"
                     />
                   </div>
@@ -305,7 +352,9 @@ const BuyerProfile: React.FC = () => {
                     <Input
                       id="national_id"
                       value={formData.national_id}
-                      onChange={(e) => handleInputChange('national_id', e.target.value)}
+                      onChange={(e) =>
+                        handleInputChange("national_id", e.target.value)
+                      }
                       placeholder="Enter your national ID"
                     />
                   </div>
@@ -318,7 +367,9 @@ const BuyerProfile: React.FC = () => {
                       id="date_of_birth"
                       type="date"
                       value={formData.date_of_birth}
-                      onChange={(e) => handleInputChange('date_of_birth', e.target.value)}
+                      onChange={(e) =>
+                        handleInputChange("date_of_birth", e.target.value)
+                      }
                     />
                   </div>
                   <div>
@@ -326,7 +377,9 @@ const BuyerProfile: React.FC = () => {
                     <Input
                       id="phone"
                       value={formData.phone}
-                      onChange={(e) => handleInputChange('phone', e.target.value)}
+                      onChange={(e) =>
+                        handleInputChange("phone", e.target.value)
+                      }
                       placeholder="Enter your phone number"
                     />
                   </div>
@@ -337,7 +390,9 @@ const BuyerProfile: React.FC = () => {
                   <Textarea
                     id="address"
                     value={formData.address}
-                    onChange={(e) => handleInputChange('address', e.target.value)}
+                    onChange={(e) =>
+                      handleInputChange("address", e.target.value)
+                    }
                     placeholder="Enter your full address"
                     rows={3}
                   />
@@ -349,7 +404,9 @@ const BuyerProfile: React.FC = () => {
                     <Input
                       id="city"
                       value={formData.city}
-                      onChange={(e) => handleInputChange('city', e.target.value)}
+                      onChange={(e) =>
+                        handleInputChange("city", e.target.value)
+                      }
                       placeholder="City"
                     />
                   </div>
@@ -358,7 +415,9 @@ const BuyerProfile: React.FC = () => {
                     <Input
                       id="state"
                       value={formData.state}
-                      onChange={(e) => handleInputChange('state', e.target.value)}
+                      onChange={(e) =>
+                        handleInputChange("state", e.target.value)
+                      }
                       placeholder="State/Province"
                     />
                   </div>
@@ -367,7 +426,9 @@ const BuyerProfile: React.FC = () => {
                     <Input
                       id="postal_code"
                       value={formData.postal_code}
-                      onChange={(e) => handleInputChange('postal_code', e.target.value)}
+                      onChange={(e) =>
+                        handleInputChange("postal_code", e.target.value)
+                      }
                       placeholder="Postal Code"
                     />
                   </div>
@@ -375,7 +436,12 @@ const BuyerProfile: React.FC = () => {
 
                 <div>
                   <Label htmlFor="country">Country</Label>
-                  <Select value={formData.country} onValueChange={(value) => handleInputChange('country', value)}>
+                  <Select
+                    value={formData.country}
+                    onValueChange={(value) =>
+                      handleInputChange("country", value)
+                    }
+                  >
                     <SelectTrigger>
                       <SelectValue placeholder="Select your country" />
                     </SelectTrigger>
@@ -419,15 +485,20 @@ const BuyerProfile: React.FC = () => {
                   Identity Verification (KYC)
                 </CardTitle>
                 <CardDescription>
-                  Complete your identity verification to unlock full bidding features
+                  Complete your identity verification to unlock full bidding
+                  features
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
                 <div className="text-center py-8">
                   <Shield className="w-16 h-16 mx-auto text-gray-400 mb-4" />
-                  <h3 className="text-lg font-semibold mb-2">KYC Verification</h3>
+                  <h3 className="text-lg font-semibold mb-2">
+                    KYC Verification
+                  </h3>
                   <p className="text-gray-600 mb-4">
-                    To participate in auctions, you need to verify your identity. This helps ensure a secure marketplace for all users.
+                    To participate in auctions, you need to verify your
+                    identity. This helps ensure a secure marketplace for all
+                    users.
                   </p>
                   <Badge className={verificationStatus.color}>
                     <verificationStatus.icon className="w-3 h-3 mr-1" />
@@ -437,16 +508,146 @@ const BuyerProfile: React.FC = () => {
 
                 {!profileData?.profile?.national_id_verified && (
                   <div className="space-y-4">
-                    <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
-                      <Upload className="w-8 h-8 mx-auto text-gray-400 mb-2" />
-                      <p className="text-gray-600">Upload your identity documents</p>
-                      <Button variant="outline" className="mt-2">
-                        Choose Files
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <Label htmlFor="kyc_type">Document Type</Label>
+                        <Select
+                          value={kycType}
+                          onValueChange={(val) => {
+                            setKycType(val as any);
+                            setKycFiles([]);
+                          }}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select document type" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="national_id">
+                              National ID (Front & Back)
+                            </SelectItem>
+                            <SelectItem value="passport">
+                              Passport (Photo page)
+                            </SelectItem>
+                            <SelectItem value="driving_license">
+                              Driving License (Front)
+                            </SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div>
+                        <Label>Upload Documents</Label>
+                        <div className="space-y-2">
+                          <input
+                            type="file"
+                            accept="image/*"
+                            multiple={kycType === "national_id"}
+                            onChange={(e) => {
+                              const files = e.target.files
+                                ? Array.from(e.target.files)
+                                : [];
+                              // If passport or driving_license, only keep first file
+                              if (
+                                kycType !== "national_id" &&
+                                files.length > 1
+                              ) {
+                                setKycFiles([files[0]]);
+                              } else {
+                                setKycFiles(files);
+                              }
+                            }}
+                          />
+                          <div className="text-sm text-gray-600">
+                            {kycType === "national_id"
+                              ? "Upload front and back images"
+                              : "Upload one image"}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <Button
+                        onClick={async () => {
+                          // Validate selected files against kycType before uploading
+                          if (kycFiles.length === 0) {
+                            setError("Please select document files to upload");
+                            return;
+                          }
+
+                          if (
+                            kycType === "national_id" &&
+                            kycFiles.length !== 2
+                          ) {
+                            setError(
+                              "National ID requires two images (front and back)"
+                            );
+                            return;
+                          }
+                          if (
+                            (kycType === "passport" ||
+                              kycType === "driving_license") &&
+                            kycFiles.length !== 1
+                          ) {
+                            setError(
+                              "Passport or driving license requires exactly one image"
+                            );
+                            return;
+                          }
+
+                          try {
+                            setUploading(true);
+                            setError(null);
+                            const uploadedUrls: string[] = [];
+                            for (const f of kycFiles) {
+                              const res = await apiService.uploadFile(
+                                f,
+                                "document"
+                              );
+                              if (
+                                res.success &&
+                                res.data &&
+                                (res.data as any).url
+                              ) {
+                                uploadedUrls.push((res.data as any).url);
+                              } else {
+                                throw new Error(res.error || "Upload failed");
+                              }
+                            }
+
+                            // Prepare payload: send kyc_documents as array of URLs
+                            const payload: any = {};
+                            payload.kyc_type = kycType || undefined;
+                            payload.kyc_documents = uploadedUrls;
+
+                            const result = await apiService.updateBuyerProfile(
+                              payload
+                            );
+                            if (result.success) {
+                              setSuccess(
+                                "Documents uploaded and submitted for verification"
+                              );
+                              await fetchProfileData();
+                            } else {
+                              setError(
+                                result.error ||
+                                  result.message ||
+                                  "Failed to submit documents"
+                              );
+                            }
+                          } catch (err: any) {
+                            setError(err?.message || "Upload failed");
+                          } finally {
+                            setUploading(false);
+                          }
+                        }}
+                        disabled={uploading}
+                      >
+                        {uploading
+                          ? "Uploading..."
+                          : "Upload & Submit for Verification"}
                       </Button>
                     </div>
-                    <p className="text-sm text-gray-500">
-                      Required documents: Government-issued ID (passport, national ID, or driver's license)
-                    </p>
                   </div>
                 )}
               </CardContent>
@@ -467,17 +668,23 @@ const BuyerProfile: React.FC = () => {
               </CardHeader>
               <CardContent className="space-y-6">
                 <div>
-                  <Label htmlFor="preferred_payment_method">Preferred Payment Method</Label>
-                  <Select 
-                    value={formData.preferred_payment_methods[0] || ''} 
-                    onValueChange={(value) => handleInputChange('preferred_payment_methods', [value])}
+                  <Label htmlFor="preferred_payment_method">
+                    Preferred Payment Method
+                  </Label>
+                  <Select
+                    value={formData.preferred_payment_methods[0] || ""}
+                    onValueChange={(value) =>
+                      handleInputChange("preferred_payment_methods", [value])
+                    }
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Select payment method" />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="mpesa">M-Pesa</SelectItem>
-                      <SelectItem value="bank_transfer">Bank Transfer</SelectItem>
+                      <SelectItem value="bank_transfer">
+                        Bank Transfer
+                      </SelectItem>
                       <SelectItem value="credit_card">Credit Card</SelectItem>
                       <SelectItem value="paypal">PayPal</SelectItem>
                     </SelectContent>

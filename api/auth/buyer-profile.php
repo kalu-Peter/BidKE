@@ -18,7 +18,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 }
 
 // Error handling to ensure headers are always sent
-function sendErrorResponse($message, $code = 400) {
+function sendErrorResponse($message, $code = 400)
+{
     global $origin;
     header("Access-Control-Allow-Origin: $origin");
     header('Access-Control-Allow-Credentials: true');
@@ -36,7 +37,7 @@ try {
 
     $database = Database::getInstance();
     $pdo = $database->getConnection();
-    
+
     $userModel = new User();
     $buyerProfileModel = new BuyerProfile();
     $sessionModel = new UserSession();
@@ -44,7 +45,7 @@ try {
     // Get session token from Authorization header
     $headers = getallheaders();
     $sessionToken = null;
-    
+
     if (isset($headers['Authorization'])) {
         $authHeader = $headers['Authorization'];
         if (strpos($authHeader, 'Bearer ') === 0) {
@@ -70,10 +71,10 @@ try {
     if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         // Fetch buyer profile data
         $buyerProfile = $buyerProfileModel->getByUserId($user['id']);
-        
+
         // Get buyer statistics
         $stats = $buyerProfileModel->getBuyerStats($user['id']);
-        
+
         // Combine user and profile data - include ALL user fields from users table
         $response = [
             'user' => [
@@ -107,27 +108,43 @@ try {
             'success' => true,
             'data' => $response
         ]);
-
     } elseif ($_SERVER['REQUEST_METHOD'] === 'PUT') {
         // Update buyer profile and user data
         $input = json_decode(file_get_contents('php://input'), true);
-        
+
         if (!$input) {
             sendErrorResponse('Invalid input data', 400);
         }
 
         // Separate fields that belong to users table vs buyer_profiles table
         $userFields = [
-            'full_name', 'date_of_birth', 'address', 'city', 'state', 
-            'postal_code', 'country', 'phone', 'bio', 'preferred_language', 
-            'timezone', 'email_notifications', 'sms_notifications'
+            'full_name',
+            'date_of_birth',
+            'address',
+            'city',
+            'state',
+            'postal_code',
+            'country',
+            'phone',
+            'bio',
+            'preferred_language',
+            'timezone',
+            'email_notifications',
+            'sms_notifications'
         ];
-        
+
         $buyerProfileFields = [
-            'national_id', 'preferred_categories', 'max_bid_limit', 
-            'auto_bid_enabled', 'default_shipping_address', 
-            'preferred_payment_methods', 'bid_notifications', 
-            'outbid_notifications', 'winning_notifications', 
+            'national_id',
+            'kyc_documents',
+            'kyc_type',
+            'preferred_categories',
+            'max_bid_limit',
+            'auto_bid_enabled',
+            'default_shipping_address',
+            'preferred_payment_methods',
+            'bid_notifications',
+            'outbid_notifications',
+            'winning_notifications',
             'auction_ending_notifications'
         ];
 
@@ -136,7 +153,7 @@ try {
         foreach ($userFields as $field) {
             if (isset($input[$field])) {
                 $value = $input[$field];
-                
+
                 // Special handling for date fields
                 if ($field === 'date_of_birth') {
                     // Only add if not empty and valid date format
@@ -155,15 +172,16 @@ try {
 
         // Prepare data for buyer_profiles table update with validation
         $profileUpdateData = [];
+        // Pre-process buyer profile fields
         foreach ($buyerProfileFields as $field) {
             if (isset($input[$field])) {
                 $value = $input[$field];
-                
+
                 // Handle array fields - PostgreSQL array format
                 if (in_array($field, ['preferred_categories', 'preferred_payment_methods'])) {
                     if (is_array($value) && !empty($value)) {
                         // Convert to PostgreSQL array format: {val1,val2,val3}
-                        $escapedValues = array_map(function($item) {
+                        $escapedValues = array_map(function ($item) {
                             return '"' . str_replace('"', '""', $item) . '"';
                         }, $value);
                         $profileUpdateData[$field] = '{' . implode(',', $escapedValues) . '}';
@@ -171,9 +189,54 @@ try {
                         // Empty array or null
                         $profileUpdateData[$field] = null;
                     }
+                } elseif ($field === 'kyc_documents' || $field === 'national_id_document_url') {
+                    // Accept either kyc_documents (array or JSON) or legacy national_id_document_url
+                    if ($field === 'national_id_document_url') {
+                        // Legacy single url - normalize later
+                        $profileUpdateData['national_id_document_url'] = empty($value) ? null : $value;
+                    } else {
+                        // kyc_documents expected as array or JSON string
+                        if (is_array($value)) {
+                            $profileUpdateData['kyc_documents'] = $value;
+                        } elseif (is_string($value) && $value !== '') {
+                            $decoded = json_decode($value, true);
+                            if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
+                                $profileUpdateData['kyc_documents'] = $decoded;
+                            } else {
+                                // treat single URL string as single-element array
+                                $profileUpdateData['kyc_documents'] = [$value];
+                            }
+                        } else {
+                            $profileUpdateData['kyc_documents'] = [];
+                        }
+                    }
                 } else {
                     $profileUpdateData[$field] = empty($value) ? null : $value;
                 }
+            }
+        }
+
+        // If a legacy national_id_document_url was provided, normalize into kyc_documents if not present
+        if (isset($profileUpdateData['national_id_document_url']) && !isset($profileUpdateData['kyc_documents'])) {
+            $v = $profileUpdateData['national_id_document_url'];
+            if ($v === null) {
+                $profileUpdateData['kyc_documents'] = [];
+            } else {
+                $profileUpdateData['kyc_documents'] = [$v];
+            }
+            unset($profileUpdateData['national_id_document_url']);
+        }
+
+        // Validate KYC: ensure file counts match kyc_type
+        if (isset($profileUpdateData['kyc_type'])) {
+            $type = $profileUpdateData['kyc_type'];
+            $docs = $profileUpdateData['kyc_documents'] ?? [];
+            $count = is_array($docs) ? count($docs) : 0;
+            if ($type === 'national_id' && $count !== 2) {
+                sendErrorResponse('National ID requires 2 document images (front and back)', 400);
+            }
+            if (($type === 'passport' || $type === 'driving_license') && $count !== 1) {
+                sendErrorResponse('Passport or driving license requires exactly 1 document image', 400);
             }
         }
 
@@ -192,7 +255,7 @@ try {
         // Update or create buyer profile if there are profile fields to update
         if (!empty($profileUpdateData) && $success) {
             $existingProfile = $buyerProfileModel->getByUserId($user['id']);
-            
+
             if ($existingProfile) {
                 // Update existing profile
                 $profileSuccess = $buyerProfileModel->update($existingProfile['id'], $profileUpdateData);
@@ -201,7 +264,7 @@ try {
                 $profileUpdateData['user_id'] = $user['id'];
                 $profileSuccess = $buyerProfileModel->create($profileUpdateData);
             }
-            
+
             if (!$profileSuccess) {
                 $success = false;
                 $message = 'Failed to update buyer profile';
@@ -216,12 +279,9 @@ try {
             'success' => true,
             'message' => $message
         ]);
-
     } else {
         throw new Exception('Method not allowed');
     }
-
 } catch (Exception $e) {
     sendErrorResponse($e->getMessage(), 400);
 }
-?>

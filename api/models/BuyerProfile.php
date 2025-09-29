@@ -5,7 +5,8 @@ require_once '../config/connect.php';
  * Buyer Profile Model for BidKE
  * Handles buyer-specific profile information and preferences
  */
-class BuyerProfile {
+class BuyerProfile
+{
     private $conn;
     private $table_name = "buyer_profiles";
 
@@ -14,7 +15,9 @@ class BuyerProfile {
     public $user_id;
     public $national_id;
     public $national_id_verified;
-    public $national_id_document_url;
+    public $kyc_type;
+    // kyc_documents stored as JSONB in DB: array of URLs
+    public $kyc_documents = [];
     public $preferred_categories;
     public $max_bid_limit;
     public $auto_bid_enabled;
@@ -40,14 +43,16 @@ class BuyerProfile {
     public $created_at;
     public $updated_at;
 
-    public function __construct() {
+    public function __construct()
+    {
         $this->conn = Database::getInstance()->getConnection();
     }
 
     /**
      * Get buyer profile by user ID
      */
-    public function getByUserId($user_id) {
+    public function getByUserId($user_id)
+    {
         $query = "SELECT * FROM " . $this->table_name . " WHERE user_id = ?";
         $stmt = $this->conn->prepare($query);
         $stmt->bindParam(1, $user_id);
@@ -71,20 +76,21 @@ class BuyerProfile {
     /**
      * Parse PostgreSQL array format to PHP array
      */
-    private function parsePostgreSQLArray($pgArray) {
+    private function parsePostgreSQLArray($pgArray)
+    {
         if (empty($pgArray) || $pgArray === '{}') {
             return [];
         }
-        
+
         // Remove the outer braces and split by comma
         $cleaned = trim($pgArray, '{}');
         if (empty($cleaned)) {
             return [];
         }
-        
+
         // Split by comma and clean up quotes
         $items = explode(',', $cleaned);
-        return array_map(function($item) {
+        return array_map(function ($item) {
             return trim($item, '"');
         }, $items);
     }
@@ -92,30 +98,39 @@ class BuyerProfile {
     /**
      * Create buyer profile
      */
-    public function create($data = []) {
+    public function create($data = [])
+    {
         $user_id = $data['user_id'] ?? $this->user_id;
-        
+
         $fields = ['user_id'];
         $placeholders = ['?'];
         $values = [$user_id];
-        
+
         $allowedFields = [
-            'national_id', 'national_id_verified', 'preferred_categories', 
-            'max_bid_limit', 'auto_bid_enabled', 'default_shipping_address', 
-            'preferred_payment_methods', 'bid_notifications', 
-            'outbid_notifications', 'winning_notifications', 
+            'national_id',
+            'national_id_verified',
+            'kyc_documents',
+            'kyc_type',
+            'preferred_categories',
+            'max_bid_limit',
+            'auto_bid_enabled',
+            'default_shipping_address',
+            'preferred_payment_methods',
+            'bid_notifications',
+            'outbid_notifications',
+            'winning_notifications',
             'auction_ending_notifications'
         ];
-        
+
         foreach ($allowedFields as $field) {
             if (isset($data[$field])) {
                 $fields[] = $field;
                 $placeholders[] = '?';
-                
-                // Handle array fields for PostgreSQL
+
+                // Handle array fields for PostgreSQL or JSONB
                 if (in_array($field, ['preferred_categories', 'preferred_payment_methods'])) {
                     if (is_array($data[$field]) && !empty($data[$field])) {
-                        $escapedValues = array_map(function($item) {
+                        $escapedValues = array_map(function ($item) {
                             return '"' . str_replace('"', '""', $item) . '"';
                         }, $data[$field]);
                         $values[] = '{' . implode(',', $escapedValues) . '}';
@@ -124,12 +139,24 @@ class BuyerProfile {
                     } else {
                         $values[] = null;
                     }
-                } else {
-                    $values[] = $data[$field];
+                } elseif ($field === 'kyc_documents') {
+                    // Expect array or JSON string; store as JSON text for JSONB
+                    if (is_array($data[$field])) {
+                        $values[] = json_encode(array_values($data[$field]));
+                    } elseif (is_string($data[$field]) && $data[$field] !== '') {
+                        $decoded = json_decode($data[$field], true);
+                        if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
+                            $values[] = json_encode(array_values($decoded));
+                        } else {
+                            $values[] = json_encode([$data[$field]]);
+                        }
+                    } else {
+                        $values[] = json_encode([]);
+                    }
                 }
             }
         }
-        
+
         $query = "INSERT INTO " . $this->table_name . " (" . implode(', ', $fields) . ") VALUES (" . implode(', ', $placeholders) . ")";
         $stmt = $this->conn->prepare($query);
 
@@ -142,22 +169,48 @@ class BuyerProfile {
     /**
      * Update buyer profile by ID
      */
-    public function update($id, $data) {
+    public function update($id, $data)
+    {
         $allowedFields = [
-            'national_id', 'national_id_verified', 'preferred_categories', 
-            'max_bid_limit', 'auto_bid_enabled', 'default_shipping_address', 
-            'preferred_payment_methods', 'bid_notifications', 
-            'outbid_notifications', 'winning_notifications', 
+            'national_id',
+            'national_id_verified',
+            'kyc_documents',
+            'kyc_type',
+            'preferred_categories',
+            'max_bid_limit',
+            'auto_bid_enabled',
+            'default_shipping_address',
+            'preferred_payment_methods',
+            'bid_notifications',
+            'outbid_notifications',
+            'winning_notifications',
             'auction_ending_notifications'
         ];
 
         $updateFields = [];
         $values = [];
-        
+
         foreach ($data as $key => $value) {
             if (in_array($key, $allowedFields)) {
-                $updateFields[] = $key . " = ?";
-                $values[] = $value;
+                if ($key === 'kyc_documents') {
+                    // Normalize to JSON string for JSONB
+                    if (is_array($value)) {
+                        $values[] = json_encode(array_values($value));
+                    } elseif (is_string($value) && $value !== '') {
+                        $decoded = json_decode($value, true);
+                        if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
+                            $values[] = json_encode(array_values($decoded));
+                        } else {
+                            $values[] = json_encode([$value]);
+                        }
+                    } else {
+                        $values[] = json_encode([]);
+                    }
+                    $updateFields[] = $key . " = ?";
+                } else {
+                    $updateFields[] = $key . " = ?";
+                    $values[] = $value;
+                }
             }
         }
 
@@ -167,7 +220,7 @@ class BuyerProfile {
 
         $values[] = $id;
         $query = "UPDATE " . $this->table_name . " SET " . implode(", ", $updateFields) . ", updated_at = NOW() WHERE id = ?";
-        
+
         $stmt = $this->conn->prepare($query);
         return $stmt->execute($values);
     }
@@ -175,30 +228,31 @@ class BuyerProfile {
     /**
      * Get buyer statistics for dashboard
      */
-    public function getBuyerStats($user_id) {
+    public function getBuyerStats($user_id)
+    {
         try {
             // For now, return mock data since auction/bid tables might not exist yet
             // TODO: Replace with real queries when auction system is implemented
-            
+
             // Check if buyer profile exists first
             $profileQuery = "SELECT COUNT(*) as count FROM " . $this->table_name . " WHERE user_id = ?";
             $stmt = $this->conn->prepare($profileQuery);
             $stmt->execute([$user_id]);
             $hasProfile = $stmt->fetch()['count'] > 0;
-            
+
             if (!$hasProfile) {
                 // Create buyer profile if it doesn't exist
                 $this->create(['user_id' => $user_id]);
             }
-            
+
             // Return sample data for now
             return [
                 'activeBids' => 0,
-                'watchlistItems' => 0, 
+                'watchlistItems' => 0,
                 'wonAuctions' => 0,
                 'totalSpent' => 0.0
             ];
-            
+
             /* TODO: Implement when auction tables are ready
             // Get active bids count
             $activeBidsQuery = "SELECT COUNT(*) as count FROM bids b 
@@ -232,7 +286,6 @@ class BuyerProfile {
                 'totalSpent' => (float)$totalSpent
             ];
             */
-            
         } catch (Exception $e) {
             error_log("Error getting buyer stats: " . $e->getMessage());
             return [
@@ -247,7 +300,8 @@ class BuyerProfile {
     /**
      * Update bidding statistics
      */
-    public function updateBiddingStats($bid_amount, $won = false) {
+    public function updateBiddingStats($bid_amount, $won = false)
+    {
         try {
             $this->conn->beginTransaction();
 
@@ -263,7 +317,7 @@ class BuyerProfile {
 
             $stmt = $this->conn->prepare($query);
             $successful_bid = $won ? 1 : 0;
-            
+
             $stmt->bindParam(1, $bid_amount);
             $stmt->bindParam(2, $bid_amount);
             $stmt->bindParam(3, $successful_bid);
@@ -277,7 +331,6 @@ class BuyerProfile {
 
             $this->conn->rollback();
             return false;
-
         } catch (Exception $e) {
             $this->conn->rollback();
             error_log("Bidding stats update error: " . $e->getMessage());
@@ -288,7 +341,8 @@ class BuyerProfile {
     /**
      * Update buyer rating
      */
-    public function updateRating($new_rating) {
+    public function updateRating($new_rating)
+    {
         $query = "UPDATE " . $this->table_name . " 
                   SET buyer_rating = (buyer_rating * total_reviews + ?) / (total_reviews + 1),
                       total_reviews = total_reviews + 1,
@@ -305,20 +359,24 @@ class BuyerProfile {
     /**
      * Verify national ID
      */
-    public function verifyNationalId($document_url = null) {
+    public function verifyNationalId($document_url = null)
+    {
+        // Mark national id as verified. If a document URL is provided, store into kyc_documents JSONB
         $query = "UPDATE " . $this->table_name . " 
                   SET national_id_verified = TRUE";
-        
+
         if ($document_url) {
-            $query .= ", national_id_document_url = ?";
+            $query .= ", kyc_documents = ?";
         }
-        
+
         $query .= ", updated_at = NOW() WHERE user_id = ?";
 
         $stmt = $this->conn->prepare($query);
-        
+
         if ($document_url) {
-            $stmt->bindParam(1, $document_url);
+            // store as JSON array
+            $json = json_encode([$document_url]);
+            $stmt->bindParam(1, $json);
             $stmt->bindParam(2, $this->user_id);
         } else {
             $stmt->bindParam(1, $this->user_id);
@@ -330,7 +388,8 @@ class BuyerProfile {
     /**
      * Restrict buyer account
      */
-    public function restrictAccount($reason) {
+    public function restrictAccount($reason)
+    {
         $query = "UPDATE " . $this->table_name . " 
                   SET is_restricted = TRUE, restriction_reason = ?, updated_at = NOW() 
                   WHERE user_id = ?";
@@ -345,7 +404,8 @@ class BuyerProfile {
     /**
      * Unrestrict buyer account
      */
-    public function unrestrictAccount() {
+    public function unrestrictAccount()
+    {
         $query = "UPDATE " . $this->table_name . " 
                   SET is_restricted = FALSE, restriction_reason = NULL, updated_at = NOW() 
                   WHERE user_id = ?";
@@ -359,7 +419,8 @@ class BuyerProfile {
     /**
      * Get top buyers by spending
      */
-    public static function getTopBuyers($limit = 10) {
+    public static function getTopBuyers($limit = 10)
+    {
         $db = Database::getInstance()->getConnection();
         $query = "SELECT bp.*, u.username, u.email 
                   FROM buyer_profiles bp
@@ -380,7 +441,8 @@ class BuyerProfile {
     /**
      * Get buyer statistics
      */
-    public static function getBuyerStatistics() {
+    public static function getBuyerStatistics()
+    {
         $db = Database::getInstance()->getConnection();
         $query = "SELECT 
                     COUNT(*) as total_buyers,
@@ -402,7 +464,8 @@ class BuyerProfile {
     /**
      * Get buyer activity summary
      */
-    public function getActivitySummary() {
+    public function getActivitySummary()
+    {
         if (!$this->user_id) {
             return null;
         }
@@ -422,12 +485,24 @@ class BuyerProfile {
     /**
      * Set properties from database row
      */
-    private function setProperties($row) {
+    private function setProperties($row)
+    {
         $this->id = $row['id'];
         $this->user_id = $row['user_id'];
         $this->national_id = $row['national_id'];
         $this->national_id_verified = $row['national_id_verified'];
-        $this->national_id_document_url = $row['national_id_document_url'];
+        $this->kyc_type = isset($row['kyc_type']) ? $row['kyc_type'] : null;
+        // kyc_documents may be JSONB; decode to PHP array
+        if (isset($row['kyc_documents'])) {
+            if (is_array($row['kyc_documents'])) {
+                $this->kyc_documents = $row['kyc_documents'];
+            } else {
+                $decoded = json_decode($row['kyc_documents'], true);
+                $this->kyc_documents = is_array($decoded) ? $decoded : [];
+            }
+        } else {
+            $this->kyc_documents = [];
+        }
         $this->preferred_categories = $row['preferred_categories'];
         $this->max_bid_limit = $row['max_bid_limit'];
         $this->auto_bid_enabled = $row['auto_bid_enabled'];
@@ -457,13 +532,15 @@ class BuyerProfile {
     /**
      * Convert to array
      */
-    public function toArray() {
+    public function toArray()
+    {
         return [
             'id' => $this->id,
             'user_id' => $this->user_id,
             'national_id' => $this->national_id,
             'national_id_verified' => $this->national_id_verified,
-            'national_id_document_url' => $this->national_id_document_url,
+            'kyc_type' => $this->kyc_type,
+            'kyc_documents' => $this->kyc_documents,
             'preferred_categories' => $this->preferred_categories,
             'max_bid_limit' => $this->max_bid_limit,
             'auto_bid_enabled' => $this->auto_bid_enabled,
@@ -491,4 +568,3 @@ class BuyerProfile {
         ];
     }
 }
-?>
