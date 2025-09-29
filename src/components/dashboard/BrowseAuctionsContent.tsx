@@ -125,7 +125,30 @@ const BrowseAuctionsContent = () => {
       const data: ApiResponse = await response.json();
 
       if (data.success) {
-        setAuctions(data.data || []);
+        const list = data.data || [];
+        // Dev-time sanity check: warn if any auction ids are missing or duplicated
+        try {
+          const ids = list.map((a: any) => a.id);
+          const missing = ids.filter(
+            (id: any) => id === null || id === undefined
+          );
+          if (missing.length > 0) {
+            console.warn(
+              "fetchAuctions: some auctions are missing id fields",
+              missing
+            );
+          }
+          const dup = ids.filter(
+            (id: any, idx: number) => ids.indexOf(id) !== idx
+          );
+          if (dup.length > 0) {
+            console.warn("fetchAuctions: duplicate auction ids detected", dup);
+          }
+        } catch (e) {
+          // ignore
+        }
+
+        setAuctions(list);
         if (data.pagination) {
           setCurrentPage(data.pagination.page);
           setTotalPages(data.pagination.pages);
@@ -428,7 +451,9 @@ const BrowseAuctionsContent = () => {
 
             return (
               <Card
-                key={auction.id}
+                key={auction.id ?? Math.random()}
+                data-auction-id={auction.id}
+                data-auction-title={auction.title}
                 className="group hover:shadow-xl transition-all duration-300"
               >
                 <div className="aspect-video bg-gray-200 rounded-t-lg relative overflow-hidden">
