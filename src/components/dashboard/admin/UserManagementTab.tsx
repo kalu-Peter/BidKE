@@ -95,7 +95,7 @@ const UserManagementTab: React.FC = () => {
   const handleApproveUser = (userId: number) => {
     setLoading(true);
     apiService
-      .reviewSellerVerification("approve", userId)
+      .reviewUserVerification("approve", userId)
       .then((res) => {
         if (res.success) {
           // remove from list or update status locally
@@ -162,7 +162,7 @@ const UserManagementTab: React.FC = () => {
     if (!selectedUser) return;
     setLoading(true);
     apiService
-      .reviewSellerVerification(
+      .reviewUserVerification(
         "reject",
         selectedUser.id || selectedUser.user_id,
         rejectReason

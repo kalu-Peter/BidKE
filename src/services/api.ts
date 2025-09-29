@@ -591,6 +591,16 @@ class ApiService {
   }
 
   /**
+   * Admin: approve or reject a user (buyer-focused). Uses buyer_profiles + users only.
+   */
+  async reviewUserVerification(action: 'approve' | 'reject', userId: number, message?: string): Promise<ApiResponse> {
+    return this.makeRequest('/admin/user-verification.php', {
+      method: 'POST',
+      body: JSON.stringify({ action, user_id: userId, message })
+    });
+  }
+
+  /**
    * Auction Creation Methods
    */
 

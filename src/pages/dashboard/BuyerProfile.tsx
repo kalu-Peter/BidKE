@@ -632,7 +632,24 @@ const BuyerProfile: React.FC = () => {
                     {verificationStatus.label}
                   </Badge>
                 </div>
-
+                {/* Show rejection/restriction reason if present (admin notes) */}
+                {(profileData?.profile?.verification_notes ||
+                  profileData?.profile?.verificationNotes ||
+                  profileData?.profile?.restriction_reason ||
+                  profileData?.user?.rejectionReason) && (
+                  <div className="p-4 mb-4 border border-red-200 bg-red-50 text-red-800 rounded">
+                    <div className="font-semibold flex items-center gap-2">
+                      <AlertCircle className="w-4 h-4" />
+                      Verification Issue
+                    </div>
+                    <p className="text-sm mt-1">
+                      {profileData?.profile?.verification_notes ||
+                        profileData?.profile?.verificationNotes ||
+                        profileData?.profile?.restriction_reason ||
+                        profileData?.user?.rejectionReason}
+                    </p>
+                  </div>
+                )}
                 {!profileData?.profile?.national_id_verified && (
                   <div className="space-y-4">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

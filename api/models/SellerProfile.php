@@ -5,7 +5,8 @@ require_once '../config/connect.php';
  * Seller Profile Model for BidKE
  * Handles seller-specific profile information and business details
  */
-class SellerProfile {
+class SellerProfile
+{
     private $conn;
     private $table_name = "seller_profiles";
 
@@ -62,14 +63,16 @@ class SellerProfile {
     public $created_at;
     public $updated_at;
 
-    public function __construct() {
+    public function __construct()
+    {
         $this->conn = Database::getInstance()->getConnection();
     }
 
     /**
      * Get seller profile by user ID
      */
-    public function getByUserId($user_id) {
+    public function getByUserId($user_id)
+    {
         $query = "SELECT * FROM " . $this->table_name . " WHERE user_id = ?";
         $stmt = $this->conn->prepare($query);
         $stmt->bindParam(1, $user_id);
@@ -87,7 +90,8 @@ class SellerProfile {
     /**
      * Create seller profile
      */
-    public function create() {
+    public function create()
+    {
         $query = "INSERT INTO " . $this->table_name . " 
                   (user_id, business_name, business_type, verification_status) 
                   VALUES (?, ?, ?, ?)";
@@ -108,18 +112,37 @@ class SellerProfile {
     /**
      * Update seller profile
      */
-    public function update($data) {
+    public function update($data)
+    {
         $allowedFields = [
-            'business_name', 'business_type', 'business_registration', 'tax_pin', 'business_permit',
-            'business_address', 'business_phone', 'business_email', 'website_url', 'business_description',
-            'operating_hours', 'service_areas', 'specializations', 'bank_account_name', 'bank_account_number',
-            'bank_name', 'bank_branch', 'bank_code', 'mobile_money_number', 'mobile_money_provider',
-            'auto_renewal', 'reserve_price_required', 'immediate_payment_required'
+            'business_name',
+            'business_type',
+            'business_registration',
+            'tax_pin',
+            'business_permit',
+            'business_address',
+            'business_phone',
+            'business_email',
+            'website_url',
+            'business_description',
+            'operating_hours',
+            'service_areas',
+            'specializations',
+            'bank_account_name',
+            'bank_account_number',
+            'bank_name',
+            'bank_branch',
+            'bank_code',
+            'mobile_money_number',
+            'mobile_money_provider',
+            'auto_renewal',
+            'reserve_price_required',
+            'immediate_payment_required'
         ];
 
         $updateFields = [];
         $values = [];
-        
+
         foreach ($data as $key => $value) {
             if (in_array($key, $allowedFields)) {
                 $updateFields[] = $key . " = ?";
@@ -140,7 +163,7 @@ class SellerProfile {
 
         $values[] = $this->user_id;
         $query = "UPDATE " . $this->table_name . " SET " . implode(", ", $updateFields) . ", updated_at = NOW() WHERE user_id = ?";
-        
+
         $stmt = $this->conn->prepare($query);
         return $stmt->execute($values);
     }
@@ -148,36 +171,81 @@ class SellerProfile {
     /**
      * Update business verification status
      */
-    public function updateVerificationStatus($status, $verified_by = null, $notes = null, $documents = null) {
-        $query = "UPDATE " . $this->table_name . " 
-                  SET verification_status = ?, verified_by = ?, verification_notes = ?";
-        
-        if ($documents) {
-            $query .= ", verification_documents = ?";
-        }
-        
-        if ($status === 'verified') {
-            $query .= ", business_verified = TRUE, verified_at = NOW()";
-        }
-        
-        $query .= ", updated_at = NOW() WHERE user_id = ?";
+    public function updateVerificationStatus($status, $verified_by = null, $notes = null, $documents = null)
+    {
+        try {
+            // Start transaction to ensure both seller_profiles and users are updated together
+            $this->conn->beginTransaction();
 
-        $stmt = $this->conn->prepare($query);
-        $params = [$status, $verified_by, $notes];
-        
-        if ($documents) {
-            $params[] = '{' . implode(',', (array)$documents) . '}';
+            $query = "UPDATE " . $this->table_name . " 
+                      SET verification_status = ?, verified_by = ?, verification_notes = ?";
+
+            if ($documents) {
+                $query .= ", verification_documents = ?";
+            }
+
+            if ($status === 'verified' || $status === 'approved') {
+                $query .= ", business_verified = TRUE, verified_at = NOW()";
+            } else {
+                // For rejected or other statuses, ensure business_verified is false
+                $query .= ", business_verified = FALSE";
+            }
+
+            $query .= ", updated_at = NOW() WHERE user_id = ?";
+
+            $stmt = $this->conn->prepare($query);
+            $params = [$status, $verified_by, $notes];
+
+            if ($documents) {
+                $params[] = '{' . implode(',', (array)$documents) . '}';
+            }
+
+            $params[] = $this->user_id;
+
+            $ok = $stmt->execute($params);
+
+            if (!$ok) {
+                $this->conn->rollBack();
+                return false;
+            }
+
+            // Also update users table: set status and is_verified accordingly
+            $userStatus = 'pending';
+            $isVerified = false;
+            if ($status === 'verified' || $status === 'approved') {
+                $userStatus = 'approved';
+                $isVerified = true;
+            } elseif ($status === 'rejected') {
+                $userStatus = 'rejected';
+                $isVerified = false;
+            }
+
+            $userQuery = "UPDATE users SET status = ?, is_verified = ? WHERE id = ?";
+            $userStmt = $this->conn->prepare($userQuery);
+            $userOk = $userStmt->execute([$userStatus, $isVerified, $this->user_id]);
+
+            if (!$userOk) {
+                $this->conn->rollBack();
+                return false;
+            }
+
+            $this->conn->commit();
+            return true;
+        } catch (Exception $e) {
+            try {
+                $this->conn->rollBack();
+            } catch (Exception $_) {
+            }
+            error_log('SellerProfile::updateVerificationStatus transaction error: ' . $e->getMessage());
+            return false;
         }
-        
-        $params[] = $this->user_id;
-        
-        return $stmt->execute($params);
     }
 
     /**
      * Update selling statistics
      */
-    public function updateSellingStats($sale_amount, $listing_count_change = 0, $active_listings_change = 0) {
+    public function updateSellingStats($sale_amount, $listing_count_change = 0, $active_listings_change = 0)
+    {
         try {
             $this->conn->beginTransaction();
 
@@ -204,7 +272,6 @@ class SellerProfile {
 
             $this->conn->rollback();
             return false;
-
         } catch (Exception $e) {
             $this->conn->rollback();
             error_log("Selling stats update error: " . $e->getMessage());
@@ -215,7 +282,8 @@ class SellerProfile {
     /**
      * Update seller rating
      */
-    public function updateRating($new_rating) {
+    public function updateRating($new_rating)
+    {
         $query = "UPDATE " . $this->table_name . " 
                   SET seller_rating = (seller_rating * total_seller_reviews + ?) / (total_seller_reviews + 1),
                       total_seller_reviews = total_seller_reviews + 1,
@@ -232,7 +300,8 @@ class SellerProfile {
     /**
      * Update seller status
      */
-    public function updateStatus($status, $can_list = null, $can_accept_payments = null) {
+    public function updateStatus($status, $can_list = null, $can_accept_payments = null)
+    {
         $query = "UPDATE " . $this->table_name . " SET seller_status = ?";
         $params = [$status];
 
@@ -256,7 +325,8 @@ class SellerProfile {
     /**
      * Update subscription
      */
-    public function updateSubscription($plan, $expires_at = null, $featured_listings = 0) {
+    public function updateSubscription($plan, $expires_at = null, $featured_listings = 0)
+    {
         $query = "UPDATE " . $this->table_name . " 
                   SET subscription_plan = ?, subscription_expires_at = ?, featured_listings_remaining = ?, updated_at = NOW() 
                   WHERE user_id = ?";
@@ -273,7 +343,8 @@ class SellerProfile {
     /**
      * Get pending verifications
      */
-    public static function getPendingVerifications($limit = 20, $offset = 0) {
+    public static function getPendingVerifications($limit = 20, $offset = 0)
+    {
         $db = Database::getInstance()->getConnection();
         $query = "SELECT sp.*, u.username, u.email 
                   FROM seller_profiles sp
@@ -295,7 +366,8 @@ class SellerProfile {
     /**
      * Get top sellers by revenue
      */
-    public static function getTopSellers($limit = 10) {
+    public static function getTopSellers($limit = 10)
+    {
         $db = Database::getInstance()->getConnection();
         $query = "SELECT sp.*, u.username, u.email 
                   FROM seller_profiles sp
@@ -316,7 +388,8 @@ class SellerProfile {
     /**
      * Get seller statistics
      */
-    public static function getSellerStatistics() {
+    public static function getSellerStatistics()
+    {
         $db = Database::getInstance()->getConnection();
         $query = "SELECT 
                     COUNT(*) as total_sellers,
@@ -340,7 +413,8 @@ class SellerProfile {
     /**
      * Get seller performance summary
      */
-    public function getPerformanceSummary() {
+    public function getPerformanceSummary()
+    {
         if (!$this->user_id) {
             return null;
         }
@@ -362,17 +436,19 @@ class SellerProfile {
     /**
      * Check if seller can list auction
      */
-    public function canListAuction() {
-        return $this->seller_status === 'active' && 
-               $this->can_list_auctions && 
-               $this->business_verified && 
-               $this->active_listings < $this->max_active_listings;
+    public function canListAuction()
+    {
+        return $this->seller_status === 'active' &&
+            $this->can_list_auctions &&
+            $this->business_verified &&
+            $this->active_listings < $this->max_active_listings;
     }
 
     /**
      * Set properties from database row
      */
-    private function setProperties($row) {
+    private function setProperties($row)
+    {
         $this->id = $row['id'];
         $this->user_id = $row['user_id'];
         $this->business_name = $row['business_name'];
@@ -429,7 +505,8 @@ class SellerProfile {
     /**
      * Convert to array
      */
-    public function toArray($includeSensitive = false) {
+    public function toArray($includeSensitive = false)
+    {
         $data = [
             'id' => $this->id,
             'user_id' => $this->user_id,
@@ -484,4 +561,3 @@ class SellerProfile {
         return $data;
     }
 }
-?>
