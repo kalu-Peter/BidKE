@@ -561,6 +561,19 @@ class ApiService {
   }
 
   /**
+   * Admin: fetch users with pagination and optional filters
+   */
+  async getUsers(params: { limit?: number; offset?: number; search?: string; role?: string; status?: string } = {}): Promise<ApiResponse<{ total: number; limit: number; offset: number; users: any[] }>> {
+    const q = new URLSearchParams();
+    if (params.limit) q.append('limit', params.limit.toString());
+    if (params.offset) q.append('offset', params.offset.toString());
+    if (params.search) q.append('search', params.search);
+    if (params.role) q.append('role', params.role);
+    if (params.status) q.append('status', params.status);
+    return this.makeRequest(`/admin/users.php?${q.toString()}`);
+  }
+
+  /**
    * Admin: approve or reject a seller verification
    */
   async reviewSellerVerification(action: 'approve' | 'reject', userId: number, notes?: string): Promise<ApiResponse> {
