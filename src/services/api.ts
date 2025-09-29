@@ -601,6 +601,13 @@ class ApiService {
   }
 
   /**
+   * Admin: fetch overview/dashboard metrics
+   */
+  async getAdminOverview(): Promise<ApiResponse<any>> {
+    return this.makeRequest('/admin/overview.php');
+  }
+
+  /**
    * Auction Creation Methods
    */
 

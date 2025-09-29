@@ -1,4 +1,5 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
+import { apiService } from "@/services/api";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import StatsCard from "@/components/dashboard/StatsCard";
@@ -135,16 +136,57 @@ const OverviewTab: React.FC = () => {
       color: "text-orange-600",
     },
   ];
-
-  // Admin summary stats (moved from AdminDashboard)
-  const stats = {
+  // Admin summary stats (will be loaded from API)
+  const [stats, setStats] = useState<any>({
     totalUsers: 1247,
-    activeListings: 156,
+    activeAuctions: 156,
     todayRevenue: 45000,
     totalRevenue: 2340000,
     pendingApprovals: 12,
+    approvedUsers: 1024,
     completedTransactions: 89,
-  };
+  });
+  const [loading, setLoading] = useState<boolean>(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let mounted = true;
+    setLoading(true);
+    apiService
+      .getAdminOverview()
+      .then((res) => {
+        if (!mounted) return;
+        if (res.success && res.data) {
+          const data = res.data;
+          setLoadError(null);
+          setStats({
+            totalUsers: data.users?.total_users ?? stats.totalUsers,
+            activeAuctions:
+              data.auctions_by_status?.live ?? stats.activeAuctions,
+            todayRevenue: Math.round(data.revenue?.today ?? stats.todayRevenue),
+            totalRevenue: Math.round(data.revenue?.total ?? stats.totalRevenue),
+            pendingApprovals:
+              data.users?.pending_users ?? stats.pendingApprovals,
+            approvedUsers: data.users?.approved_users ?? stats.approvedUsers,
+            completedTransactions: data.revenue?.total
+              ? Math.round(data.revenue.total / 1000)
+              : stats.completedTransactions,
+          });
+        } else {
+          setLoadError(res.error || res.message || "Failed to load overview");
+        }
+      })
+      .catch((err) => {
+        setLoadError(err instanceof Error ? err.message : String(err));
+      })
+      .finally(() => {
+        if (mounted) setLoading(false);
+      });
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   const handleQuickAction = (action: string) => {
     console.log("Quick action:", action);
@@ -206,8 +248,15 @@ const OverviewTab: React.FC = () => {
           changeType="positive"
         />
         <StatsCard
-          title="Active Listings"
-          value={stats.activeListings}
+          title="Approved Users"
+          value={stats.approvedUsers}
+          icon={<CheckCircle className="w-6 h-6" />}
+          change="+8 today"
+          changeType="positive"
+        />
+        <StatsCard
+          title="Active Auctions"
+          value={stats.activeAuctions}
           icon={<FileText className="w-6 h-6" />}
           change="+12 today"
           changeType="positive"

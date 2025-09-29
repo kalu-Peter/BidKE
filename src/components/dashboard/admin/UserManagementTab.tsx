@@ -48,6 +48,11 @@ const UserManagementTab: React.FC = () => {
   const [users, setUsers] = useState<any[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
+  // Overview counts from admin endpoint (approved users, live auctions etc.)
+  const [overviewCounts, setOverviewCounts] = useState<any>({
+    approvedUsers: null,
+  });
+  const [overviewLoading, setOverviewLoading] = useState<boolean>(false);
 
   const filteredUsers = users.filter((user: any) => {
     const name = (user.name || user.username || "").toString().toLowerCase();
@@ -226,14 +231,42 @@ const UserManagementTab: React.FC = () => {
     };
   }, []);
 
+  // Fetch admin overview counts to get approved users count (is_verified = true)
+  useEffect(() => {
+    let mounted = true;
+    setOverviewLoading(true);
+    apiService
+      .getAdminOverview()
+      .then((res) => {
+        if (!mounted) return;
+        if (res.success && res.data) {
+          const d: any = res.data;
+          setOverviewCounts({ approvedUsers: d.users?.approved_users ?? null });
+        }
+      })
+      .catch(() => {
+        // ignore, fallback to local computed approved count
+      })
+      .finally(() => {
+        if (mounted) setOverviewLoading(false);
+      });
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
   // Statistics (computed from loaded users)
   const stats = {
     total: users.length,
     pending: users.filter((u: any) => (u.status || "").toString() === "pending")
       .length,
-    approved: users.filter(
-      (u: any) => (u.status || "").toString() === "approved"
-    ).length,
+    // Prefer server-provided approved users count (is_verified = true) when available
+    approved:
+      overviewCounts.approvedUsers !== null
+        ? overviewCounts.approvedUsers
+        : users.filter((u: any) => (u.status || "").toString() === "approved")
+            .length,
     suspended: users.filter(
       (u: any) => (u.status || "").toString() === "suspended"
     ).length,
