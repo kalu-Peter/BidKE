@@ -1,16 +1,8 @@
 <?php
-$origin = $_SERVER['HTTP_ORIGIN'] ?? 'http://localhost:8080';
-header("Access-Control-Allow-Origin: $origin");
-header("Access-Control-Allow-Methods: GET, POST, OPTIONS");
-header("Access-Control-Allow-Headers: Content-Type, Authorization");
-header("Content-Type: application/json; charset=UTF-8");
-
-if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
-    http_response_code(200);
-    exit();
-}
-
+// Use central connect.php which sets CORS headers (mirrors Origin and sets
+// Access-Control-Allow-Credentials: true) and handles OPTIONS preflight.
 require_once '../config/connect.php';
+header("Content-Type: application/json; charset=UTF-8");
 require_once '../models/SellerProfile.php';
 require_once '../models/Auth.php';
 
@@ -70,10 +62,7 @@ try {
     } else {
         Auth::error('Method not allowed', 405);
     }
-
 } catch (Exception $e) {
     error_log('Admin seller verifications error: ' . $e->getMessage());
     Auth::error('Server error', 500);
 }
-
-?>

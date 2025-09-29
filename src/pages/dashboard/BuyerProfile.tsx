@@ -60,6 +60,8 @@ interface BuyerProfileData {
     user_id?: number;
     national_id?: string;
     national_id_verified?: boolean;
+    kyc_documents?: string[];
+    kyc_type?: string;
     preferred_categories?: string[];
     max_bid_limit?: number;
     auto_bid_enabled?: boolean;
@@ -116,6 +118,8 @@ const BuyerProfile: React.FC = () => {
   const [kycType, setKycType] = useState<
     "national_id" | "passport" | "driving_license" | ""
   >("");
+  // local view of uploaded document URLs (keeps UI responsive while editing)
+  const [localKycDocs, setLocalKycDocs] = useState<string[] | null>(null);
   const [kycFiles, setKycFiles] = useState<File[]>([]);
   const [uploading, setUploading] = useState(false);
 
@@ -131,6 +135,11 @@ const BuyerProfile: React.FC = () => {
 
       if (result.success && result.data) {
         setProfileData(result.data);
+
+        // initialize KYC local state
+        const existingDocs = result.data.profile?.kyc_documents || [];
+        setLocalKycDocs(Array.isArray(existingDocs) ? existingDocs : []);
+        setKycType((result.data.profile && result.data.profile.kyc_type) || "");
 
         // Populate form with existing data
         const profile = result.data.profile || {};
@@ -223,6 +232,75 @@ const BuyerProfile: React.FC = () => {
     }
   };
 
+  // Remove a document by index and persist change
+  const handleRemoveDocument = async (index: number) => {
+    if (!profileData) return;
+    const docs = profileData.profile?.kyc_documents || [];
+    if (!docs || docs.length === 0) return;
+    const confirmed = window.confirm(
+      "Are you sure you want to remove this document? You will need to re-upload to complete verification."
+    );
+    if (!confirmed) return;
+
+    const newDocs = docs.filter((_, i) => i !== index);
+    try {
+      setUploading(true);
+      setError(null);
+      const payload: any = { kyc_documents: newDocs };
+      // Keep kyc_type if present
+      if (profileData.profile?.kyc_type)
+        payload.kyc_type = profileData.profile.kyc_type;
+      const res = await apiService.updateBuyerProfile(payload);
+      if (res.success) {
+        setSuccess("Document removed");
+        await fetchProfileData();
+      } else {
+        setError(res.error || "Failed to remove document");
+      }
+    } catch (err: any) {
+      setError(err?.message || "Failed to remove document");
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  // Replace a document at index with a newly selected file
+  const handleReplaceDocument = async (
+    e: React.ChangeEvent<HTMLInputElement>,
+    index: number
+  ) => {
+    const files = e.target.files ? Array.from(e.target.files) : [];
+    if (files.length === 0) return;
+    const file = files[0];
+    if (!profileData) return;
+    try {
+      setUploading(true);
+      setError(null);
+      const uploadRes = await apiService.uploadFile(file, "document");
+      if (!uploadRes.success || !(uploadRes.data as any)?.url) {
+        throw new Error(uploadRes.error || "Upload failed");
+      }
+      const newUrl = (uploadRes.data as any).url;
+      const docs = profileData.profile?.kyc_documents || [];
+      const updated = docs.slice();
+      updated[index] = newUrl;
+      const payload: any = { kyc_documents: updated };
+      if (profileData.profile?.kyc_type)
+        payload.kyc_type = profileData.profile.kyc_type;
+      const res = await apiService.updateBuyerProfile(payload);
+      if (res.success) {
+        setSuccess("Document replaced successfully");
+        await fetchProfileData();
+      } else {
+        setError(res.error || "Failed to replace document");
+      }
+    } catch (err: any) {
+      setError(err?.message || "Replace failed");
+    } finally {
+      setUploading(false);
+    }
+  };
+
   const getVerificationStatus = () => {
     const status = profileData?.profile?.national_id_verified
       ? "verified"
@@ -261,6 +339,22 @@ const BuyerProfile: React.FC = () => {
   }
 
   const verificationStatus = getVerificationStatus();
+
+  // Ensure kyc_documents is always treated as an array in the UI to avoid crashes
+  const kycDocsArray: string[] = (() => {
+    const raw = profileData?.profile?.kyc_documents;
+    if (Array.isArray(raw)) return raw;
+    if (typeof raw === "string" && raw.trim() !== "") {
+      try {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) return parsed;
+      } catch (_e) {
+        // Not JSON — treat as single URL string
+        return [raw];
+      }
+    }
+    return [];
+  })();
 
   return (
     <DashboardLayout>
@@ -647,6 +741,51 @@ const BuyerProfile: React.FC = () => {
                           ? "Uploading..."
                           : "Upload & Submit for Verification"}
                       </Button>
+                    </div>
+                  </div>
+                )}
+                {/* If there are existing uploaded documents, show them with controls */}
+                {kycDocsArray.length > 0 && (
+                  <div className="mt-6">
+                    <h4 className="font-semibold mb-2">Uploaded Documents</h4>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                      {kycDocsArray.map((url: string, idx: number) => (
+                        <div key={idx} className="border rounded p-2">
+                          <div className="h-40 w-full bg-gray-100 flex items-center justify-center overflow-hidden">
+                            {/* Image preview */}
+                            <img
+                              src={url}
+                              alt={`doc-${idx}`}
+                              className="object-contain h-full w-full"
+                            />
+                          </div>
+                          <div className="flex items-center justify-between mt-2">
+                            <div className="text-sm text-gray-600 truncate">
+                              {url}
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <label className="text-sm text-blue-600 cursor-pointer">
+                                Replace
+                                <input
+                                  type="file"
+                                  accept="image/*"
+                                  className="hidden"
+                                  onChange={(e) =>
+                                    handleReplaceDocument(e as any, idx)
+                                  }
+                                />
+                              </label>
+                              <Button
+                                variant="destructive"
+                                size="sm"
+                                onClick={() => handleRemoveDocument(idx)}
+                              >
+                                Remove
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
                     </div>
                   </div>
                 )}
