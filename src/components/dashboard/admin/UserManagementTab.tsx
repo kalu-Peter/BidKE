@@ -481,7 +481,9 @@ const UserManagementTab: React.FC = () => {
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => handleViewUserDetails(user.id)}
+                    onClick={() =>
+                      handleViewUserDetails(user.id || user.user_id)
+                    }
                   >
                     <Eye className="w-4 h-4 mr-1" />
                     View Details
@@ -491,7 +493,9 @@ const UserManagementTab: React.FC = () => {
                     <>
                       <Button
                         size="sm"
-                        onClick={() => handleApproveUser(user.id)}
+                        onClick={() =>
+                          handleApproveUser(user.id || user.user_id)
+                        }
                       >
                         <CheckCircle className="w-4 h-4 mr-1" />
                         Approve
@@ -499,7 +503,9 @@ const UserManagementTab: React.FC = () => {
                       <Button
                         variant="destructive"
                         size="sm"
-                        onClick={() => handleRejectUser(user.id)}
+                        onClick={() =>
+                          handleRejectUser(user.id || user.user_id)
+                        }
                       >
                         <XCircle className="w-4 h-4 mr-1" />
                         Reject
@@ -511,7 +517,7 @@ const UserManagementTab: React.FC = () => {
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => handleSuspendUser(user.id)}
+                      onClick={() => handleSuspendUser(user.id || user.user_id)}
                     >
                       <AlertTriangle className="w-4 h-4 mr-1" />
                       Suspend
@@ -521,7 +527,7 @@ const UserManagementTab: React.FC = () => {
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => handleSendMessage(user.id)}
+                    onClick={() => handleSendMessage(user.id || user.user_id)}
                   >
                     <Mail className="w-4 h-4 mr-1" />
                     Message
