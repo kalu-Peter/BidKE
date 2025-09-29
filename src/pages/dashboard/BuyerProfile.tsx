@@ -127,6 +127,32 @@ const BuyerProfile: React.FC = () => {
     fetchProfileData();
   }, []);
 
+  // Helper: coerce any possible kyc_documents representation into string[]
+  const normalizeKycDocs = (raw: any): string[] => {
+    if (!raw) return [];
+    if (Array.isArray(raw)) return raw.map((r) => String(r));
+    if (typeof raw === "string" || raw instanceof String) {
+      const s = String(raw).trim();
+      if (!s) return [];
+      try {
+        const parsed = JSON.parse(s);
+        if (Array.isArray(parsed)) return parsed.map((p) => String(p));
+      } catch (_e) {
+        // not JSON — treat as single URL string
+        return [s];
+      }
+    }
+    // If it's some other object (e.g., JSONB object), try to stringify and parse
+    try {
+      const str = JSON.stringify(raw);
+      const parsed = JSON.parse(str);
+      if (Array.isArray(parsed)) return parsed.map((p) => String(p));
+    } catch (_e) {
+      // fallback
+    }
+    return [];
+  };
+
   const fetchProfileData = async () => {
     try {
       setLoading(true);
@@ -134,12 +160,19 @@ const BuyerProfile: React.FC = () => {
       const result = await apiService.getBuyerProfile();
 
       if (result.success && result.data) {
-        setProfileData(result.data);
+        // result.data is typed from the service and may not include our newer fields
+        const remote: any = result.data;
+        setProfileData(remote);
 
-        // initialize KYC local state
-        const existingDocs = result.data.profile?.kyc_documents || [];
-        setLocalKycDocs(Array.isArray(existingDocs) ? existingDocs : []);
-        setKycType((result.data.profile && result.data.profile.kyc_type) || "");
+        // initialize KYC local state using a safe normalizer
+        const existingDocs = normalizeKycDocs(remote?.profile?.kyc_documents);
+        setLocalKycDocs(existingDocs);
+        const k = remote?.profile?.kyc_type;
+        setKycType(
+          k === "national_id" || k === "passport" || k === "driving_license"
+            ? k
+            : ""
+        );
 
         // Populate form with existing data
         const profile = result.data.profile || {};
@@ -235,7 +268,7 @@ const BuyerProfile: React.FC = () => {
   // Remove a document by index and persist change
   const handleRemoveDocument = async (index: number) => {
     if (!profileData) return;
-    const docs = profileData.profile?.kyc_documents || [];
+    const docs = normalizeKycDocs(profileData?.profile?.kyc_documents);
     if (!docs || docs.length === 0) return;
     const confirmed = window.confirm(
       "Are you sure you want to remove this document? You will need to re-upload to complete verification."
@@ -281,7 +314,7 @@ const BuyerProfile: React.FC = () => {
         throw new Error(uploadRes.error || "Upload failed");
       }
       const newUrl = (uploadRes.data as any).url;
-      const docs = profileData.profile?.kyc_documents || [];
+      const docs = normalizeKycDocs(profileData?.profile?.kyc_documents);
       const updated = docs.slice();
       updated[index] = newUrl;
       const payload: any = { kyc_documents: updated };
@@ -344,13 +377,13 @@ const BuyerProfile: React.FC = () => {
   const kycDocsArray: string[] = (() => {
     const raw = profileData?.profile?.kyc_documents;
     if (Array.isArray(raw)) return raw;
-    if (typeof raw === "string" && raw.trim() !== "") {
+    if (typeof raw === "string" && (raw as string).trim() !== "") {
       try {
-        const parsed = JSON.parse(raw);
+        const parsed = JSON.parse(raw as string);
         if (Array.isArray(parsed)) return parsed;
       } catch (_e) {
         // Not JSON — treat as single URL string
-        return [raw];
+        return [raw as string];
       }
     }
     return [];
