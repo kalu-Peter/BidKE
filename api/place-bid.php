@@ -129,11 +129,50 @@ try {
     ";
     $db->exec($createBidsTable);
 
-    // Insert new bid
-    $bidQuery = "
-        INSERT INTO bids (auction_id, user_id, bid_amount, bid_time, status)
-        VALUES (:auction_id, :user_id, :bid_amount, NOW(), 'active')
-    ";
+    // Determine which column to use for the bidder (some schemas use bidder_id)
+    $colStmt = $db->prepare("SELECT column_name FROM information_schema.columns WHERE table_name = 'bids'");
+    $colStmt->execute();
+    $cols = $colStmt->fetchAll(PDO::FETCH_COLUMN);
+
+    if (in_array('user_id', $cols)) {
+        $userColumn = 'user_id';
+    } elseif (in_array('bidder_id', $cols)) {
+        $userColumn = 'bidder_id';
+    } else {
+        // Add a user_id column if neither exists (best-effort)
+        try {
+            $db->exec("ALTER TABLE bids ADD COLUMN user_id INTEGER");
+            $userColumn = 'user_id';
+        } catch (Exception $e) {
+            // fallback to bidder_id if alter fails for any reason
+            $userColumn = 'user_id';
+        }
+    }
+
+    // Ensure commonly expected columns exist (some older schemas miss these)
+    $requiredCols = [
+        'status' => "VARCHAR(20) DEFAULT 'active'",
+        'bid_time' => "TIMESTAMP DEFAULT CURRENT_TIMESTAMP",
+        'bid_amount' => "DECIMAL(15,2) DEFAULT 0",
+        'auction_id' => "INTEGER NOT NULL"
+    ];
+
+    foreach ($requiredCols as $col => $def) {
+        if (!in_array($col, $cols)) {
+            try {
+                $db->exec("ALTER TABLE bids ADD COLUMN $col $def");
+            } catch (Exception $e) {
+                // Non-fatal: continue if unable to add (we'll catch insert errors later)
+            }
+        }
+    }
+
+    // Refresh columns list after attempted alters
+    $colStmt->execute();
+    $cols = $colStmt->fetchAll(PDO::FETCH_COLUMN);
+
+    // Insert new bid (use detected bidder column)
+    $bidQuery = "INSERT INTO bids (auction_id, $userColumn, bid_amount, bid_time, status) VALUES (:auction_id, :user_id, :bid_amount, NOW(), 'active')";
     $bidStmt = $db->prepare($bidQuery);
     $bidStmt->execute([
         'auction_id' => $auctionId,
@@ -141,28 +180,39 @@ try {
         'bid_amount' => $bidAmount
     ]);
 
-    // Update auction with new current price and increment bid count
-    $updateAuctionQuery = "
-        UPDATE auctions 
-        SET current_price = :bid_amount, 
-            bid_count = bid_count + 1,
-            updated_at = NOW()
-        WHERE id = :auction_id
-    ";
-    $updateAuctionStmt = $db->prepare($updateAuctionQuery);
-    $updateAuctionStmt->execute([
-        'bid_amount' => $bidAmount,
-        'auction_id' => $auctionId
-    ]);
+    // Update auction with new current price and increment bid count if the column exists
+    // Detect auctions table columns
+    $aqColStmt = $db->prepare("SELECT column_name FROM information_schema.columns WHERE table_name = 'auctions'");
+    $aqColStmt->execute();
+    $aqCols = $aqColStmt->fetchAll(PDO::FETCH_COLUMN);
+
+    if (in_array('bid_count', $aqCols)) {
+        $updateAuctionQuery = "UPDATE auctions SET current_price = :bid_amount, bid_count = COALESCE(bid_count,0) + 1, updated_at = NOW() WHERE id = :auction_id";
+        $updateAuctionStmt = $db->prepare($updateAuctionQuery);
+        $updateAuctionStmt->execute([
+            'bid_amount' => $bidAmount,
+            'auction_id' => $auctionId
+        ]);
+    } elseif (in_array('total_bids', $aqCols)) {
+        $updateAuctionQuery = "UPDATE auctions SET current_price = :bid_amount, total_bids = COALESCE(total_bids,0) + 1, updated_at = NOW() WHERE id = :auction_id";
+        $updateAuctionStmt = $db->prepare($updateAuctionQuery);
+        $updateAuctionStmt->execute([
+            'bid_amount' => $bidAmount,
+            'auction_id' => $auctionId
+        ]);
+    } else {
+        // Fallback: update current_price only
+        $updateAuctionQuery = "UPDATE auctions SET current_price = :bid_amount, updated_at = NOW() WHERE id = :auction_id";
+        $updateAuctionStmt = $db->prepare($updateAuctionQuery);
+        $updateAuctionStmt->execute([
+            'bid_amount' => $bidAmount,
+            'auction_id' => $auctionId
+        ]);
+    }
 
     // Mark previous bids as outbid
-    $outbidQuery = "
-        UPDATE bids 
-        SET status = 'outbid' 
-        WHERE auction_id = :auction_id 
-        AND user_id != :user_id 
-        AND status = 'active'
-    ";
+    // Mark previous bids as outbid (use detected bidder column)
+    $outbidQuery = "UPDATE bids SET status = 'outbid' WHERE auction_id = :auction_id AND $userColumn != :user_id AND status = 'active'";
     $outbidStmt = $db->prepare($outbidQuery);
     $outbidStmt->execute([
         'auction_id' => $auctionId,

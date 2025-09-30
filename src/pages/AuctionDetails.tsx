@@ -128,79 +128,77 @@ const AuctionDetails = () => {
     notifyAuctionEnding,
   } = useNotifications();
 
-  // Fetch auction data from API
-  useEffect(() => {
-    const fetchAuctionDetails = async () => {
-      if (!id) {
-        setError("Auction ID is required");
-        setLoading(false);
-        return;
+  // Fetch auction data from API (extracted so it can be reused after placing a bid)
+  const fetchAuctionDetails = async () => {
+    if (!id) {
+      setError("Auction ID is required");
+      setLoading(false);
+      return;
+    }
+
+    try {
+      setLoading(true);
+      setError(null);
+
+      const response = await fetch(
+        `http://localhost:8000/auction-details.php?id=${id}`
+      );
+      const result: ApiResponse = await response.json();
+
+      if (!result.success) {
+        throw new Error(result.message || "Failed to fetch auction details");
       }
 
-      try {
-        setLoading(true);
-        setError(null);
-
-        const response = await fetch(
-          `http://localhost:8000/auction-details.php?id=${id}`
-        );
-        const result: ApiResponse = await response.json();
-
-        if (!result.success) {
-          throw new Error(result.message || "Failed to fetch auction details");
-        }
-
-        // Transform API data to match component interface
-        const auctionData: AuctionItem = {
-          ...result.data,
-          images: result.data.images.map((img: string) => {
-            // Convert backend image paths to frontend-compatible paths
-            if (img.startsWith("/src/assets/")) {
-              return img; // Use as relative path for Vite
-            } else if (img.startsWith("http")) {
-              return img; // Already a full URL
-            } else {
-              return `http://localhost:8000${img}`; // Backend served images
-            }
-          }),
-          seller: {
-            name: result.data.seller_name,
-            verified: true, // You can add verification logic later
-            rating: 4.8, // Mock rating for now
-            totalSales: 50, // Mock total sales for now
-            avatar: undefined, // API doesn't provide avatar, so set to undefined
-          },
-          isWatched: false, // Will be updated below if user is logged in
-        };
-
-        setAuction(auctionData);
-        // If the user is authenticated, check if this auction is on their watchlist
-        try {
-          if (user && user.id) {
-            const wl = await apiService.getWatchlist(user?.id);
-            if (wl.success && Array.isArray(wl.data)) {
-              const found = (wl.data as any[]).some(
-                (w) => Number(w.auction_id) === Number(id)
-              );
-              setAuction((prev) =>
-                prev ? { ...prev, isWatched: found } : prev
-              );
-            }
+      // Transform API data to match component interface
+      const auctionData: AuctionItem = {
+        ...result.data,
+        images: result.data.images.map((img: string) => {
+          // Convert backend image paths to frontend-compatible paths
+          if (img.startsWith("/src/assets/")) {
+            return img; // Use as relative path for Vite
+          } else if (img.startsWith("http")) {
+            return img; // Already a full URL
+          } else {
+            return `http://localhost:8000${img}`; // Backend served images
           }
-        } catch (err) {
-          // Non-fatal - ignore watchlist check failures
-          console.warn("Failed to check watchlist status:", err);
+        }),
+        seller: {
+          name: result.data.seller_name,
+          verified: true, // You can add verification logic later
+          rating: 4.8, // Mock rating for now
+          totalSales: 50, // Mock total sales for now
+          avatar: undefined, // API doesn't provide avatar, so set to undefined
+        },
+        isWatched: false, // Will be updated below if user is logged in
+      };
+
+      setAuction(auctionData);
+      // If the user is authenticated, check if this auction is on their watchlist
+      try {
+        if (user && user.id) {
+          const wl = await apiService.getWatchlist(user?.id);
+          if (wl.success && Array.isArray(wl.data)) {
+            const found = (wl.data as any[]).some(
+              (w) => Number(w.auction_id) === Number(id)
+            );
+            setAuction((prev) => (prev ? { ...prev, isWatched: found } : prev));
+          }
         }
       } catch (err) {
-        console.error("Error fetching auction details:", err);
-        setError(
-          err instanceof Error ? err.message : "Failed to load auction details"
-        );
-      } finally {
-        setLoading(false);
+        // Non-fatal - ignore watchlist check failures
+        console.warn("Failed to check watchlist status:", err);
       }
-    };
+    } catch (err) {
+      console.error("Error fetching auction details:", err);
+      setError(
+        err instanceof Error ? err.message : "Failed to load auction details"
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
 
+  useEffect(() => {
     fetchAuctionDetails();
   }, [id]);
 
@@ -326,7 +324,12 @@ const AuctionDetails = () => {
       return;
     }
 
-    const minBid = auction.current_bid + auction.bid_increment;
+    // Compute minBid defensively on client as a UX hint (server enforces final rules)
+    const currentBid =
+      typeof auction.current_bid === "number"
+        ? auction.current_bid
+        : auction.starting_price;
+    const minBid = currentBid + (auction.bid_increment || 1000);
 
     if (bidValue < minBid) {
       setBidError(`Bid must be at least KES ${minBid.toLocaleString()}`);
@@ -346,47 +349,43 @@ const AuctionDetails = () => {
 
     setIsPlacingBid(true);
 
-    // Simulate API call
-    setTimeout(() => {
-      try {
-        // Add new bid to history
-        const newBid: BidHistoryItem = {
-          id: auction.bid_history.length + 1,
-          bidder:
-            user.role === "buyer" ? `Buyer#${user.id}` : `Seller#${user.id}`,
-          amount: bidValue,
-          timestamp: new Date().toLocaleTimeString([], {
-            hour: "2-digit",
-            minute: "2-digit",
-          }),
-          isCurrentUser: true,
-        };
+    try {
+      const res = await fetch("http://localhost:8000/place-bid.php", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          auction_id: auction.id,
+          bid_amount: bidValue,
+          user_id: user.id,
+        }),
+        credentials: "include",
+      });
 
-        setAuction((prev) =>
-          prev
-            ? {
-                ...prev,
-                current_bid: bidValue,
-                bid_history: [newBid, ...prev.bid_history],
-              }
-            : null
-        );
-
-        setBidAmount("");
+      const json = await res.json();
+      if (!res.ok || !json.success) {
+        const msg = json?.message || json?.error || "Failed to place bid";
+        setBidError(msg);
         setIsPlacingBid(false);
-        setShowBidSuccess(true);
-
-        // Show winning notification
-        notifyWinning(auction.id, auction.title);
-
-        setTimeout(() => setShowBidSuccess(false), 3000);
-      } catch (error) {
-        console.error("Error placing bid:", error);
-        setBidError("Failed to place bid. Please try again.");
-        setIsPlacingBid(false);
+        return;
       }
-    }, 1500);
-    setShowPlaceBidModal(false);
+
+      // Re-fetch the auction details to get authoritative current_bid and bid_history
+      await fetchAuctionDetails();
+
+      setShowPlaceBidModal(false);
+      setBidAmount("");
+      setShowBidSuccess(true);
+      notifyWinning(auction.id, auction.title);
+
+      setTimeout(() => setShowBidSuccess(false), 3000);
+    } catch (err: any) {
+      console.error("Place bid error:", err);
+      setBidError(err?.message || "Failed to place bid. Please try again.");
+    } finally {
+      setIsPlacingBid(false);
+    }
   };
 
   const handleToggleWatch = async () => {
