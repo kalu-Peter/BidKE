@@ -124,12 +124,6 @@ const Header = () => {
             >
               Trust & Security
             </Link>
-            <Link
-              to="/terms"
-              className="text-muted-foreground hover:text-foreground transition-colors"
-            >
-              For Business
-            </Link>
           </nav>
 
           {/* Desktop Actions */}
