@@ -350,23 +350,11 @@ const AuctionDetails = () => {
     setIsPlacingBid(true);
 
     try {
-      const res = await fetch("http://localhost:8000/place-bid.php", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          auction_id: auction.id,
-          bid_amount: bidValue,
-          user_id: user.id,
-        }),
-        credentials: "include",
-      });
-
-      const json = await res.json();
-      if (!res.ok || !json.success) {
-        const msg = json?.message || json?.error || "Failed to place bid";
-        setBidError(msg);
+      const res = await apiService.placeBid(auction.id, bidValue);
+      if (!res || !res.success) {
+        const msg =
+          (res && (res.message || res.error)) || "Failed to place bid";
+        setBidError(msg as string);
         setIsPlacingBid(false);
         return;
       }

@@ -273,11 +273,41 @@ class ApiService {
     return this.makeRequest(`/auctions/detail.php?id=${id}`);
   }
 
-  async placeBid(auctionId: number, amount: number): Promise<ApiResponse> {
-    return this.makeRequest('/auctions/bid.php', {
+  async placeBid(auctionId: number, amount: number, userId?: number): Promise<ApiResponse> {
+    // Prefer explicit userId, otherwise try dev fallback from localStorage
+    let uid = userId;
+    if (!uid) {
+      const storedUserRaw = localStorage.getItem('bidlode_user');
+      const storedUser = storedUserRaw ? JSON.parse(storedUserRaw) : null;
+      if (storedUser && storedUser.id) uid = storedUser.id;
+    }
+
+    const body: any = { auction_id: auctionId, bid_amount: amount };
+    if (uid) body.user_id = uid;
+
+    const res = await this.makeRequest('/place-bid.php', {
       method: 'POST',
-      body: JSON.stringify({ auction_id: auctionId, bid_amount: amount })
+      body: JSON.stringify(body)
     });
+
+    // If successful, dispatch a global event so other components can refresh their bid lists
+    if (res && res.success) {
+      try {
+        if (typeof window !== 'undefined' && (window as any).dispatchEvent) {
+          const ev = new CustomEvent('bids:changed', { detail: { auction_id: auctionId, bid_amount: amount } });
+          (window as any).dispatchEvent(ev);
+        }
+      } catch (_) {}
+    }
+
+    return res;
+  }
+
+  /**
+   * Get buyer and seller bid summaries for the authenticated user
+   */
+  async getMyBids(): Promise<ApiResponse<{ buyer_bids: any[]; seller_listings: any[] }>> {
+    return this.makeRequest('/bids.php');
   }
 
   /**
