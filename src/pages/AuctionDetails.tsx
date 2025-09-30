@@ -105,10 +105,13 @@ const AuctionDetails = () => {
   const [bidError, setBidError] = useState("");
   const [isPlacingBid, setIsPlacingBid] = useState(false);
   const [showBidSuccess, setShowBidSuccess] = useState(false);
-  const [timeLeft, setTimeLeft] = useState({
+  const [countdown, setCountdown] = useState({
+    days: 0,
     hours: 0,
     minutes: 0,
     seconds: 0,
+    totalSeconds: 0,
+    mode: "ended" as "live" | "upcoming" | "ended",
   });
   const [auction, setAuction] = useState<AuctionItem | null>(null);
   const [loading, setLoading] = useState(true);
@@ -200,45 +203,90 @@ const AuctionDetails = () => {
     fetchAuctionDetails();
   }, [id]);
 
-  // Countdown timer effect
-  useEffect(() => {
-    if (!auction || auction.time_remaining <= 0) return;
-
-    const timer = setInterval(() => {
-      setAuction((prev) => {
-        if (!prev || prev.time_remaining <= 0) return prev;
-
-        const newTimeRemaining = prev.time_remaining - 1;
-        const hours = Math.floor(newTimeRemaining / 3600);
-        const minutes = Math.floor((newTimeRemaining % 3600) / 60);
-        const seconds = newTimeRemaining % 60;
-
-        setTimeLeft({ hours, minutes, seconds });
-
-        if (newTimeRemaining <= 0) {
-          return { ...prev, time_remaining: 0, auction_ended: true };
-        }
-
-        return { ...prev, time_remaining: newTimeRemaining };
-      });
-    }, 1000);
-
-    return () => clearInterval(timer);
-  }, [auction?.time_remaining]);
-
-  // Show ending notification when auction is about to end
+  // Countdown timer effect: compute from start_time and end_time
   useEffect(() => {
     if (!auction) return;
 
-    if (auction.time_remaining === 300) {
-      // 5 minutes left
+    const compute = () => {
+      const now = new Date();
+      const start = new Date(auction.start_time);
+      const end = new Date(auction.end_time);
+
+      if (now < start) {
+        // Upcoming
+        const totalSeconds = Math.max(
+          0,
+          Math.floor((start.getTime() - now.getTime()) / 1000)
+        );
+        const days = Math.floor(totalSeconds / 86400);
+        const hours = Math.floor((totalSeconds % 86400) / 3600);
+        const minutes = Math.floor((totalSeconds % 3600) / 60);
+        const seconds = totalSeconds % 60;
+
+        setCountdown({
+          days,
+          hours,
+          minutes,
+          seconds,
+          totalSeconds,
+          mode: "upcoming",
+        });
+        return;
+      }
+
+      if (now >= end) {
+        // Ended
+        setCountdown({
+          days: 0,
+          hours: 0,
+          minutes: 0,
+          seconds: 0,
+          totalSeconds: 0,
+          mode: "ended",
+        });
+        setAuction((prev) =>
+          prev ? { ...prev, auction_ended: true, status: "ended" } : prev
+        );
+        return;
+      }
+
+      // Live
+      const totalSeconds = Math.max(
+        0,
+        Math.floor((end.getTime() - now.getTime()) / 1000)
+      );
+      const days = Math.floor(totalSeconds / 86400);
+      const hours = Math.floor((totalSeconds % 86400) / 3600);
+      const minutes = Math.floor((totalSeconds % 3600) / 60);
+      const seconds = totalSeconds % 60;
+
+      setCountdown({
+        days,
+        hours,
+        minutes,
+        seconds,
+        totalSeconds,
+        mode: "live",
+      });
+    };
+
+    compute();
+    const timer = setInterval(compute, 1000);
+    return () => clearInterval(timer);
+  }, [auction?.start_time, auction?.end_time, auction?.id]);
+
+  // Show ending notification when auction is about to end (based on computed totalSeconds)
+  useEffect(() => {
+    if (!auction) return;
+
+    if (countdown.totalSeconds === 300 && countdown.mode === "live") {
       notifyAuctionEnding(auction.id, auction.title, "5 minutes");
-    } else if (auction.time_remaining === 60) {
-      // 1 minute left
+    } else if (countdown.totalSeconds === 60 && countdown.mode === "live") {
       notifyAuctionEnding(auction.id, auction.title, "1 minute");
     }
   }, [
-    auction?.time_remaining,
+    countdown.totalSeconds,
+    countdown.mode,
     auction?.id,
     auction?.title,
     notifyAuctionEnding,
@@ -781,19 +829,21 @@ const AuctionDetails = () => {
                     <Label className="text-sm text-gray-600">
                       Time Remaining
                     </Label>
-                    {auction.status === "live" && !auction.auction_ended ? (
+                    {countdown.mode === "live" ? (
                       <div className="text-2xl font-mono font-bold text-red-600">
-                        {String(timeLeft.hours).padStart(2, "0")}:
-                        {String(timeLeft.minutes).padStart(2, "0")}:
-                        {String(timeLeft.seconds).padStart(2, "0")}
+                        {countdown.days}d{" "}
+                        {String(countdown.hours).padStart(2, "0")}:
+                        {String(countdown.minutes).padStart(2, "0")}
                       </div>
-                    ) : auction.auction_ended || auction.status === "ended" ? (
+                    ) : countdown.mode === "upcoming" ? (
+                      <div className="text-2xl font-mono font-bold text-blue-600">
+                        {countdown.days}d{" "}
+                        {String(countdown.hours).padStart(2, "0")}:
+                        {String(countdown.minutes).padStart(2, "0")} (Starts in)
+                      </div>
+                    ) : (
                       <p className="text-lg font-semibold text-gray-500">
                         Auction Ended
-                      </p>
-                    ) : (
-                      <p className="text-lg font-semibold text-blue-600">
-                        Starts Soon
                       </p>
                     )}
                   </div>
