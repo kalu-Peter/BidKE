@@ -105,6 +105,7 @@ const AuctionDetails = () => {
   const [bidError, setBidError] = useState("");
   const [isPlacingBid, setIsPlacingBid] = useState(false);
   const [showBidSuccess, setShowBidSuccess] = useState(false);
+  const [showPlaceBidModal, setShowPlaceBidModal] = useState(false);
   const [countdown, setCountdown] = useState({
     days: 0,
     hours: 0,
@@ -332,7 +333,8 @@ const AuctionDetails = () => {
       return;
     }
 
-    if (auction.status !== "live") {
+    // Accept multiple live-like statuses from the server
+    if (!["live", "approved", "active"].includes(auction.status)) {
       setBidError("This auction is not currently accepting bids");
       return;
     }
@@ -384,6 +386,7 @@ const AuctionDetails = () => {
         setIsPlacingBid(false);
       }
     }, 1500);
+    setShowPlaceBidModal(false);
   };
 
   const handleToggleWatch = async () => {
@@ -461,11 +464,14 @@ const AuctionDetails = () => {
     }
   };
 
+  // Allow bidding on auctions that are live, active, or approved
+  const ALLOWED_BID_STATUSES = new Set(["live", "approved", "active"]);
+
   const canBid =
     user &&
     (user.role === "buyer" || user.role === "seller") &&
     auction &&
-    auction.status === "live";
+    ALLOWED_BID_STATUSES.has(auction.status);
 
   if (loading) {
     return (
@@ -726,58 +732,7 @@ const AuctionDetails = () => {
                     </div>
                   </div>
 
-                  {/* Seller Info */}
-                  <Separator />
-                  <div>
-                    <h3 className="font-semibold text-gray-900 mb-3">
-                      Seller Information
-                    </h3>
-                    <div className="flex items-center space-x-3">
-                      <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center overflow-hidden">
-                        {auction.seller.avatar ? (
-                          <img
-                            src={auction.seller.avatar}
-                            alt="Seller avatar"
-                            className="w-full h-full object-cover"
-                            onError={(e) => {
-                              const target = e.target as HTMLImageElement;
-                              target.style.display = "none";
-                              const parent = target.parentElement;
-                              if (parent) {
-                                parent.innerHTML =
-                                  '<svg class="w-6 h-6 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>';
-                              }
-                            }}
-                          />
-                        ) : (
-                          <User className="w-6 h-6 text-primary" />
-                        )}
-                      </div>
-                      <div className="flex-1">
-                        <div className="flex items-center space-x-2">
-                          <span className="font-medium text-gray-900">
-                            Seller
-                          </span>
-                          {auction.seller.verified && (
-                            <Shield className="w-4 h-4 text-green-500" />
-                          )}
-                        </div>
-                        <div className="flex items-center space-x-4 text-sm text-gray-600">
-                          <span>⭐ {auction.seller.rating}/5</span>
-                          <span>{auction.seller.totalSales} sales</span>
-                        </div>
-                      </div>
-                      <div className="flex space-x-2">
-                        <Button variant="outline" size="sm" disabled>
-                          <Phone className="w-4 h-4 mr-1" />
-                          Contact
-                        </Button>
-                      </div>
-                    </div>
-                    <p className="text-xs text-gray-500 mt-2">
-                      * Contact information will be shared with winning bidder
-                    </p>
-                  </div>
+                  {/* Seller Info removed per request */}
                 </CardContent>
               </Card>
             </div>
@@ -892,6 +847,17 @@ const AuctionDetails = () => {
                       </Button>
                     </div>
                   </div>
+                  {/* Place Bid CTA */}
+                  <Separator />
+                  <div>
+                    <Button
+                      onClick={() => setShowPlaceBidModal(true)}
+                      className="w-full bg-primary text-white"
+                      disabled={!canBid}
+                    >
+                      Place Bid
+                    </Button>
+                  </div>
                 </CardContent>
               </Card>
 
@@ -925,7 +891,9 @@ const AuctionDetails = () => {
                     <Button
                       onClick={handlePlaceBid}
                       disabled={
-                        isPlacingBid || !bidAmount || auction.status !== "live"
+                        isPlacingBid ||
+                        !bidAmount ||
+                        !ALLOWED_BID_STATUSES.has(auction.status)
                       }
                       className="w-full"
                       size="lg"
@@ -1039,6 +1007,56 @@ const AuctionDetails = () => {
         </div>
       </div>
       <Footer />
+
+      {/* Place Bid Modal */}
+      {showPlaceBidModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="bg-white rounded-lg w-full max-w-md p-6">
+            <h3 className="text-lg font-semibold mb-2">Place a Bid</h3>
+            <p className="text-sm text-gray-600 mb-4">
+              Please confirm you have a valid payment method on file before
+              placing a bid. By confirming, you commit to completing the
+              purchase if you win.
+            </p>
+
+            <div className="mb-4">
+              <Label htmlFor="modalBidAmount">Bid Amount (KES)</Label>
+              <Input
+                id="modalBidAmount"
+                type="number"
+                placeholder={`Minimum: ${(
+                  auction!.current_bid + auction!.bid_increment
+                ).toLocaleString()}`}
+                value={bidAmount}
+                onChange={(e) => setBidAmount(e.target.value)}
+                className="text-lg"
+              />
+              {bidError && (
+                <p className="text-sm text-red-600 mt-1">{bidError}</p>
+              )}
+            </div>
+
+            <div className="flex justify-end space-x-2">
+              <Button
+                variant="outline"
+                onClick={() => setShowPlaceBidModal(false)}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handlePlaceBid}
+                disabled={
+                  isPlacingBid ||
+                  !bidAmount ||
+                  !ALLOWED_BID_STATUSES.has(auction?.status || "")
+                }
+              >
+                {isPlacingBid ? "Placing..." : "Confirm Bid"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 };

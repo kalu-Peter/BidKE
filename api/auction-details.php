@@ -206,6 +206,8 @@ try {
         $auction['featured'] = (bool)$auction['featured'];
         $auction['view_count'] = (int)$auction['view_count'];
         $auction['bid_count'] = (int)$auction['bid_count'];
+        // Provide total_bids alias for compatibility
+        $auction['total_bids'] = $auction['bid_count'];
 
         // Increment view count if column exists
         if (in_array('view_count', $existingCols)) {

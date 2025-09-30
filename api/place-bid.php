@@ -49,7 +49,15 @@ try {
     // Get current auction details
     $auctionQuery = "
         SELECT 
-            id, title, current_price as current_bid, bid_increment, end_time, status, seller_id
+            id,
+            title,
+            COALESCE(current_price, starting_price) as current_bid,
+            starting_price,
+            bid_increment,
+            end_time,
+            status,
+            seller_id,
+            COALESCE(total_bids, 0) as bid_count
         FROM auctions 
         WHERE id = :auction_id
     ";
@@ -75,8 +83,8 @@ try {
         exit();
     }
 
-    // Check if auction is live
-    if ($auction['status'] !== 'live' && $auction['status'] !== 'approved') {
+    // Check if auction is live/active (accept 'active' for compatibility)
+    if (!in_array($auction['status'], ['live', 'approved', 'active'])) {
         $db->rollBack();
         http_response_code(400);
         echo json_encode(['success' => false, 'message' => 'Auction is not currently active']);
@@ -91,8 +99,10 @@ try {
         exit();
     }
 
-    // Check minimum bid amount
-    $minimumBid = $auction['current_bid'] + ($auction['bid_increment'] ?: 1000);
+    // Compute minimum bid defensively: use current_bid fallback to starting_price and a safe increment
+    $currentBid = isset($auction['current_bid']) ? (float)$auction['current_bid'] : (isset($auction['starting_price']) ? (float)$auction['starting_price'] : 0.0);
+    $increment = isset($auction['bid_increment']) && $auction['bid_increment'] !== null ? (float)$auction['bid_increment'] : 1000.0;
+    $minimumBid = $currentBid + $increment;
 
     if ($bidAmount < $minimumBid) {
         $db->rollBack();
@@ -168,7 +178,7 @@ try {
             'auction_id' => $auctionId,
             'bid_amount' => $bidAmount,
             'new_current_bid' => $bidAmount,
-            'bid_count' => $auction['bid_count'] + 1
+            'bid_count' => isset($auction['bid_count']) ? ((int)$auction['bid_count'] + 1) : null
         ]
     ]);
 } catch (Exception $e) {

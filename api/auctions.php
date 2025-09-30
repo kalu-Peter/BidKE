@@ -180,6 +180,8 @@ try {
             $auction['featured'] = (bool)$auction['featured'];
             $auction['view_count'] = isset($auction['view_count']) ? (int)$auction['view_count'] : 0;
             $auction['bid_count'] = isset($auction['bid_count']) ? (int)$auction['bid_count'] : 0;
+            // Provide total_bids for compatibility with consumers expecting that field
+            $auction['total_bids'] = $auction['bid_count'];
         }
 
         // Calculate pagination info
