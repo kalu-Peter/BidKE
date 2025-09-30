@@ -68,13 +68,13 @@ try {
             $params[':category'] = $category;
         }
 
-        // Add price filters (use current_price column present in DB)
+        // Add price filters (use current_price or fallback to starting_price)
         if ($min_price !== null) {
-            $conditions[] = "a.current_price >= :min_price";
+            $conditions[] = "COALESCE(a.current_price, a.starting_price) >= :min_price";
             $params[':min_price'] = $min_price;
         }
         if ($max_price !== null) {
-            $conditions[] = "a.current_price <= :max_price";
+            $conditions[] = "COALESCE(a.current_price, a.starting_price) <= :max_price";
             $params[':max_price'] = $max_price;
         }
 
@@ -111,6 +111,7 @@ try {
                 a.description,
                 a.starting_price,
                 a.current_price,
+                COALESCE(a.current_price, a.starting_price) as current_bid,
                 a.reserve_price,
                 a.start_time,
                 a.end_time,
@@ -174,6 +175,7 @@ try {
             $auction['starting_price'] = (float)$auction['starting_price'];
             // current_price exists in DB schema
             $auction['current_price'] = isset($auction['current_price']) ? (float)$auction['current_price'] : null;
+            $auction['current_bid'] = isset($auction['current_bid']) ? (float)$auction['current_bid'] : $auction['starting_price'];
             $auction['reserve_price'] = $auction['reserve_price'] ? (float)$auction['reserve_price'] : null;
             $auction['featured'] = (bool)$auction['featured'];
             $auction['view_count'] = isset($auction['view_count']) ? (int)$auction['view_count'] : 0;

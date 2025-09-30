@@ -549,7 +549,7 @@ const ListingsControlTab: React.FC = () => {
                     {listing.status === "live" && (
                       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4 p-3 bg-blue-50 rounded-lg">
                         <div>
-                          <p className="text-sm text-blue-600">Current Bid</p>
+                          <p className="text-sm text-blue-600">Current</p>
                           <p className="font-bold text-blue-800">
                             Ksh {listing.current_bid.toLocaleString()}
                           </p>

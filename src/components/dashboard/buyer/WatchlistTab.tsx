@@ -337,7 +337,7 @@ const WatchlistTab: React.FC = () => {
                   {/* Price Information */}
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
                     <div>
-                      <p className="text-sm text-gray-500">Current Bid</p>
+                      <p className="text-sm text-gray-500">Current</p>
                       <p className="font-bold text-green-600">
                         Ksh {item.currentBid.toLocaleString()}
                       </p>

@@ -365,7 +365,7 @@ const CarsPage = () => {
                     </p>
                     <div className="space-y-2 mb-4">
                       <div className="flex justify-between text-sm">
-                        <span className="text-gray-600">Current bid</span>
+                        <span className="text-gray-600">Current</span>
                         <span className="font-semibold text-green-600">
                           Ksh {car.currentBid.toLocaleString()}
                         </span>

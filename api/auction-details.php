@@ -50,7 +50,7 @@ try {
                 a.title,
                 a.description,
                 a.starting_price,
-                COALESCE(a.current_price, 0) as current_bid,
+                COALESCE(a.current_price, a.starting_price) as current_bid,
                 a.reserve_price,
                 a.bid_increment,
                 a.start_time,
@@ -164,23 +164,30 @@ try {
             }
         }
 
-        // Get bid history (mock for now - would come from bids table)
-        $auction['bid_history'] = [
-            [
-                'id' => 1,
-                'bidder' => 'Buyer#1023',
-                'amount' => (float)$auction['current_bid'],
-                'timestamp' => date('H:i', strtotime('-30 minutes')),
-                'isCurrentUser' => false
-            ],
-            [
-                'id' => 2,
-                'bidder' => 'Buyer#0987',
-                'amount' => (float)$auction['current_bid'] - 5000,
-                'timestamp' => date('H:i', strtotime('-45 minutes')),
-                'isCurrentUser' => false
-            ]
-        ];
+        // Get real bid history from bids table (most recent first)
+        $auction['bid_history'] = [];
+        $bidQuery = "SELECT id, bidder_id, bid_amount, bid_time, bid_status FROM bids WHERE auction_id = :auction_id ORDER BY bid_time DESC LIMIT 20";
+        $bidStmt = $db->prepare($bidQuery);
+        $bidStmt->execute([':auction_id' => $auctionId]);
+        $bids = $bidStmt->fetchAll(PDO::FETCH_ASSOC);
+        foreach ($bids as $b) {
+            // Attempt to resolve bidder display name
+            $bidderName = null;
+            if (!empty($b['bidder_id'])) {
+                $uStmt = $db->prepare("SELECT COALESCE(full_name, username) as name FROM users WHERE id = :id LIMIT 1");
+                $uStmt->execute([':id' => $b['bidder_id']]);
+                $uRow = $uStmt->fetch(PDO::FETCH_ASSOC);
+                if ($uRow) $bidderName = $uRow['name'];
+            }
+            $auction['bid_history'][] = [
+                'id' => (int)$b['id'],
+                'bidder' => $bidderName ?? ('Buyer#' . ($b['bidder_id'] ?? '0')),
+                'amount' => (float)$b['bid_amount'],
+                'timestamp' => date('H:i', strtotime($b['bid_time'])),
+                'isCurrentUser' => false,
+                'status' => $b['bid_status'] ?? 'active'
+            ];
+        }
 
         // Calculate time remaining
         $endTime = new DateTime($auction['end_time']);
