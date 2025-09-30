@@ -72,9 +72,6 @@ const UserHeader: React.FC = () => {
               />
               <span className="text-xl font-bold text-gray-900">BidLode</span>
             </Link>
-            <Badge variant="outline" className="text-xs">
-              Dashboard
-            </Badge>
           </div>
 
           <div className="flex items-center space-x-4">

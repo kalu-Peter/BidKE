@@ -125,7 +125,7 @@ const Header = () => {
               Trust & Security
             </Link>
             <Link
-              to="/signup"
+              to="/terms"
               className="text-muted-foreground hover:text-foreground transition-colors"
             >
               For Business
