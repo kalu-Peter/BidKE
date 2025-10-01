@@ -43,6 +43,7 @@ const PostItemTab: React.FC = () => {
 
     // Vehicle specific fields
     vehicleType: "",
+    vehicleCategory: "",
     vehicleMake: "",
     vehicleModel: "",
     vehicleYear: "",
@@ -158,6 +159,9 @@ const PostItemTab: React.FC = () => {
 
     // Validate item-specific fields
     if (formData.itemType === "vehicle") {
+      if (!formData.vehicleCategory)
+        validationErrors.vehicleCategory =
+          "Please select vehicle category (Car or Motorbike)";
       if (!formData.vehicleType)
         validationErrors.vehicleType = "Vehicle type is required";
       if (!formData.vehicleMake)
@@ -226,6 +230,7 @@ const PostItemTab: React.FC = () => {
         auctionEndTime: formData.auctionEndTime,
         // Vehicle specific
         ...(formData.itemType === "vehicle" && {
+          vehicleCategory: formData.vehicleCategory,
           vehicleType: formData.vehicleType,
           vehicleMake: formData.vehicleMake,
           vehicleModel: formData.vehicleModel,
@@ -343,6 +348,26 @@ const PostItemTab: React.FC = () => {
         <span>Vehicle Details</span>
       </h3>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="space-y-2">
+          <label className="text-sm font-medium">Vehicle Category *</label>
+          <Select
+            value={formData.vehicleCategory}
+            onValueChange={(value) =>
+              handleInputChange("vehicleCategory", value)
+            }
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Select category" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="car">Car</SelectItem>
+              <SelectItem value="motorbike">Motorbike</SelectItem>
+            </SelectContent>
+          </Select>
+          {errors.vehicleCategory && (
+            <p className="text-red-500 text-sm">{errors.vehicleCategory}</p>
+          )}
+        </div>
         <div className="space-y-2">
           <label className="text-sm font-medium">Vehicle Type *</label>
           <Select

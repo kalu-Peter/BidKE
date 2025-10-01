@@ -697,7 +697,8 @@ class ApiService {
     auctionEndDate: string;
     auctionEndTime: string;
     // Vehicle specific
-    vehicleType?: string;
+  vehicleCategory?: string;
+  vehicleType?: string;
     vehicleMake?: string;
     vehicleModel?: string;
     vehicleYear?: string;

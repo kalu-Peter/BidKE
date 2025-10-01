@@ -139,21 +139,37 @@ try {
     $connection->beginTransaction();
     error_log("Auction creation: transaction started");
 
-    // Get category ID
-    $category_query = "SELECT id FROM categories WHERE (slug = ? OR name = ?) AND is_active = true LIMIT 1";
-    $category_stmt = $connection->prepare($category_query);
+    // Determine category_id
+    $category_id = null;
 
-    if ($data['itemType'] === 'vehicle') {
-        $category_stmt->execute(['cars', 'Cars']);
-    } else {
-        $category_stmt->execute(['electronics', 'Electronics']);
+    // If client supplied a vehicleCategory, map it explicitly to known category IDs
+    if ($data['itemType'] === 'vehicle' && !empty($data['vehicleCategory'])) {
+        $vc = strtolower(trim($data['vehicleCategory']));
+        // Map as requested: id 1 => cars, id 2 => motorbikes
+        if ($vc === 'car' || $vc === 'cars') {
+            $category_id = 1;
+        } elseif ($vc === 'motorbike' || $vc === 'motorcycle' || $vc === 'motorbikes') {
+            $category_id = 2;
+        }
     }
 
-    $category_result = $category_stmt->fetch();
-    if (!$category_result) {
-        throw new Exception('Category not found for item type: ' . $data['itemType']);
+    // Fallback: lookup category by slug/name
+    if ($category_id === null) {
+        $category_query = "SELECT id FROM categories WHERE (slug = ? OR name = ?) AND is_active = true LIMIT 1";
+        $category_stmt = $connection->prepare($category_query);
+
+        if ($data['itemType'] === 'vehicle') {
+            $category_stmt->execute(['cars', 'Cars']);
+        } else {
+            $category_stmt->execute(['electronics', 'Electronics']);
+        }
+
+        $category_result = $category_stmt->fetch();
+        if (!$category_result) {
+            throw new Exception('Category not found for item type: ' . $data['itemType']);
+        }
+        $category_id = $category_result['id'];
     }
-    $category_id = $category_result['id'];
 
     // Combine date and time for start and end times
     $start_datetime = $data['auctionStartDate'] . ' ' . $data['auctionStartTime'];

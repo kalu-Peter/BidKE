@@ -10,6 +10,7 @@ $payload = [
     'auctionEndDate' => date('Y-m-d', strtotime('+7 days')),
     'auctionEndTime' => '18:00',
     'vehicleType' => 'motorbike',
+    'vehicleCategory' => 'motorbike',
     'vehicleMake' => 'Honda',
     'vehicleModel' => 'CBR 600',
     'vehicleYear' => '2020',
