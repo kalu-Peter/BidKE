@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import Header from "@/components/Header";
 import UserHeader from "@/components/UserHeader";
@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { Alert } from "@/components/ui/alert";
 import {
   Select,
   SelectContent,
@@ -14,76 +15,42 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Search, Grid3X3, List, Eye, Heart, Clock } from "lucide-react";
+import {
+  Search,
+  Grid3X3,
+  List,
+  Eye,
+  Heart,
+  Clock,
+  AlertCircle,
+  Loader2,
+} from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { apiService } from "@/services/api";
 
-const mockElectronics = [
-  {
-    id: 1,
-    title: "HP EliteBook 840 G5",
-    category: "Laptops",
-    currentBid: 32000,
-    reservePrice: 35000,
-    timeLeft: "1h 30m",
-    bids: 8,
-    seller: "TechHub Kenya",
-    image:
-      "https://images.unsplash.com/photo-1517336714731-489689fd1ca8?auto=format&fit=crop&w=500&q=80",
-    featured: false,
-    isWatched: false,
-    brand: "HP",
-    condition: "Used",
-  },
-  {
-    id: 2,
-    title: "iPhone 14 Pro Max",
-    category: "Phones",
-    currentBid: 95000,
-    reservePrice: 120000,
-    timeLeft: "18h 45m",
-    bids: 31,
-    seller: "Digital Solutions",
-    image:
-      "https://images.unsplash.com/photo-1592750475338-74b7b21085ab?auto=format&fit=crop&w=500&q=80",
-    featured: true,
-    isWatched: true,
-    brand: "Apple",
-    condition: "New",
-  },
-  {
-    id: 3,
-    title: "Samsung 55'' 4K TV",
-    category: "TVs",
-    currentBid: 45000,
-    reservePrice: 65000,
-    timeLeft: "1h 30m",
-    bids: 8,
-    seller: "Electronics Plaza",
-    image:
-      "https://images.unsplash.com/photo-1519125323398-675f0ddb6308?auto=format&fit=crop&w=500&q=80",
-    featured: false,
-    isWatched: false,
-    brand: "Samsung",
-    condition: "Used",
-  },
-  {
-    id: 4,
-    title: "MacBook Pro M2",
-    category: "Laptops",
-    currentBid: 185000,
-    reservePrice: 250000,
-    timeLeft: "3d 2h",
-    bids: 18,
-    seller: "TechHub Kenya",
-    image:
-      "https://images.unsplash.com/photo-1517336714731-489689fd1ca8?auto=format&fit=crop&w=500&q=80",
-    featured: true,
-    isWatched: false,
-    brand: "Apple",
-    condition: "Like New",
-  },
-];
+interface ElectronicsAuction {
+  id: number;
+  title: string;
+  description: string;
+  starting_price: number;
+  current_bid: number;
+  reserve_price?: number;
+  start_time: string;
+  end_time: string;
+  status: string;
+  category_name: string;
+  seller_name: string;
+  featured: boolean;
+  view_count: number;
+  bid_count: number;
+  images: string[];
+  item_type: string;
+  electronics_brand?: string;
+  electronics_model?: string;
+  electronics_condition?: string;
+  isWatched?: boolean;
+  timeLeft?: string; // Calculated field
+}
 
 const categories = [
   { label: "All", value: "" },
@@ -116,60 +83,173 @@ const ElectronicsPage = () => {
   const [brand, setBrand] = useState("all");
   const [condition, setCondition] = useState("all");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
-  const [allElectronics, setAllElectronics] = useState(mockElectronics);
+  const [allElectronics, setAllElectronics] = useState<ElectronicsAuction[]>(
+    []
+  );
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // Calculate time left for auction
+  const calculateTimeLeft = (endTime: string) => {
+    const end = new Date(endTime).getTime();
+    const now = new Date().getTime();
+    const timeLeft = end - now;
+
+    if (timeLeft <= 0) return "Ended";
+
+    const days = Math.floor(timeLeft / (1000 * 60 * 60 * 24));
+    const hours = Math.floor(
+      (timeLeft % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)
+    );
+    const minutes = Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60));
+
+    if (days > 0) return `${days}d ${hours}h`;
+    if (hours > 0) return `${hours}h ${minutes}m`;
+    return `${minutes}m`;
+  };
+
+  // Fetch electronics auctions from API
+  const fetchElectronicsAuctions = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const response = await apiService.getAuctions({
+        category: "electronics",
+        status: "live",
+        limit: 50,
+      });
+
+      if (response.success && response.data && Array.isArray(response.data)) {
+        const electronicsWithTimeLeft = response.data.map((auction: any) => ({
+          ...auction,
+          timeLeft: calculateTimeLeft(auction.end_time),
+          isWatched: false, // Will be updated after watchlist check
+        }));
+        setAllElectronics(electronicsWithTimeLeft);
+
+        // Check watchlist status if user is logged in
+        if (user && user.id) {
+          try {
+            const watchlistResponse = await apiService.getWatchlist(user.id);
+            if (
+              watchlistResponse.success &&
+              Array.isArray(watchlistResponse.data)
+            ) {
+              const watchedIds = watchlistResponse.data.map((item: any) =>
+                Number(item.auction_id)
+              );
+              setAllElectronics((prev) =>
+                prev.map((electronics) => ({
+                  ...electronics,
+                  isWatched: watchedIds.includes(electronics.id),
+                }))
+              );
+            }
+          } catch (watchError) {
+            console.warn("Failed to load watchlist:", watchError);
+          }
+        }
+      } else {
+        setError(response.error || "Failed to fetch electronics auctions");
+      }
+    } catch (err) {
+      console.error("Error fetching electronics auctions:", err);
+      setError("Failed to load electronics auctions. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Load auctions on component mount
+  useEffect(() => {
+    fetchElectronicsAuctions();
+  }, []);
+
+  // Update watchlist status when user changes
+  useEffect(() => {
+    if (user && user.id && allElectronics.length > 0) {
+      const updateWatchlistStatus = async () => {
+        try {
+          const watchlistResponse = await apiService.getWatchlist(user.id);
+          if (
+            watchlistResponse.success &&
+            Array.isArray(watchlistResponse.data)
+          ) {
+            const watchedIds = watchlistResponse.data.map((item: any) =>
+              Number(item.auction_id)
+            );
+            setAllElectronics((prev) =>
+              prev.map((electronics) => ({
+                ...electronics,
+                isWatched: watchedIds.includes(electronics.id),
+              }))
+            );
+          }
+        } catch (err) {
+          console.warn("Failed to update watchlist status:", err);
+        }
+      };
+      updateWatchlistStatus();
+    }
+  }, [user?.id, allElectronics.length]);
 
   // Filter electronics based on search criteria
   const filteredElectronics = allElectronics.filter((item) => {
     const matchesSearch =
       item.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      item.category.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      item.seller.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (item.brand &&
-        item.brand.toLowerCase().includes(searchTerm.toLowerCase()));
+      item.category_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      item.seller_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (item.electronics_brand &&
+        item.electronics_brand
+          .toLowerCase()
+          .includes(searchTerm.toLowerCase()));
     const matchesCategory =
       category === "all" ||
-      item.category.toLowerCase() === category.toLowerCase();
+      item.category_name.toLowerCase() === category.toLowerCase();
     const matchesBrand =
       brand === "all" ||
-      (item.brand && item.brand.toLowerCase() === brand.toLowerCase());
+      (item.electronics_brand &&
+        item.electronics_brand.toLowerCase() === brand.toLowerCase());
     const matchesCondition =
       condition === "all" ||
-      (item.condition &&
-        item.condition.toLowerCase() === condition.toLowerCase());
+      (item.electronics_condition &&
+        item.electronics_condition.toLowerCase() === condition.toLowerCase());
 
     return matchesSearch && matchesCategory && matchesBrand && matchesCondition;
   });
 
   // Handler functions
   const handleToggleWatch = async (itemId: number) => {
-    if (!user) {
+    if (!user?.id) {
       navigate("/login");
       return;
     }
 
-    const prev = allElectronics.map((c) => ({ ...c }));
-    setAllElectronics((prevList) =>
-      prevList.map((item) =>
-        item.id === itemId ? { ...item, isWatched: !item.isWatched } : item
-      )
+    const item = allElectronics.find((e) => e.id === itemId);
+    if (!item) return;
+
+    // Optimistic update
+    setAllElectronics((prev) =>
+      prev.map((e) => (e.id === itemId ? { ...e, isWatched: !e.isWatched } : e))
     );
 
     try {
-      const res = await apiService.toggleWatch(itemId, user?.id);
-      if (!res.success) throw new Error(res.message || "Toggle failed");
-
-      const watched = (res.data as any)?.watched;
-      if (typeof watched === "boolean") {
-        setAllElectronics((list) =>
-          list.map((it) =>
-            it.id === itemId ? { ...it, isWatched: watched } : it
-          )
-        );
+      if (item.isWatched) {
+        // Remove from watchlist
+        await apiService.removeFromWatchlist(user.id, itemId);
+      } else {
+        // Add to watchlist
+        await apiService.addToWatchlist(user.id, itemId);
       }
     } catch (err) {
-      console.error("Failed to toggle watch:", err);
-      // rollback
-      setAllElectronics(prev);
+      console.error("Watchlist toggle failed:", err);
+      // Revert optimistic update
+      setAllElectronics((prev) =>
+        prev.map((e) =>
+          e.id === itemId ? { ...e, isWatched: !e.isWatched } : e
+        )
+      );
     }
   };
 
@@ -266,198 +346,250 @@ const ElectronicsPage = () => {
           </div>
         </section>
 
-        {/* Main Electronics Section */}
-        <section className="py-16">
-          <div className="container mx-auto px-4">
-            <div className="flex justify-between items-center mb-8">
-              <div>
-                <h2 className="text-3xl font-bold text-gray-900 mb-2">
-                  {searchTerm || category !== "all" || brand !== "all"
-                    ? "Search Results"
-                    : "All Electronics"}
-                </h2>
-                <p className="text-gray-600">
-                  Showing {filteredElectronics.length} of{" "}
-                  {allElectronics.length} electronics
-                  {user && (
-                    <span className="ml-2">
-                      • {filteredElectronics.filter((e) => e.isWatched).length}{" "}
-                      Watched
-                    </span>
-                  )}
-                </p>
-              </div>
-              <div className="flex gap-2">
-                <Button
-                  variant={viewMode === "grid" ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => setViewMode("grid")}
-                >
-                  <Grid3X3 className="w-4 h-4 mr-2" />
-                  Grid
-                </Button>
-                <Button
-                  variant={viewMode === "list" ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => setViewMode("list")}
-                >
-                  <List className="w-4 h-4 mr-2" />
-                  List
-                </Button>
+        {/* Loading State */}
+        {loading && (
+          <section className="py-16">
+            <div className="container mx-auto px-4">
+              <div className="flex justify-center items-center min-h-[400px]">
+                <div className="text-center">
+                  <Loader2 className="w-12 h-12 animate-spin text-primary mx-auto mb-4" />
+                  <p className="text-gray-600 text-lg">
+                    Loading electronics auctions...
+                  </p>
+                </div>
               </div>
             </div>
+          </section>
+        )}
 
-            {/* Electronics Grid */}
-            <div
-              className={`grid gap-6 ${
-                viewMode === "grid"
-                  ? "grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
-                  : "grid-cols-1"
-              }`}
-            >
-              {filteredElectronics.map((item) => (
-                <Card
-                  key={item.id}
-                  className="group hover:shadow-xl transition-all duration-300"
-                >
-                  <div className="aspect-video bg-gray-200 rounded-t-lg relative overflow-hidden">
-                    <img
-                      src={item.image}
-                      alt={item.title}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                    />
-                    {item.featured && (
-                      <Badge className="absolute top-3 right-3 bg-accent text-white">
-                        Featured
-                      </Badge>
-                    )}
-                    {user && (
-                      <button
-                        onClick={() => handleToggleWatch(item.id)}
-                        className={`absolute top-3 left-3 p-2 rounded-full transition-colors ${
-                          item.isWatched
-                            ? "bg-accent text-white"
-                            : "bg-white/90 text-gray-400 hover:text-accent hover:bg-white"
-                        }`}
-                      >
-                        <Heart
-                          className={`w-4 h-4 ${
-                            item.isWatched ? "fill-current" : ""
-                          }`}
-                        />
-                      </button>
-                    )}
+        {/* Error State */}
+        {error && !loading && (
+          <section className="py-16">
+            <div className="container mx-auto px-4">
+              <div className="max-w-md mx-auto">
+                <Alert className="border-red-200 bg-red-50">
+                  <AlertCircle className="h-4 w-4 text-red-600" />
+                  <div className="ml-2">
+                    <h3 className="text-red-800 font-semibold">
+                      Error Loading Electronics
+                    </h3>
+                    <p className="text-red-700 mt-1">{error}</p>
+                    <Button
+                      onClick={fetchElectronicsAuctions}
+                      variant="outline"
+                      size="sm"
+                      className="mt-3 border-red-300 text-red-700 hover:bg-red-100"
+                    >
+                      Try Again
+                    </Button>
                   </div>
-                  <CardContent className="p-4">
-                    <div className="flex justify-between items-start mb-2">
-                      <Badge variant="outline" className="text-xs">
-                        {item.category}
-                      </Badge>
-                      <div className="flex items-center text-sm text-gray-500">
-                        <Clock className="w-4 h-4 mr-1" />
+                </Alert>
+              </div>
+            </div>
+          </section>
+        )}
+
+        {/* Main Electronics Section */}
+        {!loading && !error && (
+          <section className="py-16">
+            <div className="container mx-auto px-4">
+              <div className="flex justify-between items-center mb-8">
+                <div>
+                  <h2 className="text-3xl font-bold text-gray-900 mb-2">
+                    {searchTerm || category !== "all" || brand !== "all"
+                      ? "Search Results"
+                      : "All Electronics"}
+                  </h2>
+                  <p className="text-gray-600">
+                    Showing {filteredElectronics.length} of{" "}
+                    {allElectronics.length} electronics
+                    {user && (
+                      <span className="ml-2">
+                        •{" "}
+                        {filteredElectronics.filter((e) => e.isWatched).length}{" "}
+                        Watched
+                      </span>
+                    )}
+                  </p>
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    variant={viewMode === "grid" ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setViewMode("grid")}
+                  >
+                    <Grid3X3 className="w-4 h-4 mr-2" />
+                    Grid
+                  </Button>
+                  <Button
+                    variant={viewMode === "list" ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setViewMode("list")}
+                  >
+                    <List className="w-4 h-4 mr-2" />
+                    List
+                  </Button>
+                </div>
+              </div>
+
+              {/* Electronics Grid */}
+              <div
+                className={`grid gap-6 ${
+                  viewMode === "grid"
+                    ? "grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
+                    : "grid-cols-1"
+                }`}
+              >
+                {filteredElectronics.map((item) => (
+                  <Card
+                    key={item.id}
+                    className="group hover:shadow-xl transition-all duration-300"
+                  >
+                    <div className="aspect-video bg-gray-200 rounded-t-lg relative overflow-hidden">
+                      <img
+                        src={item.images[0] || "/placeholder.svg"}
+                        alt={item.title}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                      />
+                      {item.featured && (
+                        <Badge className="absolute top-3 right-3 bg-accent text-white">
+                          Featured
+                        </Badge>
+                      )}
+                      {user && (
+                        <button
+                          onClick={() => handleToggleWatch(item.id)}
+                          className={`absolute top-3 left-3 p-2 rounded-full transition-colors ${
+                            item.isWatched
+                              ? "bg-accent text-white"
+                              : "bg-white/90 text-gray-400 hover:text-accent hover:bg-white"
+                          }`}
+                        >
+                          <Heart
+                            className={`w-4 h-4 ${
+                              item.isWatched ? "fill-current" : ""
+                            }`}
+                          />
+                        </button>
+                      )}
+                    </div>
+                    <CardContent className="p-4">
+                      <div className="flex justify-between items-start mb-2">
+                        <Badge variant="outline" className="text-xs">
+                          {item.category_name}
+                        </Badge>
+                        <div className="flex items-center text-sm text-gray-500">
+                          <Clock className="w-4 h-4 mr-1" />
+                          <span
+                            className={
+                              item.timeLeft &&
+                              item.timeLeft.includes("h") &&
+                              !item.timeLeft.includes("d")
+                                ? "text-accent font-medium"
+                                : ""
+                            }
+                          >
+                            {item.timeLeft}
+                          </span>
+                        </div>
+                      </div>
+                      <h3
+                        className="font-semibold text-lg mb-1 group-hover:text-primary transition-colors cursor-pointer"
+                        onClick={() => handleViewDetails(item.id)}
+                      >
+                        {item.title}
+                      </h3>
+                      <p className="text-sm text-gray-500 mb-3">
+                        by {item.seller_name}
+                      </p>
+                      <p className="text-xs text-gray-400 mb-3">
+                        {item.electronics_brand} {item.electronics_model}
+                      </p>
+                      <div className="space-y-2 mb-4">
+                        <div className="flex justify-between text-sm">
+                          <span className="text-gray-600">Current</span>
+                          <span className="font-semibold text-green-600">
+                            Ksh {item.current_bid.toLocaleString()}
+                          </span>
+                        </div>
+                        {item.reserve_price && (
+                          <div className="flex justify-between text-sm">
+                            <span className="text-gray-600">Reserve price</span>
+                            <span className="text-gray-900">
+                              Ksh {item.reserve_price.toLocaleString()}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex justify-between items-center text-sm text-gray-500 mb-3">
+                        <div className="flex items-center space-x-1">
+                          <Eye className="w-4 h-4" />
+                          <span>{item.bid_count} bids</span>
+                        </div>
                         <span
                           className={
+                            item.timeLeft &&
                             item.timeLeft.includes("h") &&
                             !item.timeLeft.includes("d")
                               ? "text-accent font-medium"
                               : ""
                           }
                         >
-                          {item.timeLeft}
-                        </span>
-                      </div>
-                    </div>
-                    <h3
-                      className="font-semibold text-lg mb-1 group-hover:text-primary transition-colors cursor-pointer"
-                      onClick={() => handleViewDetails(item.id)}
-                    >
-                      {item.title}
-                    </h3>
-                    <p className="text-sm text-gray-500 mb-3">
-                      by {item.seller}
-                    </p>
-                    <div className="space-y-2 mb-4">
-                      <div className="flex justify-between text-sm">
-                        <span className="text-gray-600">Current</span>
-                        <span className="font-semibold text-green-600">
-                          Ksh {item.currentBid.toLocaleString()}
-                        </span>
-                      </div>
-                      {item.reservePrice && (
-                        <div className="flex justify-between text-sm">
-                          <span className="text-gray-600">Reserve price</span>
-                          <span className="text-gray-900">
-                            Ksh {item.reservePrice.toLocaleString()}
-                          </span>
-                        </div>
-                      )}
-                    </div>
-                    <div className="flex justify-between items-center text-sm text-gray-500 mb-3">
-                      <div className="flex items-center space-x-1">
-                        <Eye className="w-4 h-4" />
-                        <span>{item.bids} bids</span>
-                      </div>
-                      <span
-                        className={
+                          Ending{" "}
+                          {item.timeLeft &&
                           item.timeLeft.includes("h") &&
                           !item.timeLeft.includes("d")
-                            ? "text-accent font-medium"
-                            : ""
-                        }
-                      >
-                        Ending{" "}
-                        {item.timeLeft.includes("h") &&
-                        !item.timeLeft.includes("d")
-                          ? "soon"
-                          : "in " + item.timeLeft}
-                      </span>
-                    </div>
-                    <div className="flex space-x-2">
-                      <Button
-                        className="flex-1"
-                        onClick={() => handlePlaceBid(item.id)}
-                      >
-                        {user ? "Place Bid" : "Login to Bid"}
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleViewDetails(item.id)}
-                      >
-                        <Eye className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-
-            {/* Empty State */}
-            {filteredElectronics.length === 0 && (
-              <div className="text-center py-12">
-                <Search className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                  No electronics found
-                </h3>
-                <p className="text-gray-600 mb-4">
-                  Try adjusting your search criteria or check back later for new
-                  electronics
-                </p>
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    setSearchTerm("");
-                    setCategory("all");
-                    setBrand("all");
-                    setCondition("all");
-                  }}
-                >
-                  Clear Filters
-                </Button>
+                            ? "soon"
+                            : "in " + (item.timeLeft || "N/A")}
+                        </span>
+                      </div>
+                      <div className="flex space-x-2">
+                        <Button
+                          className="flex-1"
+                          onClick={() => handlePlaceBid(item.id)}
+                        >
+                          {user ? "Place Bid" : "Login to Bid"}
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleViewDetails(item.id)}
+                        >
+                          <Eye className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
               </div>
-            )}
-          </div>
-        </section>
+
+              {/* Empty State */}
+              {filteredElectronics.length === 0 && (
+                <div className="text-center py-12">
+                  <Search className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                    No electronics found
+                  </h3>
+                  <p className="text-gray-600 mb-4">
+                    Try adjusting your search criteria or check back later for
+                    new electronics
+                  </p>
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setSearchTerm("");
+                      setCategory("all");
+                      setBrand("all");
+                      setCondition("all");
+                    }}
+                  >
+                    Clear Filters
+                  </Button>
+                </div>
+              )}
+            </div>
+          </section>
+        )}
       </div>
       <Footer />
     </>
