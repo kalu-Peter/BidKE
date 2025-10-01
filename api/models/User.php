@@ -5,7 +5,8 @@ require_once '../config/connect.php';
  * User Model for BidKE Unified Signup System
  * Handles username-based signup and role-based authentication
  */
-class User {
+class User
+{
     private $db;
     private $table_name = "users";
 
@@ -46,7 +47,8 @@ class User {
     public $created_at;
     public $updated_at;
 
-    public function __construct() {
+    public function __construct()
+    {
         $this->db = Database::getInstance()->getConnection();
     }
 
@@ -54,19 +56,20 @@ class User {
      * Create new user with unified signup (username-based)
      * Automatically assigns buyer role
      */
-    public function create() {
+    public function create()
+    {
         try {
             $this->db->beginTransaction();
 
             // Call the database function to create user with buyer role
             $query = "SELECT create_user_with_buyer_role(?, ?, ?, ?) as user_id";
             $stmt = $this->db->prepare($query);
-            
+
             $stmt->bindParam(1, $this->username);
             $stmt->bindParam(2, $this->email);
             $stmt->bindParam(3, $this->phone);
             $stmt->bindParam(4, $this->password_hash);
-            
+
             if ($stmt->execute()) {
                 $result = $stmt->fetch();
                 if ($result && $result['user_id']) {
@@ -75,10 +78,9 @@ class User {
                     return $this->id;
                 }
             }
-            
+
             $this->db->rollback();
             return false;
-            
         } catch (Exception $e) {
             $this->db->rollback();
             error_log("User creation error: " . $e->getMessage());
@@ -89,11 +91,12 @@ class User {
     /**
      * Find user by username (for login)
      */
-    public function findByUsername($username) {
+    public function findByUsername($username)
+    {
         $query = "SELECT * FROM " . $this->table_name . " WHERE username = ? AND status != 'banned'";
         $stmt = $this->db->prepare($query);
         $stmt->bindParam(1, $username);
-        
+
         if ($stmt->execute()) {
             $row = $stmt->fetch();
             if ($row) {
@@ -107,11 +110,12 @@ class User {
     /**
      * Find user by email
      */
-    public function findByEmail($email) {
+    public function findByEmail($email)
+    {
         $query = "SELECT * FROM " . $this->table_name . " WHERE email = ? AND status != 'banned'";
         $stmt = $this->db->prepare($query);
         $stmt->bindParam(1, $email);
-        
+
         if ($stmt->execute()) {
             $row = $stmt->fetch();
             if ($row) {
@@ -125,11 +129,12 @@ class User {
     /**
      * Find user by ID
      */
-    public function findById($id) {
+    public function findById($id)
+    {
         $query = "SELECT * FROM " . $this->table_name . " WHERE id = ? AND status != 'banned'";
         $stmt = $this->db->prepare($query);
         $stmt->bindParam(1, $id);
-        
+
         if ($stmt->execute()) {
             $row = $stmt->fetch();
             if ($row) {
@@ -143,13 +148,14 @@ class User {
     /**
      * Get user's available login roles
      */
-    public function getLoginRoles($user_id = null) {
+    public function getLoginRoles($user_id = null)
+    {
         $id = $user_id ?? $this->id;
-        
+
         $query = "SELECT * FROM get_user_login_roles(?)";
         $stmt = $this->db->prepare($query);
         $stmt->bindParam(1, $id);
-        
+
         if ($stmt->execute()) {
             return $stmt->fetchAll();
         }
@@ -159,25 +165,28 @@ class User {
     /**
      * Verify password
      */
-    public function verifyPassword($password) {
+    public function verifyPassword($password)
+    {
         return password_verify($password, $this->password_hash);
     }
 
     /**
      * Hash password
      */
-    public static function hashPassword($password) {
+    public static function hashPassword($password)
+    {
         return password_hash($password, PASSWORD_DEFAULT);
     }
 
     /**
      * Check if username exists
      */
-    public function usernameExists($username) {
+    public function usernameExists($username)
+    {
         $query = "SELECT id FROM " . $this->table_name . " WHERE username = ?";
         $stmt = $this->db->prepare($query);
         $stmt->bindParam(1, $username);
-        
+
         if ($stmt->execute()) {
             return $stmt->rowCount() > 0;
         }
@@ -187,11 +196,12 @@ class User {
     /**
      * Check if email exists
      */
-    public function emailExists($email) {
+    public function emailExists($email)
+    {
         $query = "SELECT id FROM " . $this->table_name . " WHERE email = ?";
         $stmt = $this->db->prepare($query);
         $stmt->bindParam(1, $email);
-        
+
         if ($stmt->execute()) {
             return $stmt->rowCount() > 0;
         }
@@ -201,19 +211,19 @@ class User {
     /**
      * Log user login with role selection
      */
-    public function logLogin($login_role, $session_token, $ip_address = null, $user_agent = null) {
+    public function logLogin($login_role, $session_token, $ip_address = null, $user_agent = null)
+    {
         try {
             $query = "SELECT log_user_login(?, ?, ?, ?, ?)";
             $stmt = $this->db->prepare($query);
-            
+
             $stmt->bindParam(1, $this->id);
             $stmt->bindParam(2, $login_role);
             $stmt->bindParam(3, $session_token);
             $stmt->bindParam(4, $ip_address);
             $stmt->bindParam(5, $user_agent);
-            
+
             return $stmt->execute();
-            
         } catch (Exception $e) {
             error_log("Login logging error: " . $e->getMessage());
             return false;
@@ -223,16 +233,27 @@ class User {
     /**
      * Update user profile
      */
-    public function updateProfile($data) {
+    public function updateProfile($data)
+    {
         $allowedFields = [
-            'full_name', 'bio', 'date_of_birth', 'address', 'city', 'state',
-            'postal_code', 'country', 'preferred_language', 'timezone',
-            'email_notifications', 'sms_notifications', 'avatar_url'
+            'full_name',
+            'bio',
+            'date_of_birth',
+            'address',
+            'city',
+            'state',
+            'postal_code',
+            'country',
+            'preferred_language',
+            'timezone',
+            'email_notifications',
+            'sms_notifications',
+            'avatar_url'
         ];
 
         $updateFields = [];
         $values = [];
-        
+
         foreach ($data as $key => $value) {
             if (in_array($key, $allowedFields)) {
                 $updateFields[] = $key . " = ?";
@@ -246,7 +267,7 @@ class User {
 
         $values[] = $this->id;
         $query = "UPDATE " . $this->table_name . " SET " . implode(", ", $updateFields) . ", updated_at = NOW() WHERE id = ?";
-        
+
         $stmt = $this->db->prepare($query);
         return $stmt->execute($values);
     }
@@ -254,7 +275,8 @@ class User {
     /**
      * Verify email with code
      */
-    public function verifyEmail($verification_code) {
+    public function verifyEmail($verification_code)
+    {
         try {
             $this->db->beginTransaction();
 
@@ -263,22 +285,21 @@ class User {
             $stmt = $this->db->prepare($query);
             $stmt->bindParam(1, $this->id);
             $stmt->bindParam(2, $verification_code);
-            
+
             if ($stmt->execute() && $stmt->rowCount() > 0) {
                 // Update user as verified
                 $updateQuery = "UPDATE " . $this->table_name . " SET is_verified = TRUE, email_verified_at = NOW(), verification_code = NULL, verification_expires = NULL, status = 'active', updated_at = NOW() WHERE id = ?";
                 $updateStmt = $this->db->prepare($updateQuery);
                 $updateStmt->bindParam(1, $this->id);
-                
+
                 if ($updateStmt->execute()) {
                     $this->db->commit();
                     return true;
                 }
             }
-            
+
             $this->db->rollback();
             return false;
-            
         } catch (Exception $e) {
             $this->db->rollback();
             error_log("Email verification error: " . $e->getMessage());
@@ -289,14 +310,15 @@ class User {
     /**
      * Generate new verification code
      */
-    public function generateVerificationCode() {
+    public function generateVerificationCode()
+    {
         $verification_code = str_pad(random_int(0, 999999), 6, '0', STR_PAD_LEFT);
-        
+
         $query = "UPDATE " . $this->table_name . " SET verification_code = ?, verification_expires = NOW() + INTERVAL '24 HOURS', updated_at = NOW() WHERE id = ?";
         $stmt = $this->db->prepare($query);
         $stmt->bindParam(1, $verification_code);
         $stmt->bindParam(2, $this->id);
-        
+
         if ($stmt->execute()) {
             $this->verification_code = $verification_code;
             return $verification_code;
@@ -308,46 +330,53 @@ class User {
      * Create new user with both buyer and seller roles
      * This replaces the original single-role signup
      */
-    public function createWithBothRoles() {
+    public function createWithBothRoles()
+    {
         try {
             $this->db->beginTransaction();
 
             // First create the user with buyer role
             $query = "SELECT create_user_with_buyer_role(?, ?, ?, ?) as user_id";
             $stmt = $this->db->prepare($query);
-            
+
             $stmt->bindParam(1, $this->username);
             $stmt->bindParam(2, $this->email);
             $stmt->bindParam(3, $this->phone);
             $stmt->bindParam(4, $this->password_hash);
-            
+
             if ($stmt->execute()) {
                 $result = $stmt->fetch();
                 if ($result && $result['user_id']) {
                     $this->id = $result['user_id'];
-                    
+
                     // Now add seller role
                     $sellerRoleQuery = "SELECT id FROM roles WHERE role_name = 'seller'";
                     $sellerRoleStmt = $this->db->prepare($sellerRoleQuery);
                     $sellerRoleStmt->execute();
                     $sellerRole = $sellerRoleStmt->fetch();
-                    
+
                     if ($sellerRole) {
                         $addSellerQuery = "INSERT INTO user_roles (user_id, role_id, is_primary, is_active, role_status) VALUES (?, ?, FALSE, TRUE, 'active')";
                         $addSellerStmt = $this->db->prepare($addSellerQuery);
                         $addSellerStmt->bindParam(1, $this->id);
                         $addSellerStmt->bindParam(2, $sellerRole['id']);
                         $addSellerStmt->execute();
+
+                        // Create seller profile entry
+                        require_once 'SellerProfile.php';
+                        $sellerProfile = new SellerProfile();
+                        $sellerProfile->user_id = $this->id;
+                        $sellerProfile->verification_status = 'pending';
+                        $sellerProfile->create();
                     }
-                    
+
                     $this->db->commit();
                     return $this->id;
                 }
             }
-            
+
             $this->db->rollback();
             return false;
-            
         } catch (Exception $e) {
             $this->db->rollback();
             error_log("User creation with both roles error: " . $e->getMessage());
@@ -358,22 +387,22 @@ class User {
     /**
      * Apply for seller role
      */
-    public function applyForSellerRole($business_name = null, $business_type = 'individual') {
+    public function applyForSellerRole($business_name = null, $business_type = 'individual')
+    {
         try {
             $query = "SELECT apply_for_seller_role(?, ?, ?) as success";
             $stmt = $this->db->prepare($query);
-            
+
             $stmt->bindParam(1, $this->id);
             $stmt->bindParam(2, $business_name);
             $stmt->bindParam(3, $business_type);
-            
+
             if ($stmt->execute()) {
                 $result = $stmt->fetch();
                 return $result['success'] ?? false;
             }
-            
+
             return false;
-            
         } catch (Exception $e) {
             error_log("Seller role application error: " . $e->getMessage());
             return false;
@@ -383,7 +412,8 @@ class User {
     /**
      * Update failed login attempts
      */
-    public function updateFailedLoginAttempts() {
+    public function updateFailedLoginAttempts()
+    {
         $query = "UPDATE " . $this->table_name . " SET failed_login_attempts = failed_login_attempts + 1, updated_at = NOW() WHERE id = ?";
         $stmt = $this->db->prepare($query);
         $stmt->bindParam(1, $this->id);
@@ -393,7 +423,8 @@ class User {
     /**
      * Lock user account
      */
-    public function lockAccount($minutes = 30) {
+    public function lockAccount($minutes = 30)
+    {
         $query = "UPDATE " . $this->table_name . " SET locked_until = NOW() + INTERVAL '{$minutes} MINUTES', updated_at = NOW() WHERE id = ?";
         $stmt = $this->db->prepare($query);
         $stmt->bindParam(1, $this->id);
@@ -403,20 +434,22 @@ class User {
     /**
      * Check if account is locked
      */
-    public function isAccountLocked() {
+    public function isAccountLocked()
+    {
         return $this->locked_until && strtotime($this->locked_until) > time();
     }
 
     /**
      * Get user overview with roles
      */
-    public static function getUserOverview($limit = 20, $offset = 0) {
+    public static function getUserOverview($limit = 20, $offset = 0)
+    {
         $db = Database::getInstance()->getConnection();
         $query = "SELECT * FROM user_overview LIMIT ? OFFSET ?";
         $stmt = $db->prepare($query);
         $stmt->bindParam(1, $limit, PDO::PARAM_INT);
         $stmt->bindParam(2, $offset, PDO::PARAM_INT);
-        
+
         if ($stmt->execute()) {
             return $stmt->fetchAll();
         }
@@ -426,11 +459,12 @@ class User {
     /**
      * Get user's buyer profile
      */
-    public function getBuyerProfile() {
+    public function getBuyerProfile()
+    {
         $query = "SELECT * FROM buyer_profiles WHERE user_id = ?";
         $stmt = $this->db->prepare($query);
         $stmt->bindParam(1, $this->id);
-        
+
         if ($stmt->execute()) {
             return $stmt->fetch();
         }
@@ -440,11 +474,12 @@ class User {
     /**
      * Get user's seller profile
      */
-    public function getSellerProfile() {
+    public function getSellerProfile()
+    {
         $query = "SELECT * FROM seller_profiles WHERE user_id = ?";
         $stmt = $this->db->prepare($query);
         $stmt->bindParam(1, $this->id);
-        
+
         if ($stmt->execute()) {
             return $stmt->fetch();
         }
@@ -454,7 +489,8 @@ class User {
     /**
      * Set object properties from database row
      */
-    private function setProperties($row) {
+    private function setProperties($row)
+    {
         $this->id = $row['id'];
         $this->username = $row['username'];
         $this->email = $row['email'];
@@ -495,16 +531,29 @@ class User {
     /**
      * Update user data
      */
-    public function update($id, $data) {
+    public function update($id, $data)
+    {
         $allowedFields = [
-            'email', 'phone', 'full_name', 'bio', 'date_of_birth', 'address', 
-            'city', 'state', 'postal_code', 'country', 'preferred_language', 
-            'timezone', 'email_notifications', 'sms_notifications', 'avatar_url'
+            'email',
+            'phone',
+            'full_name',
+            'bio',
+            'date_of_birth',
+            'address',
+            'city',
+            'state',
+            'postal_code',
+            'country',
+            'preferred_language',
+            'timezone',
+            'email_notifications',
+            'sms_notifications',
+            'avatar_url'
         ];
 
         $updateFields = [];
         $values = [];
-        
+
         foreach ($data as $key => $value) {
             if (in_array($key, $allowedFields)) {
                 $updateFields[] = $key . " = ?";
@@ -518,7 +567,7 @@ class User {
 
         $values[] = $id;
         $query = "UPDATE " . $this->table_name . " SET " . implode(", ", $updateFields) . ", updated_at = NOW() WHERE id = ?";
-        
+
         $stmt = $this->db->prepare($query);
         return $stmt->execute($values);
     }
@@ -526,7 +575,8 @@ class User {
     /**
      * Convert user to array (for JSON response)
      */
-    public function toArray($includePassword = false) {
+    public function toArray($includePassword = false)
+    {
         $data = [
             'id' => $this->id,
             'username' => $this->username,
@@ -563,4 +613,3 @@ class User {
         return $data;
     }
 }
-?>
