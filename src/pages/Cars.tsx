@@ -267,11 +267,11 @@ const CarsPage = () => {
                       placeholder="Search by make, model, year..."
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
-                      className="pl-10 h-12 text-gray-900"
+                      className="pl-10 h-12 text-muted-foreground"
                     />
                   </div>
                   <Select value={category} onValueChange={setCategory}>
-                    <SelectTrigger className="w-full lg:w-48 h-12 text-gray-900">
+                    <SelectTrigger className="w-full lg:w-48 h-12 text-muted-foreground">
                       <SelectValue placeholder="All Categories" />
                     </SelectTrigger>
                     <SelectContent>
@@ -282,7 +282,7 @@ const CarsPage = () => {
                     </SelectContent>
                   </Select>
                   <Select value={brand} onValueChange={setBrand}>
-                    <SelectTrigger className="w-full lg:w-48 h-12 text-gray-900">
+                    <SelectTrigger className="w-full lg:w-48 h-12 text-muted-foreground">
                       <SelectValue placeholder="All Brands" />
                     </SelectTrigger>
                     <SelectContent>
@@ -371,12 +371,12 @@ const CarsPage = () => {
             <div className="container mx-auto px-4">
               <div className="flex justify-between items-center mb-8">
                 <div>
-                  <h2 className="text-3xl font-bold text-gray-900 mb-2">
+                  <h2 className="text-3xl font-bold text-muted-foreground mb-2">
                     {searchTerm || category !== "all" || brand !== "all"
                       ? "Search Results"
                       : "All Cars"}
                   </h2>
-                  <p className="text-gray-600">
+                  <p className="text-muted-foreground">
                     Showing {filteredCars.length} of {allCars.length} cars
                     {user && (
                       <span className="ml-2">

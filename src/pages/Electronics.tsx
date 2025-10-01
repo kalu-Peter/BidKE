@@ -284,16 +284,16 @@ const ElectronicsPage = () => {
               <div className="max-w-4xl mx-auto mb-8">
                 <div className="flex flex-col lg:flex-row gap-4">
                   <div className="flex-1 relative">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-5 h-5" />
                     <Input
                       placeholder="Search electronics..."
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
-                      className="pl-10 h-12 text-gray-900"
+                      className="pl-10 h-12 text-muted-foreground"
                     />
                   </div>
                   <Select value={category} onValueChange={setCategory}>
-                    <SelectTrigger className="w-full lg:w-48 h-12 text-gray-900">
+                    <SelectTrigger className="w-full lg:w-48 h-12 text-muted-foreground">
                       <SelectValue placeholder="All Categories" />
                     </SelectTrigger>
                     <SelectContent>
@@ -304,7 +304,7 @@ const ElectronicsPage = () => {
                     </SelectContent>
                   </Select>
                   <Select value={brand} onValueChange={setBrand}>
-                    <SelectTrigger className="w-full lg:w-48 h-12 text-gray-900">
+                    <SelectTrigger className="w-full lg:w-48 h-12 text-muted-foreground">
                       <SelectValue placeholder="All Brands" />
                     </SelectTrigger>
                     <SelectContent>
@@ -395,12 +395,12 @@ const ElectronicsPage = () => {
             <div className="container mx-auto px-4">
               <div className="flex justify-between items-center mb-8">
                 <div>
-                  <h2 className="text-3xl font-bold text-gray-900 mb-2">
+                  <h2 className="text-3xl font-bold text-muted-foreground mb-2">
                     {searchTerm || category !== "all" || brand !== "all"
                       ? "Search Results"
                       : "All Electronics"}
                   </h2>
-                  <p className="text-gray-600">
+                  <p className="text-muted-foreground">
                     Showing {filteredElectronics.length} of{" "}
                     {allElectronics.length} electronics
                     {user && (
@@ -566,11 +566,11 @@ const ElectronicsPage = () => {
               {/* Empty State */}
               {filteredElectronics.length === 0 && (
                 <div className="text-center py-12">
-                  <Search className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                  <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                  <Search className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
+                  <h3 className="text-lg font-semibold text-muted-foreground mb-2">
                     No electronics found
                   </h3>
-                  <p className="text-gray-600 mb-4">
+                  <p className="text-muted-foreground mb-4">
                     Try adjusting your search criteria or check back later for
                     new electronics
                   </p>
