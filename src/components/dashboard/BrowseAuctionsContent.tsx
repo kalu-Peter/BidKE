@@ -46,6 +46,8 @@ interface Auction {
   images: string[];
   item_type: string;
   make_brand?: string;
+  vehicle_type?: string;
+  make?: string;
   model?: string;
   year?: number;
   item_condition: string;
@@ -511,6 +513,15 @@ const BrowseAuctionsContent = () => {
                     {auction.title}
                   </h3>
                   <div className="space-y-2 mb-4">
+                    {/* Show vehicle make/model/year if available */}
+                    {auction.item_type === "vehicle" &&
+                      (auction.make || auction.model || auction.year) && (
+                        <div className="text-sm text-gray-600">
+                          {auction.make ? `${auction.make}` : ""}
+                          {auction.model ? ` ${auction.model}` : ""}
+                          {auction.year ? ` • ${auction.year}` : ""}
+                        </div>
+                      )}
                     <div className="flex justify-between text-sm">
                       <span className="text-gray-600">Current</span>
                       <span className="font-semibold text-green-600">

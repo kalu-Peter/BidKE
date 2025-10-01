@@ -75,6 +75,13 @@ interface AuctionItem {
   view_count: number;
   bid_count: number;
   auction_ended: boolean;
+  item_type?: string;
+  vehicle_type?: string;
+  make?: string;
+  model?: string;
+  year?: number;
+  vehicle_condition?: string;
+  brand?: string;
 }
 
 interface ApiResponse {
@@ -718,6 +725,68 @@ const AuctionDetails = () => {
                       </p>
                     </div>
                   </div>
+
+                  {/* Vehicle/Electronics specific info */}
+                  {auction.item_type === "vehicle" && (
+                    <div>
+                      <Separator />
+                      <h4 className="font-semibold text-gray-900">
+                        Vehicle Details
+                      </h4>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
+                        <div>
+                          <Label className="text-sm text-gray-600">Type</Label>
+                          <p className="text-gray-900">
+                            {auction.vehicle_type}
+                          </p>
+                        </div>
+                        <div>
+                          <Label className="text-sm text-gray-600">
+                            Make / Model
+                          </Label>
+                          <p className="text-gray-900">
+                            {(auction.make ? auction.make : "") +
+                              (auction.model ? " " + auction.model : "")}
+                          </p>
+                        </div>
+                        <div>
+                          <Label className="text-sm text-gray-600">Year</Label>
+                          <p className="text-gray-900">{auction.year ?? "—"}</p>
+                        </div>
+                        <div>
+                          <Label className="text-sm text-gray-600">
+                            Condition
+                          </Label>
+                          <p className="text-gray-900">
+                            {auction.vehicle_condition ?? "—"}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {auction.item_type === "electronics" && (
+                    <div>
+                      <Separator />
+                      <h4 className="font-semibold text-gray-900">
+                        Electronics
+                      </h4>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
+                        <div>
+                          <Label className="text-sm text-gray-600">Brand</Label>
+                          <p className="text-gray-900">
+                            {auction.brand ?? "—"}
+                          </p>
+                        </div>
+                        <div>
+                          <Label className="text-sm text-gray-600">Model</Label>
+                          <p className="text-gray-900">
+                            {auction.model ?? "—"}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
 
                   {/* Seller Info removed per request */}
                 </CardContent>

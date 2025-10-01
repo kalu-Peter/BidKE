@@ -197,6 +197,48 @@ try {
         $auction['time_remaining'] = $timeRemaining;
         $auction['auction_ended'] = $timeRemaining <= 0;
 
+        // Load item-specific details (vehicles or electronics) when available
+        $auction['item_type'] = 'unknown';
+        // Check if vehicles table exists and load vehicle details
+        $tblCheckStmt = $db->prepare("SELECT table_name FROM information_schema.tables WHERE table_name IN ('vehicles','electronics')");
+        $tblCheckStmt->execute();
+        $foundTbls = $tblCheckStmt->fetchAll(PDO::FETCH_COLUMN);
+
+        if (in_array('vehicles', $foundTbls)) {
+            $vStmt = $db->prepare("SELECT vehicle_type, make, model, year, mileage, condition, registration_number, engine_capacity, fuel_type, transmission, color, location FROM vehicles WHERE auction_id = :auction_id LIMIT 1");
+            $vStmt->execute([':auction_id' => $auctionId]);
+            $vRow = $vStmt->fetch(PDO::FETCH_ASSOC);
+            if ($vRow) {
+                $auction['item_type'] = 'vehicle';
+                $auction['vehicle_type'] = $vRow['vehicle_type'];
+                $auction['make'] = $vRow['make'];
+                $auction['model'] = $vRow['model'];
+                $auction['year'] = $vRow['year'] ? (int)$vRow['year'] : null;
+                $auction['mileage'] = $vRow['mileage'] ? (int)$vRow['mileage'] : null;
+                $auction['vehicle_condition'] = $vRow['condition'];
+                $auction['registration_number'] = $vRow['registration_number'] ?? null;
+                $auction['engine_capacity'] = $vRow['engine_capacity'] ?? null;
+                $auction['fuel_type'] = $vRow['fuel_type'] ?? null;
+                $auction['transmission'] = $vRow['transmission'] ?? null;
+                $auction['color'] = $vRow['color'] ?? null;
+                $auction['location'] = $vRow['location'] ?? null;
+            }
+        }
+
+        if ($auction['item_type'] === 'unknown' && in_array('electronics', $foundTbls)) {
+            $eStmt = $db->prepare("SELECT category as electronics_category, brand, model, condition, specs FROM electronics WHERE auction_id = :auction_id LIMIT 1");
+            $eStmt->execute([':auction_id' => $auctionId]);
+            $eRow = $eStmt->fetch(PDO::FETCH_ASSOC);
+            if ($eRow) {
+                $auction['item_type'] = 'electronics';
+                $auction['electronics_category'] = $eRow['electronics_category'];
+                $auction['brand'] = $eRow['brand'];
+                $auction['model'] = $eRow['model'];
+                $auction['electronics_condition'] = $eRow['condition'];
+                $auction['specs'] = $eRow['specs'] ? json_decode($eRow['specs'], true) : null;
+            }
+        }
+
         // Convert numeric fields
         $auction['id'] = (int)$auction['id'];
         $auction['starting_price'] = (float)$auction['starting_price'];
