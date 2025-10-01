@@ -378,18 +378,6 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({
                     <DropdownMenuItem asChild>
                       <Link to="/dashboard/profile">Profile</Link>
                     </DropdownMenuItem>
-                    {userRole !== "admin" ? (
-                      <>
-                        <DropdownMenuItem asChild>
-                          <Link to="/dashboard/bids">My Bids</Link>
-                        </DropdownMenuItem>
-                        <DropdownMenuItem asChild>
-                          <Link to="/dashboard/watchlist">Watchlist</Link>
-                        </DropdownMenuItem>
-                      </>
-                    ) : (
-                      <>{/* Admin: no additional items in avatar dropdown */}</>
-                    )}
                     <DropdownMenuSeparator />
                     <DropdownMenuItem onClick={handleLogout}>
                       Logout

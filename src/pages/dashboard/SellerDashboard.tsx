@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import StatsCard from "@/components/dashboard/StatsCard";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { FileText, BarChart3, DollarSign } from "lucide-react";
 
 // Import individual tab components
-import OverviewTab from "@/components/dashboard/seller/OverviewTab";
 import PostItemTab from "@/components/dashboard/seller/PostItemTab";
 import ListingsTab from "@/components/dashboard/seller/ListingsTab";
 import DraftsTab from "@/components/dashboard/seller/DraftsTab";
@@ -19,6 +19,7 @@ import BrowseAuctionsContent from "@/components/dashboard/BrowseAuctionsContent"
 const SellerDashboard = () => {
   const location = useLocation();
   const navigate = useNavigate();
+  const { user } = useAuth();
 
   // Determine active tab based on current URL
   const getActiveTab = () => {
@@ -33,7 +34,7 @@ const SellerDashboard = () => {
     if (path.includes("/dashboard/seller-bids")) return "my-bids";
     if (path.includes("/dashboard/seller-watchlist")) return "watchlist";
     if (path.includes("/dashboard/seller-won")) return "won";
-    return "overview"; // Default to overview
+    return "browse"; // Default to auctions
   };
 
   const [activeTab, setActiveTab] = useState(getActiveTab());
@@ -72,7 +73,7 @@ const SellerDashboard = () => {
         newPath = "/dashboard/seller-won";
         break;
       default:
-        newPath = "/dashboard/seller";
+        newPath = "/dashboard/seller-browse";
         break;
     }
     navigate(newPath);
@@ -88,15 +89,14 @@ const SellerDashboard = () => {
 
   return (
     <DashboardLayout
-      userRole="seller"
-      userStatus="approved"
-      userName="ABC Auctioneers Ltd"
+      userRole={user?.role as "seller" | "admin"}
+      userStatus={user?.status as "email_verified" | "approved"}
+      userName={user?.name || user?.username || "User"}
     >
       <div className="space-y-8">
         {/* Main Tabs */}
         <Tabs value={activeTab} onValueChange={handleTabChange}>
-          <TabsList className="grid w-full grid-cols-9">
-            <TabsTrigger value="overview">Overview</TabsTrigger>
+          <TabsList className="grid w-full grid-cols-8">
             <TabsTrigger value="post-item">Post Item</TabsTrigger>
             <TabsTrigger value="listings">My Listings</TabsTrigger>
             <TabsTrigger value="drafts">Drafts</TabsTrigger>
@@ -106,10 +106,6 @@ const SellerDashboard = () => {
             <TabsTrigger value="watchlist">Watchlist</TabsTrigger>
             <TabsTrigger value="won">Won Auctions</TabsTrigger>
           </TabsList>
-
-          <TabsContent value="overview" className="space-y-6">
-            <OverviewTab onTabChange={handleTabChange} />
-          </TabsContent>
 
           <TabsContent value="post-item">
             <PostItemTab />

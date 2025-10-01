@@ -62,23 +62,23 @@ const App = () => (
             {/* Dashboard Routes */}
             <Route
               path="/dashboard/buyer"
-              element={<Navigate to="/dashboard/seller" replace />}
+              element={<Navigate to="/dashboard/seller-browse" replace />}
             />
             <Route
               path="/dashboard/browse"
-              element={<Navigate to="/dashboard/seller" replace />}
+              element={<Navigate to="/dashboard/seller-browse" replace />}
             />
             <Route
               path="/dashboard/bids"
-              element={<Navigate to="/dashboard/seller" replace />}
+              element={<Navigate to="/dashboard/seller-browse" replace />}
             />
             <Route
               path="/dashboard/watchlist"
-              element={<Navigate to="/dashboard/seller" replace />}
+              element={<Navigate to="/dashboard/seller-browse" replace />}
             />
             <Route
               path="/dashboard/won"
-              element={<Navigate to="/dashboard/seller" replace />}
+              element={<Navigate to="/dashboard/seller-browse" replace />}
             />
             <Route
               path="/dashboard/profile"
@@ -104,11 +104,7 @@ const App = () => (
             />
             <Route
               path="/dashboard/seller"
-              element={
-                <ProtectedRoute requiredRole="seller">
-                  <SellerDashboard />
-                </ProtectedRoute>
-              }
+              element={<Navigate to="/dashboard/seller-browse" replace />}
             />
             <Route
               path="/dashboard/post-item"

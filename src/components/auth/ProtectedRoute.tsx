@@ -54,13 +54,13 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
 export const getDashboardPath = (role: string, status: string): string => {
   switch (role) {
     case "buyer":
-      return "/dashboard/seller"; // Redirect buyers to seller dashboard
+      return "/dashboard/seller-browse"; // Redirect buyers to seller auctions
     case "seller":
-      return "/dashboard/seller"; // Seller dashboard
+      return "/dashboard/seller-browse"; // Seller auctions tab
     case "admin":
       return "/dashboard/admin"; // Admin dashboard
     default:
-      return "/dashboard/seller"; // Default to seller dashboard
+      return "/dashboard/seller-browse"; // Default to seller auctions
   }
 };
 
