@@ -224,12 +224,12 @@ const SellerProfile: React.FC = () => {
     try {
       // Load personal profile data from users table
       const personalRes = await apiService.getBuyerProfile();
-      const personalData =
+      const personalData: any =
         personalRes.success && personalRes.data ? personalRes.data.user : {};
 
       // Load business profile data from seller_profiles table
       const businessRes = await apiService.getSellerProfile();
-      const businessData =
+      const businessData: any =
         businessRes.success && businessRes.data ? businessRes.data : {};
 
       setSellerProfile({
@@ -243,18 +243,18 @@ const SellerProfile: React.FC = () => {
         state: personalData.state || "",
         dateOfBirth: personalData.date_of_birth || "",
         postalCode: personalData.postal_code || "",
-        profilePicture: p.avatar_url || "",
-        joinedDate: p.created_at || "",
-        verified: p.business_verified || false,
-        sellerRating: p.seller_rating || 0,
-        totalListings: p.total_listings || 0,
-        successfulSales: p.completed_sales || 0,
-        totalEarnings: p.total_revenue || 0,
-        businessName: p.business_name || "",
-        businessType: p.business_type || "",
-        businessRegistration: p.business_registration || "",
-        taxNumber: p.tax_pin || "",
-        businessAddress: p.business_address || "",
+        profilePicture: businessData.avatar_url || "",
+        joinedDate: businessData.created_at || "",
+        verified: businessData.business_verified || false,
+        sellerRating: businessData.seller_rating || 0,
+        totalListings: businessData.total_listings || 0,
+        successfulSales: businessData.completed_sales || 0,
+        totalEarnings: businessData.total_revenue || 0,
+        businessName: businessData.business_name || "",
+        businessType: businessData.business_type || "",
+        businessRegistration: businessData.business_registration || "",
+        taxNumber: businessData.tax_pin || "",
+        businessAddress: businessData.business_address || "",
         businessEmail: businessData.business_email || user?.email || "",
         businessPhone: businessData.business_phone || user?.phone || "",
       });
