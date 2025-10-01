@@ -316,7 +316,7 @@ const PostItemTab: React.FC = () => {
           className={`p-6 border-2 rounded-lg text-center transition-all ${
             formData.itemType === "vehicle"
               ? "border-primary bg-primary/5 text-primary"
-              : "border-gray-200 hover:border-gray-300 text-gray-700"
+              : "border-gray-200 hover:border-gray-300 text-muted-foreground"
           }`}
         >
           <Car className="w-8 h-8 mx-auto mb-2" />
@@ -331,7 +331,7 @@ const PostItemTab: React.FC = () => {
           className={`p-6 border-2 rounded-lg text-center transition-all ${
             formData.itemType === "electronic"
               ? "border-primary bg-primary/5 text-primary"
-              : "border-gray-200 hover:border-gray-300 text-gray-700"
+              : "border-gray-200 hover:border-gray-300 text-muted-foreground"
           }`}
         >
           <Smartphone className="w-8 h-8 mx-auto mb-2" />
@@ -344,7 +344,7 @@ const PostItemTab: React.FC = () => {
 
   const renderVehicleFields = () => (
     <div className="space-y-4">
-      <h3 className="text-lg font-medium text-gray-900 flex items-center space-x-2">
+      <h3 className="text-lg font-medium text-foreground flex items-center space-x-2">
         <Car className="w-5 h-5" />
         <span>Vehicle Details</span>
       </h3>
@@ -483,7 +483,7 @@ const PostItemTab: React.FC = () => {
 
   const renderElectronicsFields = () => (
     <div className="space-y-4">
-      <h3 className="text-lg font-medium text-gray-900 flex items-center space-x-2">
+      <h3 className="text-lg font-medium text-foreground flex items-center space-x-2">
         <Smartphone className="w-5 h-5" />
         <span>Electronics Details</span>
       </h3>
@@ -738,7 +738,9 @@ const PostItemTab: React.FC = () => {
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-4">
-                    <h4 className="font-medium text-gray-700">Auction Start</h4>
+                    <h4 className="font-medium text-foreground">
+                      Auction Start
+                    </h4>
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
                         <label className="text-sm font-medium">Date *</label>
@@ -771,7 +773,7 @@ const PostItemTab: React.FC = () => {
                     </div>
                   </div>
                   <div className="space-y-4">
-                    <h4 className="font-medium text-gray-700">Auction End</h4>
+                    <h4 className="font-medium text-foreground">Auction End</h4>
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
                         <label className="text-sm font-medium">Date *</label>
@@ -806,7 +808,7 @@ const PostItemTab: React.FC = () => {
 
               {/* Image Upload */}
               <div className="space-y-4">
-                <h3 className="text-lg font-medium text-gray-900">Images</h3>
+                <h3 className="text-lg font-medium text-foreground">Images</h3>
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Upload Images *</label>
                   <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">

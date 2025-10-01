@@ -233,7 +233,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({
                   alt="BidLode Logo"
                   className="w-8 h-8 object-contain"
                 />
-                <span className="text-xl font-bold text-gray-900">BidLode</span>
+                <span className="text-xl font-bold text-white">BidLode</span>
               </Link>
               <Badge variant="outline" className="text-xs">
                 Dashboard

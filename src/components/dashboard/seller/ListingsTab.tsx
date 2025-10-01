@@ -91,7 +91,7 @@ const ListingsTab: React.FC = () => {
       },
       ended: {
         label: "Ended",
-        color: "bg-gray-100 text-gray-800",
+        color: "bg-muted/20 text-muted-foreground",
         icon: <XCircle className="w-3 h-3" />,
       },
       sold: {

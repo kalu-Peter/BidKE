@@ -70,7 +70,7 @@ const MyBidsTab: React.FC = () => {
       leading: { label: "Leading", color: "bg-green-100 text-green-800" },
       outbid: { label: "Outbid", color: "bg-red-100 text-red-800" },
       won: { label: "Won", color: "bg-blue-100 text-blue-800" },
-      lost: { label: "Lost", color: "bg-gray-100 text-gray-800" },
+      lost: { label: "Lost", color: "bg-muted/20 text-muted-foreground" },
     };
     return configs[status as keyof typeof configs] || configs.lost;
   };

@@ -153,7 +153,7 @@ const SalesTab: React.FC = () => {
         <Card>
           <CardContent className="p-6">
             <div className="text-center">
-              <div className="text-2xl font-bold text-gray-900 mb-1">
+              <div className="text-2xl font-bold text-foreground mb-1">
                 Ksh 216,500
               </div>
               <div className="text-sm text-gray-600">Total Payouts</div>
@@ -164,7 +164,7 @@ const SalesTab: React.FC = () => {
         <Card>
           <CardContent className="p-6">
             <div className="text-center">
-              <div className="text-2xl font-bold text-gray-900 mb-1">
+              <div className="text-2xl font-bold text-foreground mb-1">
                 Ksh 21,600
               </div>
               <div className="text-sm text-gray-600">Total Commission</div>
@@ -175,8 +175,8 @@ const SalesTab: React.FC = () => {
         <Card>
           <CardContent className="p-6">
             <div className="text-center">
-              <div className="text-2xl font-bold text-gray-900 mb-1">4</div>
-              <div className="text-sm text-gray-600">Items Sold</div>
+              <div className="text-2xl font-bold text-foreground mb-1">4</div>
+              <div className="text-sm text-muted-foreground">Items Sold</div>
               <div className="text-xs text-blue-600 mt-1">This month</div>
             </div>
           </CardContent>
