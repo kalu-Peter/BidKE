@@ -532,6 +532,40 @@ class ApiService {
   }
 
   /**
+   * Update seller profile (business information)
+   */
+  async updateSellerProfile(data: {
+    business_name?: string;
+    business_type?: string;
+    business_registration?: string;
+    tax_pin?: string;
+    business_permit?: string;
+    business_address?: string;
+    business_phone?: string;
+    business_email?: string;
+    website_url?: string;
+    business_description?: string;
+    operating_hours?: any;
+    service_areas?: string[];
+    specializations?: string[];
+    bank_account_name?: string;
+    bank_account_number?: string;
+    bank_name?: string;
+    bank_branch?: string;
+    bank_code?: string;
+    mobile_money_number?: string;
+    mobile_money_provider?: string;
+  }): Promise<ApiResponse<any>> {
+    return this.makeRequest('/auth/seller-profile.php', {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(data),
+    });
+  }
+
+  /**
    * Upload Methods
    */
 

@@ -90,8 +90,12 @@ class SellerProfile
     /**
      * Create seller profile
      */
-    public function create()
+    public function create($data = null)
     {
+        if ($data !== null) {
+            return $this->createFromData($data);
+        }
+
         $query = "INSERT INTO " . $this->table_name . " 
                   (user_id, business_name, business_type, verification_status) 
                   VALUES (?, ?, ?, ?)";
@@ -103,6 +107,72 @@ class SellerProfile
         $stmt->bindParam(4, $this->verification_status);
 
         if ($stmt->execute()) {
+            $this->id = $this->conn->lastInsertId();
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * Create seller profile from data array
+     */
+    public function createFromData($data)
+    {
+        $allowedFields = [
+            'user_id',
+            'business_name',
+            'business_type',
+            'business_registration',
+            'tax_pin',
+            'business_permit',
+            'business_address',
+            'business_phone',
+            'business_email',
+            'website_url',
+            'business_description',
+            'operating_hours',
+            'service_areas',
+            'specializations',
+            'bank_account_name',
+            'bank_account_number',
+            'bank_name',
+            'bank_branch',
+            'bank_code',
+            'mobile_money_number',
+            'mobile_money_provider',
+            'verification_status',
+            'business_verified'
+        ];
+
+        $insertFields = [];
+        $placeholders = [];
+        $values = [];
+
+        foreach ($data as $key => $value) {
+            if (in_array($key, $allowedFields)) {
+                $insertFields[] = $key;
+                $placeholders[] = "?";
+
+                // Handle special field types
+                if ($key === 'operating_hours') {
+                    $values[] = json_encode($value);
+                } elseif (in_array($key, ['service_areas', 'specializations', 'verification_documents'])) {
+                    $values[] = '{' . implode(',', (array)$value) . '}';
+                } else {
+                    $values[] = $value;
+                }
+            }
+        }
+
+        if (empty($insertFields)) {
+            return false;
+        }
+
+        $query = "INSERT INTO " . $this->table_name . " (" . implode(", ", $insertFields) . ", created_at, updated_at) 
+                  VALUES (" . implode(", ", $placeholders) . ", NOW(), NOW())";
+
+        $stmt = $this->conn->prepare($query);
+        if ($stmt->execute($values)) {
             $this->id = $this->conn->lastInsertId();
             return true;
         }

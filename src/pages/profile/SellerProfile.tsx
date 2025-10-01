@@ -47,12 +47,16 @@ const SellerProfile: React.FC = () => {
 
   // Seller profile state (will be loaded for the logged-in user)
   const [sellerProfile, setSellerProfile] = useState<any>({
-    firstName: user?.name || user?.username || "",
-    lastName: "",
+    username: user?.username || "",
+    fullName: user?.name || "",
     email: user?.email || "",
     phone: user?.phone || "",
     location: "",
     bio: "",
+    city: "",
+    state: "",
+    dateOfBirth: "",
+    postalCode: "",
     profilePicture: "",
     joinedDate: "",
     verified: false,
@@ -102,9 +106,56 @@ const SellerProfile: React.FC = () => {
     minimumOfferPercentage: 80,
   });
 
-  const handleSave = () => {
-    setIsEditing(false);
-    // Save profile logic here
+  const handleSave = async () => {
+    try {
+      // Prepare personal profile data for users table (buyer-profile.php)
+      const personalData = {
+        full_name: sellerProfile.fullName,
+        phone: sellerProfile.phone,
+        address: sellerProfile.location,
+        city: sellerProfile.city,
+        state: sellerProfile.state,
+        postal_code: sellerProfile.postalCode,
+        date_of_birth: sellerProfile.dateOfBirth,
+        bio: sellerProfile.bio,
+      };
+
+      // Prepare business data for seller_profiles table (seller-profile.php)
+      const businessData = {
+        business_name: sellerProfile.businessName,
+        business_type: sellerProfile.businessType,
+        business_registration: sellerProfile.businessRegistration,
+        tax_pin: sellerProfile.taxNumber,
+        business_address: sellerProfile.businessAddress,
+        business_email: sellerProfile.businessEmail,
+        business_phone: sellerProfile.businessPhone,
+        business_description: sellerProfile.bio,
+      };
+
+      // Save personal info to users table
+      const personalRes = await apiService.updateBuyerProfile(personalData);
+      if (!personalRes.success) {
+        throw new Error(
+          personalRes.error || "Failed to update personal information"
+        );
+      }
+
+      // Save business info to seller_profiles table
+      const businessRes = await apiService.updateSellerProfile(businessData);
+      if (!businessRes.success) {
+        throw new Error(
+          businessRes.error || "Failed to update business information"
+        );
+      }
+
+      setIsEditing(false);
+      alert("Profile updated successfully!");
+      // Reload profile to reflect changes
+      await loadProfile();
+    } catch (error: any) {
+      console.error("Profile update error:", error);
+      alert("Failed to update profile: " + (error.message || "Unknown error"));
+    }
   };
 
   const handleDocumentUpload = (docType: string, file: File) => {
@@ -170,18 +221,28 @@ const SellerProfile: React.FC = () => {
 
   // Load seller profile for the logged-in user
   const loadProfile = async () => {
-    const res = await apiService.getSellerProfile();
-    if (res.success && res.data) {
-      const p = res.data;
+    try {
+      // Load personal profile data from users table
+      const personalRes = await apiService.getBuyerProfile();
+      const personalData =
+        personalRes.success && personalRes.data ? personalRes.data.user : {};
+
+      // Load business profile data from seller_profiles table
+      const businessRes = await apiService.getSellerProfile();
+      const businessData =
+        businessRes.success && businessRes.data ? businessRes.data : {};
+
       setSellerProfile({
-        firstName: p.full_name
-          ? p.full_name.split(" ")[0]
-          : user?.name || user?.username || "",
-        lastName: p.full_name ? p.full_name.split(" ").slice(1).join(" ") : "",
-        email: p.business_email || p.email || user?.email || "",
-        phone: p.business_phone || p.phone || user?.phone || "",
-        location: p.business_address || "",
-        bio: p.business_description || "",
+        username: user?.username || "",
+        fullName: personalData.full_name || user?.name || "",
+        email: personalData.email || user?.email || "",
+        phone: personalData.phone || user?.phone || "",
+        location: personalData.address || "",
+        bio: personalData.bio || "",
+        city: personalData.city || "",
+        state: personalData.state || "",
+        dateOfBirth: personalData.date_of_birth || "",
+        postalCode: personalData.postal_code || "",
         profilePicture: p.avatar_url || "",
         joinedDate: p.created_at || "",
         verified: p.business_verified || false,
@@ -194,29 +255,40 @@ const SellerProfile: React.FC = () => {
         businessRegistration: p.business_registration || "",
         taxNumber: p.tax_pin || "",
         businessAddress: p.business_address || "",
-        businessEmail: p.business_email || user?.email || "",
-        businessPhone: p.business_phone || user?.phone || "",
+        businessEmail: businessData.business_email || user?.email || "",
+        businessPhone: businessData.business_phone || user?.phone || "",
       });
-      // update verification flags if present
+
+      // Update verification flags if present
       setVerification((prev) => ({
         ...prev,
-        businessVerified: p.business_verified || false,
+        businessVerified: businessData.business_verified || false,
       }));
-      // store verification notes (rejection reason) if present
-      if (p.verification_notes) {
-        // attach to sellerProfile so UI can render
+
+      // Store verification notes (rejection reason) if present
+      if (businessData.verification_notes) {
         setSellerProfile((prev) => ({
           ...prev,
-          verificationNotes: p.verification_notes,
+          verificationNotes: businessData.verification_notes,
         }));
-      } else if (p.verificationNotes) {
+      } else if (businessData.verificationNotes) {
         setSellerProfile((prev) => ({
           ...prev,
-          verificationNotes: p.verificationNotes,
+          verificationNotes: businessData.verificationNotes,
         }));
       } else {
         setSellerProfile((prev) => ({ ...prev, verificationNotes: null }));
       }
+    } catch (error) {
+      console.error("Failed to load profile:", error);
+      // Use fallback data if API calls fail
+      setSellerProfile((prev) => ({
+        ...prev,
+        username: user?.username || "",
+        fullName: user?.name || "",
+        email: user?.email || "",
+        phone: user?.phone || "",
+      }));
     }
   };
 
@@ -249,8 +321,10 @@ const SellerProfile: React.FC = () => {
                   <Avatar className="h-24 w-24">
                     <AvatarImage src={sellerProfile.profilePicture} />
                     <AvatarFallback>
-                      {sellerProfile.firstName[0]}
-                      {sellerProfile.lastName[0]}
+                      {sellerProfile.username?.[0] || "U"}
+                      {sellerProfile.fullName?.split(" ")?.[1]?.[0] ||
+                        sellerProfile.fullName?.[1] ||
+                        ""}
                     </AvatarFallback>
                   </Avatar>
                   <Button
@@ -264,7 +338,7 @@ const SellerProfile: React.FC = () => {
 
                 <div className="flex-1">
                   <h1 className="text-3xl font-bold mb-2">
-                    {sellerProfile.firstName} {sellerProfile.lastName}
+                    {sellerProfile.fullName || sellerProfile.username}
                   </h1>
                   <p className="text-primary font-medium mb-2">
                     {sellerProfile.businessName}
@@ -368,29 +442,24 @@ const SellerProfile: React.FC = () => {
               <CardContent className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-2">
-                    <Label htmlFor="firstName">First Name</Label>
+                    <Label htmlFor="username">Username</Label>
                     <Input
-                      id="firstName"
-                      value={sellerProfile.firstName}
-                      disabled={!isEditing}
-                      onChange={(e) =>
-                        setSellerProfile((prev) => ({
-                          ...prev,
-                          firstName: e.target.value,
-                        }))
-                      }
+                      id="username"
+                      value={sellerProfile.username}
+                      disabled={true}
+                      placeholder="Cannot be changed"
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="lastName">Last Name</Label>
+                    <Label htmlFor="fullName">Full Name</Label>
                     <Input
-                      id="lastName"
-                      value={sellerProfile.lastName}
+                      id="fullName"
+                      value={sellerProfile.fullName}
                       disabled={!isEditing}
                       onChange={(e) =>
                         setSellerProfile((prev) => ({
                           ...prev,
-                          lastName: e.target.value,
+                          fullName: e.target.value,
                         }))
                       }
                     />
@@ -424,12 +493,73 @@ const SellerProfile: React.FC = () => {
                       }
                     />
                   </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="dateOfBirth">Date of Birth</Label>
+                    <Input
+                      id="dateOfBirth"
+                      type="date"
+                      value={sellerProfile.dateOfBirth}
+                      disabled={!isEditing}
+                      onChange={(e) =>
+                        setSellerProfile((prev) => ({
+                          ...prev,
+                          dateOfBirth: e.target.value,
+                        }))
+                      }
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="city">City</Label>
+                    <Input
+                      id="city"
+                      value={sellerProfile.city}
+                      disabled={!isEditing}
+                      placeholder="e.g. Nairobi"
+                      onChange={(e) =>
+                        setSellerProfile((prev) => ({
+                          ...prev,
+                          city: e.target.value,
+                        }))
+                      }
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="state">State/County</Label>
+                    <Input
+                      id="state"
+                      value={sellerProfile.state}
+                      disabled={!isEditing}
+                      placeholder="e.g. Nairobi County"
+                      onChange={(e) =>
+                        setSellerProfile((prev) => ({
+                          ...prev,
+                          state: e.target.value,
+                        }))
+                      }
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="postalCode">Postal Code</Label>
+                    <Input
+                      id="postalCode"
+                      value={sellerProfile.postalCode}
+                      disabled={!isEditing}
+                      placeholder="e.g. 00100"
+                      onChange={(e) =>
+                        setSellerProfile((prev) => ({
+                          ...prev,
+                          postalCode: e.target.value,
+                        }))
+                      }
+                    />
+                  </div>
                   <div className="space-y-2 md:col-span-2">
-                    <Label htmlFor="location">Location</Label>
+                    <Label htmlFor="location">Address</Label>
                     <Input
                       id="location"
                       value={sellerProfile.location}
                       disabled={!isEditing}
+                      placeholder="Street address"
                       onChange={(e) =>
                         setSellerProfile((prev) => ({
                           ...prev,
@@ -504,14 +634,15 @@ const SellerProfile: React.FC = () => {
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="Sole Proprietorship">
+                        <SelectItem value="individual">Individual</SelectItem>
+                        <SelectItem value="sole_proprietorship">
                           Sole Proprietorship
                         </SelectItem>
-                        <SelectItem value="Partnership">Partnership</SelectItem>
-                        <SelectItem value="Limited Company">
-                          Limited Company
-                        </SelectItem>
-                        <SelectItem value="Corporation">Corporation</SelectItem>
+                        <SelectItem value="partnership">Partnership</SelectItem>
+                        <SelectItem value="company">Limited Company</SelectItem>
+                        <SelectItem value="dealer">Dealer</SelectItem>
+                        <SelectItem value="auctioneer">Auctioneer</SelectItem>
+                        <SelectItem value="other">Other</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>

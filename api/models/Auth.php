@@ -176,12 +176,22 @@ class Auth
         $user_data = self::authenticate();
 
         if (!$user_data) {
+            // Set CORS headers for error responses
+            $origin = $_SERVER['HTTP_ORIGIN'] ?? '*';
+            header("Access-Control-Allow-Origin: $origin");
+            header("Access-Control-Allow-Credentials: true");
+            header('Content-Type: application/json');
             http_response_code(401);
             echo json_encode(['error' => 'Authentication required']);
             exit;
         }
 
         if ($required_role && !self::hasRole($required_role, $user_data)) {
+            // Set CORS headers for error responses
+            $origin = $_SERVER['HTTP_ORIGIN'] ?? '*';
+            header("Access-Control-Allow-Origin: $origin");
+            header("Access-Control-Allow-Credentials: true");
+            header('Content-Type: application/json');
             http_response_code(403);
             echo json_encode(['error' => 'Insufficient permissions']);
             exit;
@@ -310,7 +320,12 @@ class Auth
             return array_map([self::class, 'sanitizeInput'], $data);
         }
 
-        return htmlspecialchars(strip_tags(trim($data)), ENT_QUOTES, 'UTF-8');
+        // Handle null values
+        if ($data === null) {
+            return null;
+        }
+
+        return htmlspecialchars(strip_tags(trim((string)$data)), ENT_QUOTES, 'UTF-8');
     }
 
     /**
@@ -386,7 +401,21 @@ class Auth
             $response['data'] = $data;
         }
 
-        header('Content-Type: application/json');
+        // Only set Content-Type if not already set to preserve CORS headers
+        if (!headers_sent()) {
+            $existing_headers = headers_list();
+            $has_content_type = false;
+            foreach ($existing_headers as $header) {
+                if (stripos($header, 'Content-Type:') === 0) {
+                    $has_content_type = true;
+                    break;
+                }
+            }
+            if (!$has_content_type) {
+                header('Content-Type: application/json');
+            }
+        }
+
         echo json_encode($response, JSON_UNESCAPED_UNICODE);
         exit;
     }

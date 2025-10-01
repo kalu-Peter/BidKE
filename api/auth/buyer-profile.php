@@ -109,14 +109,14 @@ try {
             'data' => $response
         ]);
     } elseif ($_SERVER['REQUEST_METHOD'] === 'PUT') {
-        // Update buyer profile and user data
+        // Update personal profile information in users table and buyer-specific data
         $input = json_decode(file_get_contents('php://input'), true);
 
         if (!$input) {
             sendErrorResponse('Invalid input data', 400);
         }
 
-        // Separate fields that belong to users table vs buyer_profiles table
+        // Personal profile fields - stored in users table
         $userFields = [
             'full_name',
             'date_of_birth',
