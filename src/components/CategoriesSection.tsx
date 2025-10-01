@@ -49,7 +49,6 @@ interface Auction {
 interface CategorySection {
   id: string;
   title: string;
-  subtitle: string;
   description: string;
   icon: any;
   apiCategory: string;
@@ -61,8 +60,7 @@ interface CategorySection {
 const categoryConfigs: CategorySection[] = [
   {
     id: "cars",
-    title: "🚗 Cars & Vehicles",
-    subtitle: "Premium Vehicles",
+    title: "Cars & Vehicles",
     description:
       "Sedans, SUVs, pickup trucks and commercial vehicles at competitive prices",
     icon: Car,
@@ -73,8 +71,7 @@ const categoryConfigs: CategorySection[] = [
   },
   {
     id: "motorbikes",
-    title: "🏍️ Motorbikes & Scooters",
-    subtitle: "Two-Wheeler Collection",
+    title: "Motorbikes & Scooters",
     description:
       "Quality motorcycles, boda bodas, and scooters from verified lenders",
     icon: Bike,
@@ -85,8 +82,7 @@ const categoryConfigs: CategorySection[] = [
   },
   {
     id: "electronics",
-    title: "📱 Electronics",
-    subtitle: "Tech & Gadgets",
+    title: "Electronics",
     description:
       "Laptops, smartphones, appliances and gadgets from repossession companies",
     icon: Smartphone,
@@ -152,9 +148,6 @@ const CategorySection = ({
               <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-2">
                 {category.title}
               </h2>
-              <p className="text-muted-foreground text-lg">
-                {category.subtitle}
-              </p>
             </div>
           </div>
           <p className="text-muted-foreground max-w-2xl mx-auto mb-6">
@@ -353,33 +346,6 @@ const CategoriesSection = () => {
 
   return (
     <section className="bg-background">
-      {/* Main Header */}
-      <div className="py-16 bg-background">
-        <div className="container mx-auto px-4 text-center">
-          <h1 className="text-4xl md:text-5xl font-bold text-foreground mb-6">
-            Browse Auction Categories
-          </h1>
-          <p className="text-xl text-muted-foreground max-w-3xl mx-auto mb-8">
-            Discover quality items across our three main auction categories.
-            Each section shows live auctions with real-time bidding.
-          </p>
-          <div className="flex justify-center gap-8 text-sm text-muted-foreground">
-            <div className="flex items-center gap-2">
-              <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-              <span>Verified Sellers</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-              <span>Secure Payments</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
-              <span>Quality Assured</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
       {/* Cars Section (Top) */}
       <CategorySection
         category={categoryConfigs[0]}
