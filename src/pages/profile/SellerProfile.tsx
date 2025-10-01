@@ -85,13 +85,19 @@ const SellerProfile: React.FC = () => {
   });
 
   // Verification documents
-  const [verificationDocs, setVerificationDocs] = useState({
+  // idDocument may be a single File or an array of Files (national id requires front+back)
+  const [verificationDocs, setVerificationDocs] = useState<any>({
     idDocument: null,
     proofOfAddress: null,
     businessRegistration: null,
     taxCertificate: null,
     bankStatement: null,
   });
+
+  // KYC type selected for identity verification
+  const [kycType, setKycType] = useState<
+    "national_id" | "passport" | "driving_license" | ""
+  >("");
 
   const [preferences, setPreferences] = useState({
     emailNotifications: true,
@@ -170,8 +176,18 @@ const SellerProfile: React.FC = () => {
       try {
         // Build documents list depending on type
         const docsToUpload: File[] = [];
-        if (type === "identity" && verificationDocs.idDocument)
-          docsToUpload.push(verificationDocs.idDocument as File);
+        if (type === "identity") {
+          const idDoc = verificationDocs.idDocument;
+          if (!idDoc) {
+            alert("Please select identity document(s) and choose a KYC type");
+            return;
+          }
+          if (Array.isArray(idDoc)) {
+            docsToUpload.push(...idDoc);
+          } else {
+            docsToUpload.push(idDoc as File);
+          }
+        }
         if (type === "business" && verificationDocs.businessRegistration)
           docsToUpload.push(verificationDocs.businessRegistration as File);
         if (type === "tax" && verificationDocs.taxCertificate)
@@ -190,27 +206,73 @@ const SellerProfile: React.FC = () => {
           }
         }
 
-        // Submit verification request
-        const payload: any = { documents: uploadedUrls };
-        if (type === "business") {
-          payload.business_name = sellerProfile.businessName;
-          payload.business_type = sellerProfile.businessType;
-        }
+        // If identity verification, update buyer profile with kyc_type + kyc_documents
+        if (type === "identity") {
+          if (!kycType) {
+            alert(
+              "Please select a KYC type (Passport, National ID or Driving License)"
+            );
+            return;
+          }
 
-        const submitRes = await apiService.submitSellerVerification(payload);
-        if (submitRes.success) {
-          alert("Verification submitted successfully.");
-          // refresh profile to reflect pending status
-          try {
-            await loadProfile();
-          } catch (e) {
-            console.warn("Failed to refresh profile", e);
+          // Validate document count for selected kycType
+          const uploadedCount = uploadedUrls.length;
+          if (kycType === "national_id" && uploadedCount !== 2) {
+            alert(
+              "National ID requires two images (front and back). Please upload both."
+            );
+            return;
+          }
+          if (
+            (kycType === "passport" || kycType === "driving_license") &&
+            uploadedCount !== 1
+          ) {
+            alert(
+              "Passport or Driving License requires exactly one document image."
+            );
+            return;
+          }
+
+          // Call buyer profile update endpoint to store KYC info
+          const updateRes = await apiService.updateBuyerProfile({
+            kyc_type: kycType,
+            kyc_documents: uploadedUrls,
+          });
+          if (updateRes.success) {
+            alert("Identity verification uploaded. KYC fields updated.");
+            try {
+              await loadProfile();
+            } catch (e) {
+              console.warn("Failed to refresh profile", e);
+            }
+          } else {
+            alert(
+              "Failed to update buyer profile: " +
+                (updateRes.error || updateRes.message || "Unknown")
+            );
           }
         } else {
-          alert(
-            "Submission failed: " +
-              (submitRes.error || submitRes.message || "Unknown")
-          );
+          // For business/tax submissions keep existing flow (submit to seller verification endpoint)
+          const payload: any = { documents: uploadedUrls };
+          if (type === "business") {
+            payload.business_name = sellerProfile.businessName;
+            payload.business_type = sellerProfile.businessType;
+          }
+
+          const submitRes = await apiService.submitSellerVerification(payload);
+          if (submitRes.success) {
+            alert("Verification submitted successfully.");
+            try {
+              await loadProfile();
+            } catch (e) {
+              console.warn("Failed to refresh profile", e);
+            }
+          } else {
+            alert(
+              "Submission failed: " +
+                (submitRes.error || submitRes.message || "Unknown")
+            );
+          }
         }
       } catch (err) {
         console.error(err);
@@ -226,6 +288,8 @@ const SellerProfile: React.FC = () => {
       const personalRes = await apiService.getBuyerProfile();
       const personalData: any =
         personalRes.success && personalRes.data ? personalRes.data.user : {};
+      const buyerProfileData: any =
+        personalRes.success && personalRes.data ? personalRes.data.profile : {};
 
       // Load business profile data from seller_profiles table
       const businessRes = await apiService.getSellerProfile();
@@ -259,10 +323,18 @@ const SellerProfile: React.FC = () => {
         businessPhone: businessData.business_phone || user?.phone || "",
       });
 
+      // Set KYC type from buyer profile if available
+      if (buyerProfileData?.kyc_type) {
+        setKycType(buyerProfileData.kyc_type);
+      }
+
       // Update verification flags if present
       setVerification((prev) => ({
         ...prev,
         businessVerified: businessData.business_verified || false,
+        identityVerified:
+          buyerProfileData?.kyc_type &&
+          buyerProfileData?.kyc_documents?.length > 0,
       }));
 
       // Store verification notes (rejection reason) if present
@@ -759,6 +831,40 @@ const SellerProfile: React.FC = () => {
                           <p className="text-sm text-muted-foreground">
                             Upload your government-issued ID
                           </p>
+                          <div className="mt-2">
+                            <div className="flex items-center gap-2">
+                              <Label className="text-sm">KYC Type</Label>
+                              <Select
+                                value={kycType}
+                                onValueChange={(v) => setKycType(v as any)}
+                              >
+                                <SelectTrigger>
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="national_id">
+                                    National ID (Front & Back)
+                                  </SelectItem>
+                                  <SelectItem value="passport">
+                                    Passport
+                                  </SelectItem>
+                                  <SelectItem value="driving_license">
+                                    Driving License
+                                  </SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            <p className="text-xs text-muted-foreground mt-1">
+                              {kycType === "national_id" &&
+                                "National ID requires two images (front and back)."}
+                              {kycType === "passport" &&
+                                "Passport requires one clear image of the passport photo page."}
+                              {kycType === "driving_license" &&
+                                "Driving license requires one image of the document."}
+                              {!kycType &&
+                                "Select KYC type before uploading documents."}
+                            </p>
+                          </div>
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
@@ -772,15 +878,27 @@ const SellerProfile: React.FC = () => {
                             <input
                               type="file"
                               accept="image/*,.pdf"
-                              onChange={(e) =>
-                                e.target.files?.[0] &&
-                                handleDocumentUpload(
-                                  "idDocument",
-                                  e.target.files[0]
-                                )
-                              }
+                              onChange={(e) => {
+                                const files = e.target.files;
+                                if (!files || files.length === 0) return;
+                                // If national_id allow selecting two files
+                                if (kycType === "national_id") {
+                                  // Convert FileList to Array
+                                  const arr = Array.from(files);
+                                  setVerificationDocs((prev: any) => ({
+                                    ...prev,
+                                    idDocument: arr,
+                                  }));
+                                } else {
+                                  setVerificationDocs((prev: any) => ({
+                                    ...prev,
+                                    idDocument: files[0],
+                                  }));
+                                }
+                              }}
                               className="hidden"
                               id="id-upload"
+                              multiple={kycType === "national_id"}
                             />
                             <Button variant="outline" size="sm" asChild>
                               <label
