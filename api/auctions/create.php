@@ -204,13 +204,42 @@ try {
 
     // Create item-specific record
     if ($data['itemType'] === 'vehicle') {
+        // Normalize and validate vehicle type against DB check constraint
+        $allowed_vehicle_types = ['car', 'motorcycle', 'truck', 'van', 'bus', 'other'];
+
+        $raw_vt = isset($data['vehicleType']) ? strtolower(trim($data['vehicleType'])) : '';
+        // Map common frontend synonyms to DB enum values
+        $vt_map = [
+            'motorbike' => 'motorcycle',
+            'motorcycle' => 'motorcycle',
+            'suv' => 'car',
+            'pickup' => 'truck',
+            'pickup truck' => 'truck',
+            'truck' => 'truck',
+            'van' => 'van',
+            'bus' => 'bus',
+            'car' => 'car',
+            'other' => 'other'
+        ];
+
+        $vehicle_type_normalized = 'car';
+        if ($raw_vt === '') {
+            // default to car when not provided
+            $vehicle_type_normalized = 'car';
+        } elseif (isset($vt_map[$raw_vt])) {
+            $vehicle_type_normalized = $vt_map[$raw_vt];
+        } else {
+            // Unknown vehicle type - return helpful error to client
+            sendError('Invalid vehicleType: ' . ($data['vehicleType'] ?? 'null') . '. Allowed: ' . implode(', ', $allowed_vehicle_types), 400);
+        }
+
         $vehicle_query = "INSERT INTO vehicles (auction_id, vehicle_type, make, model, year, mileage, condition, registration_number, engine_capacity, fuel_type, transmission, color, location) 
                           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
         $vehicle_stmt = $connection->prepare($vehicle_query);
         $vehicle_stmt->execute([
             $auction_id,
-            $data['vehicleType'] ?? 'car',
+            $vehicle_type_normalized,
             $data['vehicleMake'],
             $data['vehicleModel'],
             intval($data['vehicleYear']),

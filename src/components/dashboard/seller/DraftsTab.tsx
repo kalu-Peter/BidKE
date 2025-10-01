@@ -1,10 +1,14 @@
-import React, { useEffect, useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { apiService } from '@/services/api';
+import React, { useEffect, useState } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { apiService } from "@/services/api";
 
 // Simple preview modal (inline)
-const PreviewModal: React.FC<{ item: any; onClose: () => void; onSubmit: () => void }> = ({ item, onClose, onSubmit }) => {
+const PreviewModal: React.FC<{
+  item: any;
+  onClose: () => void;
+  onSubmit: () => void;
+}> = ({ item, onClose, onSubmit }) => {
   if (!item) return null;
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
@@ -14,15 +18,21 @@ const PreviewModal: React.FC<{ item: any; onClose: () => void; onSubmit: () => v
         <div className="mt-4 grid grid-cols-2 gap-4">
           <div>
             <p className="text-xs text-gray-500">Start</p>
-            <p className="font-medium">{item.start_time || item.auctionStartDate}</p>
+            <p className="font-medium">
+              {item.start_time || item.auctionStartDate}
+            </p>
           </div>
           <div>
             <p className="text-xs text-gray-500">End</p>
-            <p className="font-medium">{item.end_time || item.auctionEndDate}</p>
+            <p className="font-medium">
+              {item.end_time || item.auctionEndDate}
+            </p>
           </div>
         </div>
         <div className="flex justify-end space-x-2 mt-6">
-          <Button variant="outline" onClick={onClose}>Close</Button>
+          <Button variant="outline" onClick={onClose}>
+            Close
+          </Button>
           <Button onClick={onSubmit}>Submit for Review</Button>
         </div>
       </div>
@@ -42,23 +52,26 @@ const DraftsTab: React.FC = () => {
       setLoading(true);
       const payload = {
         // update status to pending_review
-        status: 'pending_review'
+        status: "pending_review",
       };
 
       // optionally include images or other updated fields
-      if (itemData.images) payload['images'] = itemData.images;
+      if (itemData.images) payload["images"] = itemData.images;
 
       const resp = await apiService.updateAuction(auctionId, payload);
       if (resp.success) {
         // refresh lists
         await loadSellerAuctions();
         setPreviewItem(null);
-        window.alert('Submitted for review');
+        window.alert("Submitted for review");
       } else {
-        window.alert('Failed to submit for review: ' + (resp.error || resp.message || 'Unknown'));
+        window.alert(
+          "Failed to submit for review: " +
+            (resp.error || resp.message || "Unknown")
+        );
       }
     } catch (err: any) {
-      window.alert('Failed to submit: ' + (err.message || err));
+      window.alert("Failed to submit: " + (err.message || err));
     } finally {
       setLoading(false);
     }
@@ -69,19 +82,37 @@ const DraftsTab: React.FC = () => {
     try {
       // Assuming API supports seller-auctions.php?seller_id=current or uses session
       // We call getSellerAuctions with sellerId omitted if server uses session
-      const respDrafts = await apiService.getSellerAuctions({ sellerId: 0, status: 'draft', page: 1, limit: 50 } as any).catch(e => e);
-      const respPending = await apiService.getSellerAuctions({ sellerId: 0, status: 'pending_review', page: 1, limit: 50 } as any).catch(e => e);
+      const respDrafts = await apiService
+        .getSellerAuctions({
+          sellerId: 0,
+          status: "draft",
+          page: 1,
+          limit: 50,
+        } as any)
+        .catch((e) => e);
+      const respPending = await apiService
+        .getSellerAuctions({
+          sellerId: 0,
+          status: "pending_review",
+          page: 1,
+          limit: 50,
+        } as any)
+        .catch((e) => e);
 
-      if (respDrafts && respDrafts.success && respDrafts.data) setDrafts(respDrafts.data.auctions || []);
-      if (respPending && respPending.success && respPending.data) setPending(respPending.data.auctions || []);
+      if (respDrafts && respDrafts.success && respDrafts.data)
+        setDrafts(respDrafts.data.auctions || []);
+      if (respPending && respPending.success && respPending.data)
+        setPending(respPending.data.auctions || []);
     } catch (err: any) {
-      setError(err?.message || 'Failed to load drafts');
+      setError(err?.message || "Failed to load drafts");
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => { loadSellerAuctions(); }, []);
+  useEffect(() => {
+    loadSellerAuctions();
+  }, []);
 
   return (
     <Card>
@@ -96,15 +127,27 @@ const DraftsTab: React.FC = () => {
             {drafts.length === 0 ? (
               <p className="text-sm text-gray-500">No drafts found.</p>
             ) : (
-              drafts.map(d => (
-                <div key={d.id} className="p-3 border rounded mb-2 flex justify-between items-center">
+              drafts.map((d, idx) => (
+                <div
+                  key={d.id ? `draft-${d.id}` : `draft-idx-${idx}`}
+                  className="p-3 border rounded mb-2 flex justify-between items-center"
+                >
                   <div>
                     <div className="font-medium">{d.title}</div>
-                    <div className="text-sm text-gray-500">Status: {d.status}</div>
+                    <div className="text-sm text-gray-500">
+                      Status: {d.status}
+                    </div>
                   </div>
                   <div className="flex items-center space-x-2">
-                    <Button size="sm" onClick={() => window.alert('Edit draft: ' + d.id)}>Edit</Button>
-                    <Button size="sm" onClick={() => setPreviewItem(d)}>Preview</Button>
+                    <Button
+                      size="sm"
+                      onClick={() => window.alert("Edit draft: " + d.id)}
+                    >
+                      Edit
+                    </Button>
+                    <Button size="sm" onClick={() => setPreviewItem(d)}>
+                      Preview
+                    </Button>
                   </div>
                 </div>
               ))
@@ -116,14 +159,24 @@ const DraftsTab: React.FC = () => {
             {pending.length === 0 ? (
               <p className="text-sm text-gray-500">No pending items.</p>
             ) : (
-              pending.map(d => (
-                <div key={d.id} className="p-3 border rounded mb-2 flex justify-between items-center">
+              pending.map((d, idx) => (
+                <div
+                  key={d.id ? `pending-${d.id}` : `pending-idx-${idx}`}
+                  className="p-3 border rounded mb-2 flex justify-between items-center"
+                >
                   <div>
                     <div className="font-medium">{d.title}</div>
-                    <div className="text-sm text-gray-500">Status: {d.status}</div>
+                    <div className="text-sm text-gray-500">
+                      Status: {d.status}
+                    </div>
                   </div>
                   <div className="flex items-center space-x-2">
-                    <Button size="sm" onClick={() => window.alert('View: ' + d.id)}>View</Button>
+                    <Button
+                      size="sm"
+                      onClick={() => window.alert("View: " + d.id)}
+                    >
+                      View
+                    </Button>
                   </div>
                 </div>
               ))
@@ -132,7 +185,11 @@ const DraftsTab: React.FC = () => {
         </div>
       </CardContent>
       {previewItem && (
-        <PreviewModal item={previewItem} onClose={() => setPreviewItem(null)} onSubmit={() => submitDraft(previewItem.id, previewItem)} />
+        <PreviewModal
+          item={previewItem}
+          onClose={() => setPreviewItem(null)}
+          onSubmit={() => submitDraft(previewItem.id, previewItem)}
+        />
       )}
     </Card>
   );
