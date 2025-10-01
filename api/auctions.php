@@ -41,6 +41,8 @@ try {
             FROM auctions a
             LEFT JOIN categories c ON a.category_id = c.id
             LEFT JOIN users u ON a.seller_id = u.id
+            LEFT JOIN vehicles v ON a.id = v.auction_id
+            LEFT JOIN electronics e ON a.id = e.auction_id
             WHERE 1=1
         ";
 
@@ -122,7 +124,8 @@ try {
                 c.name as category_name,
                 c.name as category_slug,
                 COALESCE(u.full_name, u.username) as seller_name,
-                u.email as seller_email
+                u.email as seller_email,
+                COALESCE(v.location, e.location) as location
             " . $baseQuery . "
             ORDER BY a.featured DESC, a.created_at DESC
             LIMIT :limit OFFSET :offset

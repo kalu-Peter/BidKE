@@ -549,7 +549,7 @@ const AuctionDetails = () => {
       <div className="min-h-screen bg-background pt-20">
         <div className="container mx-auto px-4 py-8">
           {/* Breadcrumb */}
-          <div className="flex items-center space-x-2 text-sm text-gray-600 mb-6">
+          <div className="flex items-center space-x-2 text-sm text-muted-foreground mb-6">
             <Button
               variant="ghost"
               size="sm"
@@ -561,7 +561,9 @@ const AuctionDetails = () => {
             <span>/</span>
             <span>{auction.category_name}</span>
             <span>/</span>
-            <span className="text-gray-900 font-medium">{auction.title}</span>
+            <span className="text-muted-foreground font-medium">
+              {auction.title}
+            </span>
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -686,22 +688,31 @@ const AuctionDetails = () => {
                 <CardHeader>
                   <div className="flex items-start justify-between">
                     <div>
-                      <CardTitle className="text-2xl font-bold text-gray-900 mb-2">
+                      <CardTitle className="text-2xl font-bold text-muted-foreground mb-2">
                         {auction.title}
                       </CardTitle>
                       <div className="flex items-center space-x-4">
                         <Badge variant="outline">{auction.category_name}</Badge>
-                        {getStatusBadge()}
+                        <Badge
+                          variant="outline"
+                          className="flex items-center space-x-1"
+                        >
+                          <MapPin className="w-4 h-4" />
+                          <span>
+                            {(auction as any).location ||
+                              "Location not specified"}
+                          </span>
+                        </Badge>
                       </div>
                     </div>
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div>
-                    <h3 className="font-semibold text-gray-900 mb-2">
+                    <h3 className="font-semibold text-muted-foreground mb-2">
                       Description
                     </h3>
-                    <p className="text-gray-600 leading-relaxed">
+                    <p className="text-muted-foreground leading-relaxed">
                       {auction.description}
                     </p>
                   </div>
@@ -713,10 +724,12 @@ const AuctionDetails = () => {
                       <Label className="text-sm font-medium text-gray-700">
                         Category
                       </Label>
-                      <p className="text-gray-900">{auction.category_name}</p>
+                      <p className="text-muted-foreground">
+                        {auction.category_name}
+                      </p>
                     </div>
                     <div>
-                      <Label className="text-sm font-medium text-gray-700">
+                      <Label className="text-sm font-medium text-muted-foreground">
                         Status
                       </Label>
                       <p className="text-gray-900">
@@ -730,34 +743,40 @@ const AuctionDetails = () => {
                   {auction.item_type === "vehicle" && (
                     <div>
                       <Separator />
-                      <h4 className="font-semibold text-gray-900">
+                      <h4 className="font-semibold text-muted-foreground">
                         Vehicle Details
                       </h4>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
                         <div>
-                          <Label className="text-sm text-gray-600">Type</Label>
-                          <p className="text-gray-900">
+                          <Label className="text-sm text-muted-foreground">
+                            Type
+                          </Label>
+                          <p className="text-muted-foreground">
                             {auction.vehicle_type}
                           </p>
                         </div>
                         <div>
-                          <Label className="text-sm text-gray-600">
+                          <Label className="text-sm text-muted-foreground">
                             Make / Model
                           </Label>
-                          <p className="text-gray-900">
+                          <p className="text-muted-foreground">
                             {(auction.make ? auction.make : "") +
                               (auction.model ? " " + auction.model : "")}
                           </p>
                         </div>
                         <div>
-                          <Label className="text-sm text-gray-600">Year</Label>
-                          <p className="text-gray-900">{auction.year ?? "—"}</p>
+                          <Label className="text-sm text-muted-foreground">
+                            Year
+                          </Label>
+                          <p className="text-muted-foreground">
+                            {auction.year ?? "—"}
+                          </p>
                         </div>
                         <div>
-                          <Label className="text-sm text-gray-600">
+                          <Label className="text-sm text-muted-foreground">
                             Condition
                           </Label>
-                          <p className="text-gray-900">
+                          <p className="text-muted-foreground">
                             {auction.vehicle_condition ?? "—"}
                           </p>
                         </div>
@@ -768,18 +787,22 @@ const AuctionDetails = () => {
                   {auction.item_type === "electronics" && (
                     <div>
                       <Separator />
-                      <h4 className="font-semibold text-gray-900">
+                      <h4 className="font-semibold text-muted-foreground">
                         Electronics
                       </h4>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
                         <div>
-                          <Label className="text-sm text-gray-600">Brand</Label>
-                          <p className="text-gray-900">
+                          <Label className="text-sm text-muted-foreground">
+                            Brand
+                          </Label>
+                          <p className="text-muted-foreground">
                             {auction.brand ?? "—"}
                           </p>
                         </div>
                         <div>
-                          <Label className="text-sm text-gray-600">Model</Label>
+                          <Label className="text-sm text-muted-foreground">
+                            Model
+                          </Label>
                           <p className="text-gray-900">
                             {auction.model ?? "—"}
                           </p>
@@ -806,7 +829,7 @@ const AuctionDetails = () => {
                 <CardContent className="space-y-4">
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <Label className="text-sm text-gray-600">
+                      <Label className="text-sm text-muted-foreground">
                         Starting Price
                       </Label>
                       <p className="text-lg font-semibold">
@@ -814,7 +837,7 @@ const AuctionDetails = () => {
                       </p>
                     </div>
                     <div>
-                      <Label className="text-sm text-gray-600">
+                      <Label className="text-sm text-muted-foreground">
                         Min. Increment
                       </Label>
                       <p className="text-lg font-semibold">
@@ -826,7 +849,7 @@ const AuctionDetails = () => {
                   <Separator />
 
                   <div>
-                    <Label className="text-sm text-gray-600">
+                    <Label className="text-sm text-muted-foreground">
                       Current Highest Bid
                     </Label>
                     <p className="text-3xl font-bold text-green-600">
@@ -837,7 +860,7 @@ const AuctionDetails = () => {
                   <Separator />
 
                   <div>
-                    <Label className="text-sm text-gray-600">
+                    <Label className="text-sm text-muted-foreground">
                       Time Remaining
                     </Label>
                     {countdown.mode === "live" ? (
@@ -871,7 +894,7 @@ const AuctionDetails = () => {
                   {/* Demo Notification Buttons - Remove in production */}
                   <Separator />
                   <div>
-                    <Label className="text-sm text-gray-600 mb-2 block">
+                    <Label className="text-sm text-muted-foreground mb-2 block">
                       Test Notifications:
                     </Label>
                     <div className="flex flex-wrap gap-2">
@@ -989,7 +1012,7 @@ const AuctionDetails = () => {
                     <h3 className="font-semibold text-gray-900 mb-2">
                       Want to bid?
                     </h3>
-                    <p className="text-gray-600 mb-4">
+                    <p className="text-muted-foreground mb-4">
                       Login to start bidding on this auction
                     </p>
                     <Button
@@ -1038,7 +1061,7 @@ const AuctionDetails = () => {
                               </Badge>
                             )}
                           </div>
-                          <p className="text-sm text-gray-600">
+                          <p className="text-sm text-muted-foreground">
                             {bid.timestamp}
                           </p>
                         </div>
@@ -1069,7 +1092,7 @@ const AuctionDetails = () => {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
           <div className="bg-card rounded-lg w-full max-w-md p-6">
             <h3 className="text-lg font-semibold mb-2">Place a Bid</h3>
-            <p className="text-sm text-gray-600 mb-4">
+            <p className="text-sm text-muted-foreground mb-4">
               Please confirm you have a valid payment method on file before
               placing a bid. By confirming, you commit to completing the
               purchase if you win.

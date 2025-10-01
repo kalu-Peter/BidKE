@@ -33,6 +33,7 @@ const PostItemTab: React.FC = () => {
     // Common fields
     title: "",
     description: "",
+    location: "",
     startingPrice: "",
     reservePrice: "",
     hasReservePrice: false,
@@ -129,6 +130,10 @@ const PostItemTab: React.FC = () => {
       validationErrors.description = "Description is required";
     }
 
+    if (!formData.location.trim()) {
+      validationErrors.location = "Location is required";
+    }
+
     if (!formData.startingPrice || parseFloat(formData.startingPrice) <= 0) {
       validationErrors.startingPrice = "Valid starting price is required";
     }
@@ -219,6 +224,7 @@ const PostItemTab: React.FC = () => {
         itemType: formData.itemType as "vehicle" | "electronic",
         title: formData.title.trim(),
         description: formData.description.trim(),
+        location: formData.location.trim(),
         startingPrice: parseFloat(formData.startingPrice),
         reservePrice: formData.hasReservePrice
           ? parseFloat(formData.reservePrice)
@@ -268,6 +274,7 @@ const PostItemTab: React.FC = () => {
           itemType: "",
           title: "",
           description: "",
+          location: "",
           startingPrice: "",
           reservePrice: "",
           hasReservePrice: false,
@@ -656,6 +663,20 @@ const PostItemTab: React.FC = () => {
                     />
                     {errors.title && (
                       <p className="text-red-500 text-sm">{errors.title}</p>
+                    )}
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Location *</label>
+                    <Input
+                      placeholder="e.g., Nairobi, Mombasa, Kisumu"
+                      value={formData.location}
+                      onChange={(e) =>
+                        handleInputChange("location", e.target.value)
+                      }
+                      required
+                    />
+                    {errors.location && (
+                      <p className="text-red-500 text-sm">{errors.location}</p>
                     )}
                   </div>
                   <div className="space-y-2">

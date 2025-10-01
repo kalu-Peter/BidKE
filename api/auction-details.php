@@ -226,7 +226,7 @@ try {
         }
 
         if ($auction['item_type'] === 'unknown' && in_array('electronics', $foundTbls)) {
-            $eStmt = $db->prepare("SELECT category as electronics_category, brand, model, condition, specs FROM electronics WHERE auction_id = :auction_id LIMIT 1");
+            $eStmt = $db->prepare("SELECT category as electronics_category, brand, model, condition, specs, location FROM electronics WHERE auction_id = :auction_id LIMIT 1");
             $eStmt->execute([':auction_id' => $auctionId]);
             $eRow = $eStmt->fetch(PDO::FETCH_ASSOC);
             if ($eRow) {
@@ -236,6 +236,7 @@ try {
                 $auction['model'] = $eRow['model'];
                 $auction['electronics_condition'] = $eRow['condition'];
                 $auction['specs'] = $eRow['specs'] ? json_decode($eRow['specs'], true) : null;
+                $auction['location'] = $eRow['location'] ?? null;
             }
         }
 

@@ -20,6 +20,7 @@ import {
   Clock,
   AlertCircle,
   Loader2,
+  MapPin,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -533,8 +534,10 @@ const BrowseAuctionsContent = () => {
                   </div>
                   <div className="flex justify-between items-center text-sm text-gray-500 mb-3">
                     <div className="flex items-center space-x-1">
-                      <Eye className="w-4 h-4" />
-                      <span>{auction.bid_count} bids</span>
+                      <MapPin className="w-4 h-4" />
+                      <span>
+                        {auction.location || "Location not specified"}
+                      </span>
                     </div>
                     <span
                       className={isEndingSoon ? "text-accent font-medium" : ""}
