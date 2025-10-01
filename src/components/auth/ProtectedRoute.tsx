@@ -1,17 +1,17 @@
-import React from 'react';
-import { Navigate, useLocation } from 'react-router-dom';
-import { useAuth } from '@/contexts/AuthContext';
+import React from "react";
+import { Navigate, useLocation } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
-  requiredRole?: 'buyer' | 'seller' | 'admin';
+  requiredRole?: "seller" | "admin";
   requireApproval?: boolean;
 }
 
-const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ 
-  children, 
+const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
+  children,
   requiredRole,
-  requireApproval = false 
+  requireApproval = false,
 }) => {
   const { isAuthenticated, isLoading, user } = useAuth();
   const location = useLocation();
@@ -32,13 +32,19 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
 
   if (requiredRole && user?.role !== requiredRole) {
     // Redirect to appropriate dashboard if user has wrong role
-    const redirectPath = getDashboardPath(user?.role || 'buyer', user?.status || 'email_verified');
+    const redirectPath = getDashboardPath(
+      user?.role || "seller",
+      user?.status || "email_verified"
+    );
     return <Navigate to={redirectPath} replace />;
   }
 
-  if (requireApproval && user?.status !== 'approved') {
+  if (requireApproval && user?.status !== "approved") {
     // Redirect to dashboard with limited access
-    const redirectPath = getDashboardPath(user?.role || 'buyer', user?.status || 'email_verified');
+    const redirectPath = getDashboardPath(
+      user?.role || "seller",
+      user?.status || "email_verified"
+    );
     return <Navigate to={redirectPath} replace />;
   }
 
@@ -47,14 +53,14 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
 
 export const getDashboardPath = (role: string, status: string): string => {
   switch (role) {
-    case 'buyer':
-      return '/dashboard/browse'; // Buyer dashboard shows browse auctions
-    case 'seller':
-      return '/dashboard/seller'; // Seller dashboard
-    case 'admin':
-      return '/dashboard/admin'; // Admin dashboard 
+    case "buyer":
+      return "/dashboard/seller"; // Redirect buyers to seller dashboard
+    case "seller":
+      return "/dashboard/seller"; // Seller dashboard
+    case "admin":
+      return "/dashboard/admin"; // Admin dashboard
     default:
-      return '/dashboard/browse'; // Default to buyer dashboard
+      return "/dashboard/seller"; // Default to seller dashboard
   }
 };
 

@@ -18,7 +18,6 @@ import {
   Settings,
   Bell,
   LogOut,
-  ArrowLeftRight,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -32,7 +31,7 @@ import { useState } from "react";
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
-  userRole?: "buyer" | "seller" | "admin";
+  userRole?: "seller" | "admin";
   userStatus?: "email_verified" | "approved";
   userName?: string;
 }
@@ -48,7 +47,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({
   const { user, logout } = useAuth();
 
   // Use props if provided, otherwise use auth context
-  const userRole = propUserRole || user?.role || "buyer";
+  const userRole = propUserRole || user?.role || "seller";
   const userStatus = propUserStatus || user?.status || "email_verified";
   const userName = propUserName || user?.name || "User";
 
@@ -197,33 +196,6 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({
   const handleLogout = () => {
     logout();
     navigate("/login", { replace: true });
-  };
-
-  const handleRoleSwitch = (newRole: "buyer" | "seller") => {
-    // Check if user has the role they want to switch to
-    const userRoles = user?.roles || [];
-    const hasRole = userRoles.some((role) => role.role_name === newRole);
-
-    if (hasRole) {
-      // Navigate to the appropriate dashboard
-      const dashboardPaths = {
-        buyer: "/dashboard/browse",
-        seller: "/dashboard/listings",
-      };
-      navigate(dashboardPaths[newRole]);
-    }
-  };
-
-  const canSwitchRoles = () => {
-    const userRoles = user?.roles || [];
-    return userRoles.length > 1 && userRole !== "admin";
-  };
-
-  const getAvailableRoles = () => {
-    const userRoles = user?.roles || [];
-    return userRoles.filter(
-      (role) => role.role_name !== userRole && role.role_name !== "admin"
-    );
   };
 
   const getDashboardUrl = () => {
@@ -500,37 +472,6 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({
                   </DropdownMenuContent>
                 </DropdownMenu>
               </div>
-
-              {/* Role Switcher */}
-              {canSwitchRoles() && (
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="flex items-center space-x-2"
-                    >
-                      <ArrowLeftRight className="w-4 h-4" />
-                      <span>Switch Role</span>
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuLabel>Switch Dashboard</DropdownMenuLabel>
-                    <DropdownMenuSeparator />
-                    {getAvailableRoles().map((role) => (
-                      <DropdownMenuItem
-                        key={role.role_name}
-                        onClick={() =>
-                          handleRoleSwitch(role.role_name as "buyer" | "seller")
-                        }
-                      >
-                        {role.role_name === "buyer" ? "🛒" : "🏪"}{" "}
-                        {role.role_display_name || role.role_name}
-                      </DropdownMenuItem>
-                    ))}
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              )}
 
               <Badge className={getRoleDisplay().color}>
                 {getRoleDisplay().label}

@@ -13,7 +13,6 @@ import Electronics from "./pages/Electronics";
 import SignUp from "./pages/auth/SignUp";
 import Login from "./pages/auth/Login";
 import AdminSignUp from "./pages/auth/AdminSignUp";
-import BuyerDashboard from "./pages/dashboard/BuyerDashboard";
 import SellerDashboard from "./pages/dashboard/SellerDashboard";
 import AdminDashboard from "./pages/dashboard/AdminDashboard";
 import BrowseAuctions from "./pages/BrowseAuctions";
@@ -21,7 +20,6 @@ import AuctionDetails from "./pages/AuctionDetails";
 import HowItWorks from "./pages/HowItWorks";
 import TrustSecurity from "./pages/TrustSecurity";
 import Contact from "./pages/Contact";
-import BuyerProfile from "./pages/dashboard/BuyerProfile";
 import SellerProfile from "./pages/profile/SellerProfile";
 
 const queryClient = new QueryClient();
@@ -64,45 +62,29 @@ const App = () => (
             {/* Dashboard Routes */}
             <Route
               path="/dashboard/buyer"
-              element={<Navigate to="/dashboard/browse" replace />}
+              element={<Navigate to="/dashboard/seller" replace />}
             />
             <Route
               path="/dashboard/browse"
-              element={
-                <ProtectedRoute>
-                  <BuyerDashboard />
-                </ProtectedRoute>
-              }
+              element={<Navigate to="/dashboard/seller" replace />}
             />
             <Route
               path="/dashboard/bids"
-              element={
-                <ProtectedRoute>
-                  <BuyerDashboard />
-                </ProtectedRoute>
-              }
+              element={<Navigate to="/dashboard/seller" replace />}
             />
             <Route
               path="/dashboard/watchlist"
-              element={
-                <ProtectedRoute>
-                  <BuyerDashboard />
-                </ProtectedRoute>
-              }
+              element={<Navigate to="/dashboard/seller" replace />}
             />
             <Route
               path="/dashboard/won"
-              element={
-                <ProtectedRoute>
-                  <BuyerDashboard />
-                </ProtectedRoute>
-              }
+              element={<Navigate to="/dashboard/seller" replace />}
             />
             <Route
               path="/dashboard/profile"
               element={
                 <ProtectedRoute>
-                  <BuyerProfile />
+                  <SellerProfile />
                 </ProtectedRoute>
               }
             />
@@ -110,11 +92,7 @@ const App = () => (
             {/* Profile Routes */}
             <Route
               path="/profile/buyer"
-              element={
-                <ProtectedRoute>
-                  <BuyerProfile />
-                </ProtectedRoute>
-              }
+              element={<Navigate to="/profile/seller" replace />}
             />
             <Route
               path="/profile/seller"

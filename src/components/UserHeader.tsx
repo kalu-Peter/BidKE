@@ -25,23 +25,22 @@ const UserHeader: React.FC = () => {
   const getDashboardUrl = () => {
     switch (user?.role) {
       case "buyer":
-        return "/dashboard/browse";
+        return "/dashboard/seller";
       case "seller":
         return "/dashboard/seller";
       case "admin":
         return "/dashboard/admin";
       default:
-        return "/dashboard/browse";
+        return "/dashboard/seller";
     }
   };
 
   const getRoleDisplay = () => {
     const roles: any = {
-      buyer: { label: "Buyer", color: "bg-secondary/10 text-secondary" },
       seller: { label: "Seller", color: "bg-primary/10 text-primary" },
       admin: { label: "Admin", color: "bg-accent/10 text-accent" },
     };
-    return roles[user?.role || "buyer"];
+    return roles[user?.role || "seller"];
   };
 
   const getStatusBadge = () => {
