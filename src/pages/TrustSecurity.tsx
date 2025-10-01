@@ -230,10 +230,10 @@ const TrustSecurity = () => {
         <section className="py-16">
           <div className="container mx-auto px-4">
             <div className="text-center mb-12">
-              <h2 className="text-3xl font-bold text-gray-900 mb-4">
+              <h2 className="text-3xl font-bold text-foreground mb-4">
                 Multi-Layer Security Protection
               </h2>
-              <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+              <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
                 We employ industry-leading security measures to protect your
                 data, transactions, and privacy
               </p>
@@ -258,7 +258,7 @@ const TrustSecurity = () => {
                       </CardTitle>
                     </CardHeader>
                     <CardContent>
-                      <p className="text-gray-600 text-center">
+                      <p className="text-muted-foreground text-center">
                         {feature.description}
                       </p>
                     </CardContent>
@@ -273,10 +273,10 @@ const TrustSecurity = () => {
         <section className="py-16 bg-white">
           <div className="container mx-auto px-4">
             <div className="text-center mb-12">
-              <h2 className="text-3xl font-bold text-gray-900 mb-4">
+              <h2 className="text-3xl font-bold text-foreground mb-4">
                 Trusted by Thousands
               </h2>
-              <p className="text-xl text-gray-600">
+              <p className="text-xl text-muted-foreground">
                 Numbers that showcase our commitment to trust and reliability
               </p>
             </div>
@@ -293,13 +293,13 @@ const TrustSecurity = () => {
                       <div className="w-16 h-16 bg-accent/10 rounded-full flex items-center justify-center mx-auto mb-4">
                         <IconComponent className="w-8 h-8 text-green-600" />
                       </div>
-                      <div className="text-3xl font-bold text-gray-900 mb-2">
+                      <div className="text-3xl font-bold text-foreground mb-2">
                         {indicator.value}
                       </div>
-                      <div className="text-lg font-semibold text-gray-700 mb-2">
+                      <div className="text-lg font-semibold text-foreground mb-2">
                         {indicator.label}
                       </div>
-                      <p className="text-sm text-gray-600">
+                      <p className="text-sm text-muted-foreground">
                         {indicator.description}
                       </p>
                     </CardContent>
@@ -314,10 +314,10 @@ const TrustSecurity = () => {
         <section className="py-16 bg-muted/20">
           <div className="container mx-auto px-4">
             <div className="text-center mb-12">
-              <h2 className="text-3xl font-bold text-gray-900 mb-4">
+              <h2 className="text-3xl font-bold text-foreground mb-4">
                 Comprehensive Protection Policies
               </h2>
-              <p className="text-xl text-gray-600">
+              <p className="text-xl text-muted-foreground">
                 Detailed policies designed to protect all participants in our
                 marketplace
               </p>
@@ -330,7 +330,7 @@ const TrustSecurity = () => {
                   className="h-full hover:shadow-lg transition-shadow"
                 >
                   <CardHeader>
-                    <CardTitle className="text-xl text-center text-gray-900">
+                    <CardTitle className="text-xl text-center text-foreground">
                       {policy.title}
                     </CardTitle>
                   </CardHeader>
@@ -342,7 +342,7 @@ const TrustSecurity = () => {
                           className="flex items-start space-x-3"
                         >
                           <CheckCircle className="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" />
-                          <span className="text-gray-600">{item}</span>
+                          <span className="text-muted-foreground">{item}</span>
                         </li>
                       ))}
                     </ul>
@@ -357,10 +357,10 @@ const TrustSecurity = () => {
         <section className="py-16 bg-background">
           <div className="container mx-auto px-4">
             <div className="text-center mb-12">
-              <h2 className="text-3xl font-bold text-gray-900 mb-4">
+              <h2 className="text-3xl font-bold text-foreground mb-4">
                 Certifications & Compliance
               </h2>
-              <p className="text-xl text-gray-600">
+              <p className="text-xl text-muted-foreground">
                 Recognized certifications and regulatory compliance demonstrate
                 our commitment to security
               </p>
@@ -379,10 +379,12 @@ const TrustSecurity = () => {
                     <Badge className="mb-3 bg-primary/10 text-primary">
                       {cert.badge}
                     </Badge>
-                    <h3 className="font-semibold text-gray-900 mb-2">
+                    <h3 className="font-semibold text-foreground mb-2">
                       {cert.name}
                     </h3>
-                    <p className="text-sm text-gray-600">{cert.description}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {cert.description}
+                    </p>
                   </CardContent>
                 </Card>
               ))}
@@ -394,10 +396,10 @@ const TrustSecurity = () => {
         <section className="py-16 bg-destructive/10">
           <div className="container mx-auto px-4">
             <div className="text-center mb-12">
-              <h2 className="text-3xl font-bold text-gray-900 mb-4">
+              <h2 className="text-3xl font-bold text-foreground mb-4">
                 Report Security Concerns
               </h2>
-              <p className="text-xl text-gray-600">
+              <p className="text-xl text-muted-foreground">
                 Help us maintain a safe platform by reporting any security
                 issues or suspicious activity
               </p>
@@ -415,10 +417,12 @@ const TrustSecurity = () => {
                       <div className="w-16 h-16 bg-destructive/10 rounded-full flex items-center justify-center mx-auto mb-4">
                         <IconComponent className="w-8 h-8 text-red-600" />
                       </div>
-                      <h3 className="text-xl font-semibold text-gray-900 mb-3">
+                      <h3 className="text-xl font-semibold text-foreground mb-3">
                         {option.title}
                       </h3>
-                      <p className="text-gray-600 mb-6">{option.description}</p>
+                      <p className="text-muted-foreground mb-6">
+                        {option.description}
+                      </p>
                       <Button
                         variant="outline"
                         className="border-red-600 text-red-600 hover:bg-red-600 hover:text-white"
@@ -438,10 +442,10 @@ const TrustSecurity = () => {
           <div className="container mx-auto px-4">
             <div className="max-w-4xl mx-auto">
               <div className="text-center mb-12">
-                <h2 className="text-3xl font-bold text-gray-900 mb-4">
+                <h2 className="text-3xl font-bold text-foreground mb-4">
                   Security Best Practices
                 </h2>
-                <p className="text-xl text-gray-600">
+                <p className="text-xl text-muted-foreground">
                   Follow these guidelines to keep your account and transactions
                   secure
                 </p>
@@ -459,25 +463,25 @@ const TrustSecurity = () => {
                     <ul className="space-y-3">
                       <li className="flex items-start space-x-3">
                         <CheckCircle className="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" />
-                        <span className="text-gray-600">
+                        <span className="text-muted-foreground">
                           Use a strong, unique password
                         </span>
                       </li>
                       <li className="flex items-start space-x-3">
                         <CheckCircle className="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" />
-                        <span className="text-gray-600">
+                        <span className="text-muted-foreground">
                           Enable two-factor authentication
                         </span>
                       </li>
                       <li className="flex items-start space-x-3">
                         <CheckCircle className="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" />
-                        <span className="text-gray-600">
+                        <span className="text-muted-foreground">
                           Keep your contact details updated
                         </span>
                       </li>
                       <li className="flex items-start space-x-3">
                         <CheckCircle className="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" />
-                        <span className="text-gray-600">
+                        <span className="text-muted-foreground">
                           Log out from shared devices
                         </span>
                       </li>
@@ -496,25 +500,25 @@ const TrustSecurity = () => {
                     <ul className="space-y-3">
                       <li className="flex items-start space-x-3">
                         <CheckCircle className="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" />
-                        <span className="text-gray-600">
+                        <span className="text-muted-foreground">
                           Verify seller ratings and reviews
                         </span>
                       </li>
                       <li className="flex items-start space-x-3">
                         <CheckCircle className="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" />
-                        <span className="text-gray-600">
+                        <span className="text-muted-foreground">
                           Use our secure payment system only
                         </span>
                       </li>
                       <li className="flex items-start space-x-3">
                         <CheckCircle className="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" />
-                        <span className="text-gray-600">
+                        <span className="text-muted-foreground">
                           Inspect items before final payment
                         </span>
                       </li>
                       <li className="flex items-start space-x-3">
                         <CheckCircle className="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" />
-                        <span className="text-gray-600">
+                        <span className="text-muted-foreground">
                           Report suspicious behavior immediately
                         </span>
                       </li>
@@ -531,7 +535,7 @@ const TrustSecurity = () => {
           <div className="container mx-auto px-4">
             <div className="max-w-3xl mx-auto text-center">
               <h2 className="text-3xl font-bold mb-6">Security Team Contact</h2>
-              <p className="text-xl text-gray-300 mb-8">
+              <p className="text-xl text-muted-foreground mb-8">
                 Have security concerns or need to report an incident? Our
                 security team is here to help.
               </p>

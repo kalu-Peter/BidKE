@@ -249,10 +249,10 @@ const HowItWorks = () => {
               <Badge className="mb-4 text-sm px-4 py-2 bg-primary/10 text-primary">
                 For Sellers
               </Badge>
-              <h2 className="text-3xl font-bold text-gray-900 mb-4">
+              <h2 className="text-3xl font-bold text-foreground mb-4">
                 Selling Made Simple
               </h2>
-              <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+              <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
                 From listing to payment, our platform makes it easy for
                 businesses to reach buyers and maximize returns on their assets
               </p>
@@ -321,10 +321,10 @@ const HowItWorks = () => {
               <Badge className="mb-4 text-sm px-4 py-2 bg-accent/10 text-accent">
                 For Buyers
               </Badge>
-              <h2 className="text-3xl font-bold text-gray-900 mb-4">
+              <h2 className="text-3xl font-bold text-foreground mb-4">
                 Bidding Made Easy
               </h2>
-              <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+              <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
                 Discover amazing deals and bid with confidence on Kenya's most
                 trusted auction platform
               </p>
@@ -390,10 +390,10 @@ const HowItWorks = () => {
         <section className="py-16 bg-muted/20">
           <div className="container mx-auto px-4">
             <div className="text-center mb-12">
-              <h2 className="text-3xl font-bold text-gray-900 mb-4">
+              <h2 className="text-3xl font-bold text-foreground mb-4">
                 Why Choose BidLode?
               </h2>
-              <p className="text-xl text-gray-600">
+              <p className="text-xl text-muted-foreground">
                 Built with security, transparency, and user experience in mind
               </p>
             </div>
@@ -410,10 +410,12 @@ const HowItWorks = () => {
                       <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
                         <IconComponent className="w-8 h-8 text-blue-600" />
                       </div>
-                      <h3 className="text-xl font-semibold mb-3">
+                      <h3 className="text-xl font-semibold mb-3 text-foreground">
                         {feature.title}
                       </h3>
-                      <p className="text-gray-600">{feature.description}</p>
+                      <p className="text-muted-foreground">
+                        {feature.description}
+                      </p>
                     </CardContent>
                   </Card>
                 );
@@ -426,10 +428,10 @@ const HowItWorks = () => {
         <section className="py-16 bg-background">
           <div className="container mx-auto px-4">
             <div className="text-center mb-12">
-              <h2 className="text-3xl font-bold text-gray-900 mb-4">
+              <h2 className="text-3xl font-bold text-foreground mb-4">
                 Frequently Asked Questions
               </h2>
-              <p className="text-xl text-gray-600">
+              <p className="text-xl text-muted-foreground">
                 Got questions? We've got answers.
               </p>
             </div>
@@ -438,10 +440,10 @@ const HowItWorks = () => {
               {faqs.map((faq, index) => (
                 <Card key={index} className="hover:shadow-md transition-shadow">
                   <CardContent className="p-6">
-                    <h3 className="text-lg font-semibold mb-3 text-gray-900">
+                    <h3 className="text-lg font-semibold mb-3 text-foreground">
                       {faq.question}
                     </h3>
-                    <p className="text-gray-600 leading-relaxed">
+                    <p className="text-muted-foreground leading-relaxed">
                       {faq.answer}
                     </p>
                   </CardContent>
@@ -450,7 +452,9 @@ const HowItWorks = () => {
             </div>
 
             <div className="text-center mt-12">
-              <p className="text-gray-600 mb-4">Still have questions?</p>
+              <p className="text-muted-foreground mb-4">
+                Still have questions?
+              </p>
               <Button variant="outline" size="lg">
                 Contact Support
               </Button>
