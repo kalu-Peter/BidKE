@@ -3,18 +3,33 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Plus, Upload, Car, Smartphone, Calendar, Clock, CheckCircle, AlertCircle } from "lucide-react";
+import {
+  Plus,
+  Upload,
+  Car,
+  Smartphone,
+  Calendar,
+  Clock,
+  CheckCircle,
+  AlertCircle,
+} from "lucide-react";
 import { apiService } from "@/services/api";
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from "react-router-dom";
 
 const PostItemTab: React.FC = () => {
   const [formData, setFormData] = useState({
     // Item type selection
     itemType: "", // "vehicle" or "electronic"
-    
+
     // Common fields
     title: "",
     description: "",
@@ -25,22 +40,23 @@ const PostItemTab: React.FC = () => {
     auctionStartTime: "",
     auctionEndDate: "",
     auctionEndTime: "",
-    
+
     // Vehicle specific fields
+    vehicleType: "",
     vehicleMake: "",
     vehicleModel: "",
     vehicleYear: "",
     vehicleMileage: "",
     vehicleCondition: "",
-    
+
     // Electronics specific fields
     electronicsBrand: "",
     electronicsModel: "",
     electronicsYear: "",
     electronicsCondition: "",
-    
+
     // Images
-    images: [] as Array<{ url: string; alt_text?: string; file?: File }>
+    images: [] as Array<{ url: string; alt_text?: string; file?: File }>,
   });
 
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -50,111 +66,139 @@ const PostItemTab: React.FC = () => {
   const navigate = useNavigate();
 
   const handleInputChange = (field: string, value: string | boolean) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+    setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
-    
+
     for (const file of files) {
       if (formData.images.length >= 8) {
-        alert('Maximum 8 images allowed');
+        alert("Maximum 8 images allowed");
         break;
       }
-      
+
       try {
-        const response = await apiService.uploadFile(file, 'auction');
+        const response = await apiService.uploadFile(file, "auction");
         if (response.success && response.data) {
-          setFormData(prev => ({
+          setFormData((prev) => ({
             ...prev,
-            images: [...prev.images, { 
-              url: response.data.url, 
-              alt_text: file.name,
-              file: file 
-            }]
+            images: [
+              ...prev.images,
+              {
+                url: response.data.url,
+                alt_text: file.name,
+                file: file,
+              },
+            ],
           }));
         }
       } catch (error) {
-        console.error('Error uploading file:', error);
+        console.error("Error uploading file:", error);
         alert(`Failed to upload ${file.name}`);
       }
     }
   };
 
   const removeImage = (index: number) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      images: prev.images.filter((_, i) => i !== index)
+      images: prev.images.filter((_, i) => i !== index),
     }));
   };
 
-  const handleSubmit = async (e: React.FormEvent, submitStatus: 'draft' | 'pending' = 'pending') => {
+  const handleSubmit = async (
+    e: React.FormEvent,
+    submitStatus: "draft" | "pending" = "pending"
+  ) => {
     e.preventDefault();
-    
+
     // Validate form
     const validationErrors: { [key: string]: string } = {};
-    
+
     if (!formData.itemType) {
       validationErrors.itemType = "Please select an item type";
     }
-    
+
     if (!formData.title.trim()) {
       validationErrors.title = "Title is required";
     }
-    
+
     if (!formData.description.trim()) {
       validationErrors.description = "Description is required";
     }
-    
+
     if (!formData.startingPrice || parseFloat(formData.startingPrice) <= 0) {
       validationErrors.startingPrice = "Valid starting price is required";
     }
-    
-    if (formData.hasReservePrice && (!formData.reservePrice || parseFloat(formData.reservePrice) <= 0)) {
-      validationErrors.reservePrice = "Valid reserve price is required when enabled";
+
+    if (
+      formData.hasReservePrice &&
+      (!formData.reservePrice || parseFloat(formData.reservePrice) <= 0)
+    ) {
+      validationErrors.reservePrice =
+        "Valid reserve price is required when enabled";
     }
-    
+
     if (!formData.auctionStartDate) {
       validationErrors.auctionStartDate = "Auction start date is required";
     }
-    
+
     if (!formData.auctionStartTime) {
       validationErrors.auctionStartTime = "Auction start time is required";
     }
-    
+
     if (!formData.auctionEndDate) {
       validationErrors.auctionEndDate = "Auction end date is required";
     }
-    
+
     if (!formData.auctionEndTime) {
       validationErrors.auctionEndTime = "Auction end time is required";
     }
 
     // Validate item-specific fields
     if (formData.itemType === "vehicle") {
-      if (!formData.vehicleMake) validationErrors.vehicleMake = "Vehicle make is required";
-      if (!formData.vehicleModel) validationErrors.vehicleModel = "Vehicle model is required";
-      if (!formData.vehicleYear) validationErrors.vehicleYear = "Vehicle year is required";
-      if (!formData.vehicleMileage) validationErrors.vehicleMileage = "Vehicle mileage is required";
-      if (!formData.vehicleCondition) validationErrors.vehicleCondition = "Vehicle condition is required";
+      if (!formData.vehicleType)
+        validationErrors.vehicleType = "Vehicle type is required";
+      if (!formData.vehicleMake)
+        validationErrors.vehicleMake = "Vehicle make is required";
+      if (!formData.vehicleModel)
+        validationErrors.vehicleModel = "Vehicle model is required";
+      if (!formData.vehicleYear)
+        validationErrors.vehicleYear = "Vehicle year is required";
+      if (!formData.vehicleMileage)
+        validationErrors.vehicleMileage = "Vehicle mileage is required";
+      if (!formData.vehicleCondition)
+        validationErrors.vehicleCondition = "Vehicle condition is required";
     } else if (formData.itemType === "electronic") {
-      if (!formData.electronicsBrand) validationErrors.electronicsBrand = "Electronics brand is required";
-      if (!formData.electronicsModel) validationErrors.electronicsModel = "Electronics model is required";
-      if (!formData.electronicsYear) validationErrors.electronicsYear = "Electronics year is required";
-      if (!formData.electronicsCondition) validationErrors.electronicsCondition = "Electronics condition is required";
+      if (!formData.electronicsBrand)
+        validationErrors.electronicsBrand = "Electronics brand is required";
+      if (!formData.electronicsModel)
+        validationErrors.electronicsModel = "Electronics model is required";
+      if (!formData.electronicsYear)
+        validationErrors.electronicsYear = "Electronics year is required";
+      if (!formData.electronicsCondition)
+        validationErrors.electronicsCondition =
+          "Electronics condition is required";
     }
 
     // Check date/time logic
-    const startDateTime = new Date(`${formData.auctionStartDate}T${formData.auctionStartTime}`);
-    const endDateTime = new Date(`${formData.auctionEndDate}T${formData.auctionEndTime}`);
+    const startDateTime = new Date(
+      `${formData.auctionStartDate}T${formData.auctionStartTime}`
+    );
+    const endDateTime = new Date(
+      `${formData.auctionEndDate}T${formData.auctionEndTime}`
+    );
     const now = new Date();
 
     if (startDateTime <= now) {
-      validationErrors.auctionStartDate = "Auction start time must be in the future";
+      validationErrors.auctionStartDate =
+        "Auction start time must be in the future";
     }
 
     if (endDateTime <= startDateTime) {
-      validationErrors.auctionEndDate = "Auction end time must be after start time";
+      validationErrors.auctionEndDate =
+        "Auction end time must be after start time";
     }
 
     if (Object.keys(validationErrors).length > 0) {
@@ -168,18 +212,21 @@ const PostItemTab: React.FC = () => {
     try {
       // Prepare auction data
       const auctionData = {
-        itemType: formData.itemType as 'vehicle' | 'electronic',
+        itemType: formData.itemType as "vehicle" | "electronic",
         title: formData.title.trim(),
         description: formData.description.trim(),
         startingPrice: parseFloat(formData.startingPrice),
-        reservePrice: formData.hasReservePrice ? parseFloat(formData.reservePrice) : undefined,
+        reservePrice: formData.hasReservePrice
+          ? parseFloat(formData.reservePrice)
+          : undefined,
         hasReservePrice: formData.hasReservePrice,
         auctionStartDate: formData.auctionStartDate,
         auctionStartTime: formData.auctionStartTime,
         auctionEndDate: formData.auctionEndDate,
         auctionEndTime: formData.auctionEndTime,
         // Vehicle specific
-        ...(formData.itemType === 'vehicle' && {
+        ...(formData.itemType === "vehicle" && {
+          vehicleType: formData.vehicleType,
           vehicleMake: formData.vehicleMake,
           vehicleModel: formData.vehicleModel,
           vehicleYear: formData.vehicleYear,
@@ -187,27 +234,30 @@ const PostItemTab: React.FC = () => {
           vehicleCondition: formData.vehicleCondition,
         }),
         // Electronics specific
-        ...(formData.itemType === 'electronic' && {
+        ...(formData.itemType === "electronic" && {
           electronicsBrand: formData.electronicsBrand,
           electronicsModel: formData.electronicsModel,
           electronicsYear: formData.electronicsYear,
           electronicsCondition: formData.electronicsCondition,
         }),
         // Images (uploaded URLs)
-        images: formData.images
+        images: formData.images,
       };
 
-  // Attach status (draft or pending_review)
-  // normalize 'pending' to 'pending_review' which admin API expects
-  const normalizedStatus = submitStatus === 'pending' ? 'pending_review' : submitStatus;
-  (auctionData as any).status = normalizedStatus;
+      // Attach status (draft or pending_review)
+      // normalize 'pending' to 'pending_review' which admin API expects
+      const normalizedStatus =
+        submitStatus === "pending" ? "pending_review" : submitStatus;
+      (auctionData as any).status = normalizedStatus;
 
-  const result = await apiService.createAuction(auctionData);
+      const result = await apiService.createAuction(auctionData);
 
       if (result.success) {
         setSubmitResult(result.data);
-        setSuccessMessage("Auction created successfully! Your item has been submitted for review.");
-        
+        setSuccessMessage(
+          "Auction created successfully! Your item has been submitted for review."
+        );
+
         // Reset form
         setFormData({
           itemType: "",
@@ -220,6 +270,7 @@ const PostItemTab: React.FC = () => {
           auctionStartTime: "",
           auctionEndDate: "",
           auctionEndTime: "",
+          vehicleType: "",
           vehicleMake: "",
           vehicleModel: "",
           vehicleYear: "",
@@ -229,17 +280,21 @@ const PostItemTab: React.FC = () => {
           electronicsModel: "",
           electronicsYear: "",
           electronicsCondition: "",
-          images: []
+          images: [],
         });
         // If saved as draft, navigate to drafts tab so the seller sees their draft
-        if (normalizedStatus === 'draft') {
-          navigate('/dashboard/drafts');
+        if (normalizedStatus === "draft") {
+          navigate("/dashboard/drafts");
         }
       } else {
-        setErrors({ submit: result.error || "Failed to create auction. Please try again." });
+        setErrors({
+          submit: result.error || "Failed to create auction. Please try again.",
+        });
       }
     } catch (error: any) {
-      setErrors({ submit: error.message || "Failed to create auction. Please try again." });
+      setErrors({
+        submit: error.message || "Failed to create auction. Please try again.",
+      });
     } finally {
       setIsSubmitting(false);
     }
@@ -260,7 +315,9 @@ const PostItemTab: React.FC = () => {
         >
           <Car className="w-8 h-8 mx-auto mb-2" />
           <div className="font-medium">Vehicle</div>
-          <div className="text-sm opacity-75">Cars, Motorbikes, Trucks</div>
+          <div className="text-sm opacity-75">
+            Cars, Motorbikes, Trucks, SUVs, etc.
+          </div>
         </button>
         <button
           type="button"
@@ -287,8 +344,35 @@ const PostItemTab: React.FC = () => {
       </h3>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         <div className="space-y-2">
+          <label className="text-sm font-medium">Vehicle Type *</label>
+          <Select
+            value={formData.vehicleType}
+            onValueChange={(value) => handleInputChange("vehicleType", value)}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Select vehicle type" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="car">Car</SelectItem>
+              <SelectItem value="motorbike">Motorbike</SelectItem>
+              <SelectItem value="truck">Truck</SelectItem>
+              <SelectItem value="van">Van</SelectItem>
+              <SelectItem value="suv">SUV</SelectItem>
+              <SelectItem value="pickup">Pickup Truck</SelectItem>
+              <SelectItem value="bus">Bus</SelectItem>
+              <SelectItem value="trailer">Trailer</SelectItem>
+            </SelectContent>
+          </Select>
+          {errors.vehicleType && (
+            <p className="text-red-500 text-sm">{errors.vehicleType}</p>
+          )}
+        </div>
+        <div className="space-y-2">
           <label className="text-sm font-medium">Make *</label>
-          <Select value={formData.vehicleMake} onValueChange={(value) => handleInputChange("vehicleMake", value)}>
+          <Select
+            value={formData.vehicleMake}
+            onValueChange={(value) => handleInputChange("vehicleMake", value)}
+          >
             <SelectTrigger>
               <SelectValue placeholder="Select make" />
             </SelectTrigger>
@@ -309,8 +393,8 @@ const PostItemTab: React.FC = () => {
         </div>
         <div className="space-y-2">
           <label className="text-sm font-medium">Model *</label>
-          <Input 
-            placeholder="e.g., Axio, Vitz, Fielder" 
+          <Input
+            placeholder="e.g., Axio, Vitz, Fielder"
             value={formData.vehicleModel}
             onChange={(e) => handleInputChange("vehicleModel", e.target.value)}
             required
@@ -318,30 +402,42 @@ const PostItemTab: React.FC = () => {
         </div>
         <div className="space-y-2">
           <label className="text-sm font-medium">Year *</label>
-          <Select value={formData.vehicleYear} onValueChange={(value) => handleInputChange("vehicleYear", value)}>
+          <Select
+            value={formData.vehicleYear}
+            onValueChange={(value) => handleInputChange("vehicleYear", value)}
+          >
             <SelectTrigger>
               <SelectValue placeholder="Select year" />
             </SelectTrigger>
             <SelectContent>
-              {Array.from({ length: 25 }, (_, i) => 2025 - i).map(year => (
-                <SelectItem key={year} value={year.toString()}>{year}</SelectItem>
+              {Array.from({ length: 25 }, (_, i) => 2025 - i).map((year) => (
+                <SelectItem key={year} value={year.toString()}>
+                  {year}
+                </SelectItem>
               ))}
             </SelectContent>
           </Select>
         </div>
         <div className="space-y-2">
           <label className="text-sm font-medium">Mileage (KM) *</label>
-          <Input 
-            type="number" 
-            placeholder="e.g., 45000" 
+          <Input
+            type="number"
+            placeholder="e.g., 45000"
             value={formData.vehicleMileage}
-            onChange={(e) => handleInputChange("vehicleMileage", e.target.value)}
+            onChange={(e) =>
+              handleInputChange("vehicleMileage", e.target.value)
+            }
             required
           />
         </div>
         <div className="space-y-2">
           <label className="text-sm font-medium">Condition *</label>
-          <Select value={formData.vehicleCondition} onValueChange={(value) => handleInputChange("vehicleCondition", value)}>
+          <Select
+            value={formData.vehicleCondition}
+            onValueChange={(value) =>
+              handleInputChange("vehicleCondition", value)
+            }
+          >
             <SelectTrigger>
               <SelectValue placeholder="Select condition" />
             </SelectTrigger>
@@ -368,7 +464,12 @@ const PostItemTab: React.FC = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         <div className="space-y-2">
           <label className="text-sm font-medium">Brand *</label>
-          <Select value={formData.electronicsBrand} onValueChange={(value) => handleInputChange("electronicsBrand", value)}>
+          <Select
+            value={formData.electronicsBrand}
+            onValueChange={(value) =>
+              handleInputChange("electronicsBrand", value)
+            }
+          >
             <SelectTrigger>
               <SelectValue placeholder="Select brand" />
             </SelectTrigger>
@@ -392,29 +493,43 @@ const PostItemTab: React.FC = () => {
         </div>
         <div className="space-y-2">
           <label className="text-sm font-medium">Model *</label>
-          <Input 
-            placeholder="e.g., iPhone 14, Galaxy S23, MacBook Pro" 
+          <Input
+            placeholder="e.g., iPhone 14, Galaxy S23, MacBook Pro"
             value={formData.electronicsModel}
-            onChange={(e) => handleInputChange("electronicsModel", e.target.value)}
+            onChange={(e) =>
+              handleInputChange("electronicsModel", e.target.value)
+            }
             required
           />
         </div>
         <div className="space-y-2">
           <label className="text-sm font-medium">Year *</label>
-          <Select value={formData.electronicsYear} onValueChange={(value) => handleInputChange("electronicsYear", value)}>
+          <Select
+            value={formData.electronicsYear}
+            onValueChange={(value) =>
+              handleInputChange("electronicsYear", value)
+            }
+          >
             <SelectTrigger>
               <SelectValue placeholder="Select year" />
             </SelectTrigger>
             <SelectContent>
-              {Array.from({ length: 15 }, (_, i) => 2025 - i).map(year => (
-                <SelectItem key={year} value={year.toString()}>{year}</SelectItem>
+              {Array.from({ length: 15 }, (_, i) => 2025 - i).map((year) => (
+                <SelectItem key={year} value={year.toString()}>
+                  {year}
+                </SelectItem>
               ))}
             </SelectContent>
           </Select>
         </div>
         <div className="space-y-2">
           <label className="text-sm font-medium">Condition *</label>
-          <Select value={formData.electronicsCondition} onValueChange={(value) => handleInputChange("electronicsCondition", value)}>
+          <Select
+            value={formData.electronicsCondition}
+            onValueChange={(value) =>
+              handleInputChange("electronicsCondition", value)
+            }
+          >
             <SelectTrigger>
               <SelectValue placeholder="Select condition" />
             </SelectTrigger>
@@ -451,8 +566,12 @@ const PostItemTab: React.FC = () => {
               {successMessage}
               {submitResult && (
                 <div className="mt-2 text-sm">
-                  <p><strong>Auction ID:</strong> {submitResult.auction_id}</p>
-                  <p><strong>Status:</strong> {submitResult.status}</p>
+                  <p>
+                    <strong>Auction ID:</strong> {submitResult.auction_id}
+                  </p>
+                  <p>
+                    <strong>Status:</strong> {submitResult.status}
+                  </p>
                 </div>
               )}
             </AlertDescription>
@@ -491,53 +610,81 @@ const PostItemTab: React.FC = () => {
             <>
               {/* Common Fields */}
               <div className="space-y-4">
-                <h3 className="text-lg font-medium text-gray-900">Basic Information</h3>
+                <h3 className="text-lg font-medium text-gray-900">
+                  Basic Information
+                </h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <label className="text-sm font-medium">Item Title *</label>
-                    <Input 
-                      placeholder={formData.itemType === "vehicle" ? "e.g., Toyota Axio 2016" : "e.g., iPhone 14 Pro Max 256GB"} 
+                    <Input
+                      placeholder={
+                        formData.itemType === "vehicle"
+                          ? "e.g., Toyota Axio 2016"
+                          : "e.g., iPhone 14 Pro Max 256GB"
+                      }
                       value={formData.title}
-                      onChange={(e) => handleInputChange("title", e.target.value)}
+                      onChange={(e) =>
+                        handleInputChange("title", e.target.value)
+                      }
                       required
                     />
-                    {errors.title && <p className="text-red-500 text-sm">{errors.title}</p>}
+                    {errors.title && (
+                      <p className="text-red-500 text-sm">{errors.title}</p>
+                    )}
                   </div>
                   <div className="space-y-2">
-                    <label className="text-sm font-medium">Starting Price (Ksh) *</label>
-                    <Input 
-                      type="number" 
-                      placeholder="50000" 
+                    <label className="text-sm font-medium">
+                      Starting Price (Ksh) *
+                    </label>
+                    <Input
+                      type="number"
+                      placeholder="50000"
                       value={formData.startingPrice}
-                      onChange={(e) => handleInputChange("startingPrice", e.target.value)}
+                      onChange={(e) =>
+                        handleInputChange("startingPrice", e.target.value)
+                      }
                       required
                     />
-                    {errors.startingPrice && <p className="text-red-500 text-sm">{errors.startingPrice}</p>}
+                    {errors.startingPrice && (
+                      <p className="text-red-500 text-sm">
+                        {errors.startingPrice}
+                      </p>
+                    )}
                   </div>
                 </div>
-                
+
                 <div className="space-y-4">
                   <div className="flex items-center space-x-2">
-                    <Checkbox 
+                    <Checkbox
                       id="hasReservePrice"
                       checked={formData.hasReservePrice}
-                      onCheckedChange={(checked) => handleInputChange("hasReservePrice", checked as boolean)}
+                      onCheckedChange={(checked) =>
+                        handleInputChange("hasReservePrice", checked as boolean)
+                      }
                     />
-                    <label htmlFor="hasReservePrice" className="text-sm font-medium">
+                    <label
+                      htmlFor="hasReservePrice"
+                      className="text-sm font-medium"
+                    >
                       Set Reserve Price (Optional)
                     </label>
                   </div>
                   {formData.hasReservePrice && (
                     <div className="space-y-2">
-                      <label className="text-sm font-medium">Reserve Price (Ksh)</label>
-                      <Input 
-                        type="number" 
-                        placeholder="900000" 
+                      <label className="text-sm font-medium">
+                        Reserve Price (Ksh)
+                      </label>
+                      <Input
+                        type="number"
+                        placeholder="900000"
                         value={formData.reservePrice}
-                        onChange={(e) => handleInputChange("reservePrice", e.target.value)}
+                        onChange={(e) =>
+                          handleInputChange("reservePrice", e.target.value)
+                        }
                       />
                       <p className="text-xs text-gray-500">
-                        Reserve price is the minimum amount you're willing to accept. It's hidden from bidders.
+                        Reserve price is the minimum amount you're willing to
+                        accept. It's hidden from bidders.
                       </p>
                     </div>
                   )}
@@ -545,11 +692,13 @@ const PostItemTab: React.FC = () => {
 
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Description *</label>
-                  <Textarea 
+                  <Textarea
                     placeholder="Provide detailed description including condition, features, reason for sale, etc."
                     rows={4}
                     value={formData.description}
-                    onChange={(e) => handleInputChange("description", e.target.value)}
+                    onChange={(e) =>
+                      handleInputChange("description", e.target.value)
+                    }
                     required
                   />
                 </div>
@@ -567,19 +716,29 @@ const PostItemTab: React.FC = () => {
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
                         <label className="text-sm font-medium">Date *</label>
-                        <Input 
-                          type="date" 
+                        <Input
+                          type="date"
                           value={formData.auctionStartDate}
-                          onChange={(e) => handleInputChange("auctionStartDate", e.target.value)}
+                          onChange={(e) =>
+                            handleInputChange(
+                              "auctionStartDate",
+                              e.target.value
+                            )
+                          }
                           required
                         />
                       </div>
                       <div className="space-y-2">
                         <label className="text-sm font-medium">Time *</label>
-                        <Input 
-                          type="time" 
+                        <Input
+                          type="time"
                           value={formData.auctionStartTime}
-                          onChange={(e) => handleInputChange("auctionStartTime", e.target.value)}
+                          onChange={(e) =>
+                            handleInputChange(
+                              "auctionStartTime",
+                              e.target.value
+                            )
+                          }
                           required
                         />
                       </div>
@@ -590,19 +749,23 @@ const PostItemTab: React.FC = () => {
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
                         <label className="text-sm font-medium">Date *</label>
-                        <Input 
-                          type="date" 
+                        <Input
+                          type="date"
                           value={formData.auctionEndDate}
-                          onChange={(e) => handleInputChange("auctionEndDate", e.target.value)}
+                          onChange={(e) =>
+                            handleInputChange("auctionEndDate", e.target.value)
+                          }
                           required
                         />
                       </div>
                       <div className="space-y-2">
                         <label className="text-sm font-medium">Time *</label>
-                        <Input 
-                          type="time" 
+                        <Input
+                          type="time"
                           value={formData.auctionEndTime}
-                          onChange={(e) => handleInputChange("auctionEndTime", e.target.value)}
+                          onChange={(e) =>
+                            handleInputChange("auctionEndTime", e.target.value)
+                          }
                           required
                         />
                       </div>
@@ -622,8 +785,12 @@ const PostItemTab: React.FC = () => {
                   <label className="text-sm font-medium">Upload Images *</label>
                   <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
                     <Upload className="w-8 h-8 text-gray-400 mx-auto mb-2" />
-                    <p className="text-sm text-gray-600 mb-2">Click to upload or drag and drop</p>
-                    <p className="text-xs text-gray-400">PNG, JPG up to 5MB each (Max 8 images)</p>
+                    <p className="text-sm text-gray-600 mb-2">
+                      Click to upload or drag and drop
+                    </p>
+                    <p className="text-xs text-gray-400">
+                      PNG, JPG up to 5MB each (Max 8 images)
+                    </p>
                     <input
                       type="file"
                       multiple
@@ -633,19 +800,28 @@ const PostItemTab: React.FC = () => {
                       id="image-upload"
                     />
                     <label htmlFor="image-upload">
-                      <Button variant="outline" className="mt-4" type="button" asChild>
+                      <Button
+                        variant="outline"
+                        className="mt-4"
+                        type="button"
+                        asChild
+                      >
                         <span>Choose Files</span>
                       </Button>
                     </label>
                   </div>
-                  
+
                   {/* Display uploaded images */}
                   {formData.images.length > 0 && (
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4">
                       {formData.images.map((image, index) => (
                         <div key={index} className="relative">
                           <img
-                            src={image.file ? URL.createObjectURL(image.file) : image.url}
+                            src={
+                              image.file
+                                ? URL.createObjectURL(image.file)
+                                : image.url
+                            }
                             alt={image.alt_text || `Upload ${index + 1}`}
                             className="w-full h-24 object-cover rounded-lg"
                           />
@@ -665,10 +841,23 @@ const PostItemTab: React.FC = () => {
 
               {/* Submit Buttons */}
               <div className="flex justify-end space-x-4 pt-6 border-t">
-                <Button variant="outline" type="button" disabled={isSubmitting} onClick={async (e) => { setIsSubmitting(true); await handleSubmit(e as any, 'draft'); }}>
+                <Button
+                  variant="outline"
+                  type="button"
+                  disabled={isSubmitting}
+                  onClick={async (e) => {
+                    setIsSubmitting(true);
+                    await handleSubmit(e as any, "draft");
+                  }}
+                >
                   Save as Draft
                 </Button>
-                <Button type="submit" className="bg-primary hover:bg-primary/90" disabled={isSubmitting} onClick={(e) => handleSubmit(e as any, 'pending')}>
+                <Button
+                  type="submit"
+                  className="bg-primary hover:bg-primary/90"
+                  disabled={isSubmitting}
+                  onClick={(e) => handleSubmit(e as any, "pending")}
+                >
                   {isSubmitting ? "Creating Auction..." : "Submit for Review"}
                 </Button>
               </div>

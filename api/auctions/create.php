@@ -210,7 +210,7 @@ try {
         $vehicle_stmt = $connection->prepare($vehicle_query);
         $vehicle_stmt->execute([
             $auction_id,
-            'car',
+            $data['vehicleType'] ?? 'car',
             $data['vehicleMake'],
             $data['vehicleModel'],
             intval($data['vehicleYear']),
