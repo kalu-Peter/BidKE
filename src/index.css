@@ -8,24 +8,24 @@ All colors MUST be HSL.
 
 @layer base {
   :root {
-    --background: 220 15% 97%;
-    --foreground: 225 15% 12%;
+    --background: 214 100% 9%;  /* #00072D - Deep Navy Background */
+    --foreground: 0 0% 95%;     /* Light text for contrast */
 
-    --card: 0 0% 100%;
-    --card-foreground: 225 15% 12%;
+    --card: 214 80% 12%;        /* Slightly lighter navy for cards */
+    --card-foreground: 0 0% 95%;
 
-    --popover: 0 0% 100%;
-    --popover-foreground: 225 15% 12%;
+    --popover: 214 80% 12%;
+    --popover-foreground: 0 0% 95%;
 
-    /* BidLode Official Colors */
-    --primary: 216 94% 30%;  /* #084597 - Primary Blue */
+    /* BidLode Official Colors - Dark Theme Optimized */
+    --primary: 218 85% 60%;     /* Brighter blue for dark background */
     --primary-foreground: 0 0% 98%;
 
-    --secondary: 218 55% 54%;  /* #205DAD - Secondary Blue */
+    --secondary: 220 70% 50%;   /* Adjusted secondary for contrast */
     --secondary-foreground: 0 0% 98%;
 
-    --muted: 220 20% 94%;
-    --muted-foreground: 225 10% 45%;
+    --muted: 214 50% 15%;       /* Dark muted background */
+    --muted-foreground: 0 0% 70%; /* Light muted text */
 
     --accent: 0 82% 72%;  /* #FF7272 - Coral Red */
     --accent-foreground: 0 0% 98%;
@@ -33,24 +33,24 @@ All colors MUST be HSL.
     --destructive: 0 70% 50%;
     --destructive-foreground: 0 0% 98%;
 
-    --border: 220 15% 88%;
-    --input: 220 15% 88%;
-    --ring: 216 94% 30%;  /* Primary Blue */
+    --border: 214 60% 20%;      /* Dark navy borders */
+    --input: 214 60% 18%;       /* Dark input backgrounds */
+    --ring: 218 85% 60%;        /* Bright blue focus ring */
 
     --radius: 0.75rem;
 
-    /* Custom design tokens with BidLode colors */
-    --gradient-primary: linear-gradient(135deg, hsl(216 94% 30%), hsl(218 55% 54%));
+    /* Custom design tokens - Dark Theme Optimized */
+    --gradient-primary: linear-gradient(135deg, hsl(218 85% 60%), hsl(220 70% 50%));
     --gradient-accent: linear-gradient(135deg, hsl(0 82% 72%), hsl(0 70% 65%));
-    --gradient-hero: linear-gradient(135deg, hsl(216 94% 30%) 0%, hsl(218 55% 54%) 50%, hsl(0 82% 72%) 100%);
-    --shadow-elegant: 0 10px 30px -10px hsl(216 94% 30% / 0.3);
-    --shadow-card: 0 4px 20px hsl(225 15% 12% / 0.08);
+    --gradient-hero: linear-gradient(135deg, hsl(218 85% 60%) 0%, hsl(220 70% 50%) 50%, hsl(0 82% 72%) 100%);
+    --shadow-elegant: 0 10px 30px -10px hsl(218 85% 60% / 0.4);
+    --shadow-card: 0 4px 20px hsl(214 100% 5% / 0.6);
 
-    --sidebar-background: 0 0% 98%;
+    --sidebar-background: 214 100% 7%;  /* Even darker for sidebar */
 
-    --sidebar-foreground: 216 94% 30%;  /* Primary Blue */
+    --sidebar-foreground: 0 0% 95%;
 
-    --sidebar-primary: 216 94% 30%;  /* Primary Blue */
+    --sidebar-primary: 218 85% 60%;
 
     --sidebar-primary-foreground: 0 0% 98%;
 
@@ -58,48 +58,48 @@ All colors MUST be HSL.
 
     --sidebar-accent-foreground: 0 0% 98%;
 
-    --sidebar-border: 220 13% 91%;
+    --sidebar-border: 214 60% 15%;
 
-    --sidebar-ring: 218 55% 54%;  /* Secondary Blue */
+    --sidebar-ring: 218 85% 60%;
   }
 
   .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
+    --background: 214 100% 9%;   /* Same as light mode - consistent dark navy */
+    --foreground: 0 0% 95%;
 
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
+    --card: 214 80% 12%;
+    --card-foreground: 0 0% 95%;
 
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
+    --popover: 214 80% 12%;
+    --popover-foreground: 0 0% 95%;
 
-    /* BidLode Dark Mode Colors */
-    --primary: 218 55% 54%;  /* Secondary Blue for better contrast in dark mode */
+    /* Dark Mode - Consistent with Light Mode Navy Theme */
+    --primary: 218 85% 65%;      /* Even brighter for dark mode */
     --primary-foreground: 0 0% 98%;
 
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
+    --secondary: 220 70% 55%;
+    --secondary-foreground: 0 0% 98%;
 
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
+    --muted: 214 50% 15%;
+    --muted-foreground: 0 0% 70%;
 
     --accent: 0 82% 72%;  /* Coral Red */
     --accent-foreground: 0 0% 98%;
 
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
+    --destructive: 0 70% 60%;
+    --destructive-foreground: 0 0% 98%;
 
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 218 55% 54%;  /* Secondary Blue */
-    --sidebar-background: 216 94% 15%;  /* Darker Primary Blue */
-    --sidebar-foreground: 240 4.8% 95.9%;
-    --sidebar-primary: 218 55% 54%;  /* Secondary Blue */
+    --border: 214 60% 20%;
+    --input: 214 60% 18%;
+    --ring: 218 85% 65%;
+    --sidebar-background: 214 100% 7%;
+    --sidebar-foreground: 0 0% 95%;
+    --sidebar-primary: 218 85% 65%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 0 82% 72%;  /* Coral Red */
+    --sidebar-accent: 0 82% 72%;
     --sidebar-accent-foreground: 0 0% 98%;
-    --sidebar-border: 240 3.7% 15.9%;
-    --sidebar-ring: 218 55% 54%;  /* Secondary Blue */
+    --sidebar-border: 214 60% 15%;
+    --sidebar-ring: 218 85% 65%;
   }
 }
 

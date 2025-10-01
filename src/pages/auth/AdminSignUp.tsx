@@ -1,10 +1,16 @@
-import React, { useState } from 'react';
-import { apiService } from '@/services/api';
-import { Link, useNavigate } from 'react-router-dom';
+import React, { useState } from "react";
+import { apiService } from "@/services/api";
+import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Eye, EyeOff, Shield, UserPlus } from "lucide-react";
 
@@ -20,81 +26,81 @@ interface AdminSignUpData {
 const AdminSignUp: React.FC = () => {
   const navigate = useNavigate();
   const [formData, setFormData] = useState<AdminSignUpData>({
-    username: '',
-    email: '',
-    password: '',
-    confirmPassword: '',
-    phone: '',
-    fullName: ''
+    username: "",
+    email: "",
+    password: "",
+    confirmPassword: "",
+    phone: "",
+    fullName: "",
   });
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      [name]: value
+      [name]: value,
     }));
     // Clear error when user starts typing
-    if (error) setError('');
+    if (error) setError("");
   };
 
   const validateForm = (): boolean => {
     if (!formData.username.trim()) {
-      setError('Username is required');
+      setError("Username is required");
       return false;
     }
-    
+
     if (!formData.email.trim()) {
-      setError('Email is required');
+      setError("Email is required");
       return false;
     }
-    
+
     if (!/\S+@\S+\.\S+/.test(formData.email)) {
-      setError('Please enter a valid email address');
+      setError("Please enter a valid email address");
       return false;
     }
-    
+
     if (!formData.password) {
-      setError('Password is required');
+      setError("Password is required");
       return false;
     }
-    
+
     if (formData.password.length < 6) {
-      setError('Password must be at least 6 characters long');
+      setError("Password must be at least 6 characters long");
       return false;
     }
-    
+
     if (formData.password !== formData.confirmPassword) {
-      setError('Passwords do not match');
+      setError("Passwords do not match");
       return false;
     }
-    
+
     if (!formData.phone.trim()) {
-      setError('Phone number is required');
+      setError("Phone number is required");
       return false;
     }
-    
+
     if (!formData.fullName.trim()) {
-      setError('Full name is required');
+      setError("Full name is required");
       return false;
     }
-    
+
     return true;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!validateForm()) {
       return;
     }
-    
+
     setIsLoading(true);
-    setError('');
+    setError("");
 
     try {
       const res = await apiService.createAdminUser({
@@ -102,37 +108,39 @@ const AdminSignUp: React.FC = () => {
         email: formData.email,
         password: formData.password,
         phone: formData.phone,
-        fullName: formData.fullName
+        fullName: formData.fullName,
       });
 
       if (res.success) {
         // Redirect to login with success message
-        navigate('/login', { 
-          state: { 
-            message: 'Admin account created successfully! Please log in.',
-            type: 'success'
-          }
+        navigate("/login", {
+          state: {
+            message: "Admin account created successfully! Please log in.",
+            type: "success",
+          },
         });
       } else {
-        setError(res.error || 'Registration failed');
+        setError(res.error || "Registration failed");
       }
     } catch (error) {
-      console.error('Admin registration error:', error);
-      setError('Network error. Please try again.');
+      console.error("Admin registration error:", error);
+      setError("Network error. Please try again.");
     } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 flex items-center justify-center p-4">
-      <Card className="w-full max-w-md shadow-xl border-0 bg-white/80 backdrop-blur-sm">
+    <div className="min-h-screen bg-background flex items-center justify-center p-4">
+      <Card className="w-full max-w-md shadow-xl border border-border bg-card/95 backdrop-blur-sm">
         <CardHeader className="space-y-4 text-center">
           <div className="mx-auto w-16 h-16 bg-gradient-to-br from-red-500 to-red-600 rounded-full flex items-center justify-center">
             <Shield className="w-8 h-8 text-white" />
           </div>
           <div>
-            <CardTitle className="text-2xl font-bold text-gray-900">Admin Registration</CardTitle>
+            <CardTitle className="text-2xl font-bold text-gray-900">
+              Admin Registration
+            </CardTitle>
             <CardDescription className="text-gray-600">
               Create an administrator account for BidKE
             </CardDescription>
@@ -142,8 +150,10 @@ const AdminSignUp: React.FC = () => {
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             {error && (
-              <Alert className="border-red-200 bg-red-50">
-                <AlertDescription className="text-red-800">{error}</AlertDescription>
+              <Alert className="border-destructive/20 bg-destructive/10 text-destructive">
+                <AlertDescription className="text-red-800">
+                  {error}
+                </AlertDescription>
               </Alert>
             )}
 
@@ -257,8 +267,8 @@ const AdminSignUp: React.FC = () => {
               </div>
             </div>
 
-            <Button 
-              type="submit" 
+            <Button
+              type="submit"
               className="w-full bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white font-semibold py-2 px-4 rounded-md transition-all duration-200"
               disabled={isLoading}
             >
@@ -278,8 +288,11 @@ const AdminSignUp: React.FC = () => {
 
           <div className="mt-6 text-center">
             <p className="text-sm text-gray-600">
-              Already have an account?{' '}
-              <Link to="/login" className="font-medium text-red-600 hover:text-red-500">
+              Already have an account?{" "}
+              <Link
+                to="/login"
+                className="font-medium text-red-600 hover:text-red-500"
+              >
                 Sign in here
               </Link>
             </p>

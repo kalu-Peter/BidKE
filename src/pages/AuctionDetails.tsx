@@ -471,13 +471,13 @@ const AuctionDetails = () => {
     return (
       <>
         {user ? <UserHeader /> : <Header />}
-        <div className="min-h-screen bg-gray-50 pt-20 flex items-center justify-center">
+        <div className="min-h-screen bg-background pt-20 flex items-center justify-center">
           <div className="text-center">
             <Loader2 className="w-12 h-12 animate-spin mx-auto mb-4 text-primary" />
-            <h2 className="text-xl font-semibold text-gray-900 mb-2">
+            <h2 className="text-xl font-semibold text-foreground mb-2">
               Loading Auction Details
             </h2>
-            <p className="text-gray-600">
+            <p className="text-muted-foreground">
               Please wait while we fetch the auction information...
             </p>
           </div>
@@ -491,13 +491,13 @@ const AuctionDetails = () => {
     return (
       <>
         {user ? <UserHeader /> : <Header />}
-        <div className="min-h-screen bg-gray-50 pt-20 flex items-center justify-center">
+        <div className="min-h-screen bg-background pt-20 flex items-center justify-center">
           <div className="text-center max-w-md mx-auto">
             <AlertTriangle className="w-16 h-16 text-red-500 mx-auto mb-4" />
-            <h2 className="text-xl font-semibold text-gray-900 mb-2">
+            <h2 className="text-xl font-semibold text-foreground mb-2">
               Error Loading Auction
             </h2>
-            <p className="text-gray-600 mb-4">{error}</p>
+            <p className="text-muted-foreground mb-4">{error}</p>
             <Button onClick={() => navigate("/browse-auctions")}>
               Back to Auctions
             </Button>
@@ -512,12 +512,12 @@ const AuctionDetails = () => {
     return (
       <>
         {user ? <UserHeader /> : <Header />}
-        <div className="min-h-screen bg-gray-50 pt-20 flex items-center justify-center">
+        <div className="min-h-screen bg-background pt-20 flex items-center justify-center">
           <div className="text-center">
-            <h2 className="text-xl font-semibold text-gray-900 mb-2">
+            <h2 className="text-xl font-semibold text-foreground mb-2">
               Auction Not Found
             </h2>
-            <p className="text-gray-600 mb-4">
+            <p className="text-muted-foreground mb-4">
               The auction you're looking for doesn't exist.
             </p>
             <Button onClick={() => navigate("/browse-auctions")}>
@@ -546,7 +546,7 @@ const AuctionDetails = () => {
         }
       />
 
-      <div className="min-h-screen bg-gray-50 pt-20">
+      <div className="min-h-screen bg-background pt-20">
         <div className="container mx-auto px-4 py-8">
           {/* Breadcrumb */}
           <div className="flex items-center space-x-2 text-sm text-gray-600 mb-6">
@@ -570,7 +570,7 @@ const AuctionDetails = () => {
               {/* Image Carousel */}
               <Card>
                 <CardContent className="p-0">
-                  <div className="relative aspect-video bg-gray-200 rounded-lg overflow-hidden">
+                  <div className="relative aspect-video bg-muted rounded-lg overflow-hidden">
                     <img
                       src={auction.images[currentImageIndex]}
                       alt={`${auction.title} - Image ${currentImageIndex + 1}`}
@@ -594,7 +594,7 @@ const AuctionDetails = () => {
                     <Button
                       variant="outline"
                       size="sm"
-                      className="absolute left-2 top-1/2 transform -translate-y-1/2 bg-white/90 hover:bg-white"
+                      className="absolute left-2 top-1/2 transform -translate-y-1/2 bg-card/90 hover:bg-card"
                       onClick={handlePrevImage}
                     >
                       <ChevronLeft className="w-4 h-4" />
@@ -602,7 +602,7 @@ const AuctionDetails = () => {
                     <Button
                       variant="outline"
                       size="sm"
-                      className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-white/90 hover:bg-white"
+                      className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-card/90 hover:bg-card"
                       onClick={handleNextImage}
                     >
                       <ChevronRight className="w-4 h-4" />
@@ -618,7 +618,7 @@ const AuctionDetails = () => {
                       <Button
                         variant="outline"
                         size="sm"
-                        className="bg-white/90 hover:bg-white"
+                        className="bg-card/90 hover:bg-card"
                         onClick={handleToggleWatch}
                       >
                         <Heart
@@ -630,7 +630,7 @@ const AuctionDetails = () => {
                       <Button
                         variant="outline"
                         size="sm"
-                        className="bg-white/90 hover:bg-white"
+                        className="bg-card/90 hover:bg-card"
                       >
                         <Share2 className="w-4 h-4" />
                       </Button>
@@ -1018,7 +1018,7 @@ const AuctionDetails = () => {
                         className={`flex items-center justify-between p-3 rounded ${
                           bid.isCurrentUser
                             ? "bg-primary/5 border border-primary/20"
-                            : "bg-gray-50"
+                            : "bg-muted"
                         }`}
                       >
                         <div className="flex-1">
@@ -1067,7 +1067,7 @@ const AuctionDetails = () => {
       {/* Place Bid Modal */}
       {showPlaceBidModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-          <div className="bg-white rounded-lg w-full max-w-md p-6">
+          <div className="bg-card rounded-lg w-full max-w-md p-6">
             <h3 className="text-lg font-semibold mb-2">Place a Bid</h3>
             <p className="text-sm text-gray-600 mb-4">
               Please confirm you have a valid payment method on file before

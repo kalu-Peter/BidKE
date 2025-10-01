@@ -12,7 +12,7 @@ import { AlertCircle, CheckCircle } from "lucide-react";
 const SignUp = () => {
   const navigate = useNavigate();
   const { register, isSubmitting } = useAuth();
-  
+
   const [formData, setFormData] = useState({
     username: "",
     email: "",
@@ -25,15 +25,15 @@ const SignUp = () => {
   const [successMessage, setSuccessMessage] = useState<string>("");
 
   const updateField = (field: string, value: string) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+    setFormData((prev) => ({ ...prev, [field]: value }));
     if (errors[field]) {
-      setErrors(prev => ({ ...prev, [field]: "" }));
+      setErrors((prev) => ({ ...prev, [field]: "" }));
     }
   };
 
   const validateForm = () => {
     const newErrors: { [key: string]: string } = {};
-    
+
     if (!formData.username) newErrors.username = "Username is required";
     if (!formData.email) newErrors.email = "Email is required";
     if (!/\S+@\S+\.\S+/.test(formData.email)) {
@@ -54,7 +54,7 @@ const SignUp = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!validateForm()) return;
 
     try {
@@ -62,31 +62,39 @@ const SignUp = () => {
         username: formData.username,
         email: formData.email,
         password: formData.password,
-        phone: formData.phone
+        phone: formData.phone,
       };
 
       const result = await register(registrationData);
-      
+
       if (result.success) {
-        setSuccessMessage("Registration successful! Your account has been created with both buyer and seller access. Please check your email for verification instructions.");
+        setSuccessMessage(
+          "Registration successful! Your account has been created with both buyer and seller access. Please check your email for verification instructions."
+        );
         setErrors({});
-        
+
         // Redirect to login after 3 seconds
         setTimeout(() => {
-          navigate('/login', { 
-            state: { 
-              message: 'Registration successful! Please log in to access your buyer and seller dashboard.',
-              email: formData.email 
-            }
+          navigate("/login", {
+            state: {
+              message:
+                "Registration successful! Please log in to access your buyer and seller dashboard.",
+              email: formData.email,
+            },
           });
         }, 3000);
       } else {
         // Map validation errors from backend to form fields if present
         if ((result as any).validationErrors) {
-          const v = (result as any).validationErrors as { [key: string]: string };
-          setErrors(prev => ({ ...prev, ...v }));
+          const v = (result as any).validationErrors as {
+            [key: string]: string;
+          };
+          setErrors((prev) => ({ ...prev, ...v }));
         }
-        setErrors(prev => ({ ...prev, submit: result.error || "Registration failed. Please try again." }));
+        setErrors((prev) => ({
+          ...prev,
+          submit: result.error || "Registration failed. Please try again.",
+        }));
         setSuccessMessage("");
       }
     } catch (error) {
@@ -98,15 +106,20 @@ const SignUp = () => {
   return (
     <>
       <Header />
-      <div className="min-h-screen bg-gray-50 pt-24 pb-12">
+      <div className="min-h-screen bg-background pt-24 pb-12">
         <div className="container mx-auto px-4">
           <div className="max-w-2xl mx-auto">
             <div className="text-center mb-8">
-              <h1 className="text-3xl font-bold text-gray-900 mb-2">Join BidLode</h1>
-              <p className="text-gray-600">Create your account to start buying and selling in auctions</p>
-              <div className="mt-2 p-3 bg-blue-50 rounded-lg border border-blue-200">
+              <h1 className="text-3xl font-bold text-gray-900 mb-2">
+                Join BidLode
+              </h1>
+              <p className="text-gray-600">
+                Create your account to start buying and selling in auctions
+              </p>
+              <div className="mt-2 p-3 bg-primary/10 rounded-lg border border-primary/20">
                 <p className="text-sm text-blue-800">
-                  ✨ One account gives you access to both buying and selling features
+                  ✨ One account gives you access to both buying and selling
+                  features
                 </p>
               </div>
             </div>
@@ -120,7 +133,10 @@ const SignUp = () => {
               </CardHeader>
               <CardContent>
                 {successMessage && (
-                  <Alert variant="default" className="mb-6 border-green-200 bg-green-50">
+                  <Alert
+                    variant="default"
+                    className="mb-6 border-green-500/20 bg-green-500/10 text-green-700 dark:text-green-300"
+                  >
                     <CheckCircle className="h-4 w-4 text-green-600" />
                     <AlertDescription className="text-green-800">
                       {successMessage}
@@ -144,7 +160,7 @@ const SignUp = () => {
                     error={errors.username}
                     placeholder="Enter your username"
                   />
-                  
+
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <FormField
                       label="Email Address"
@@ -165,7 +181,7 @@ const SignUp = () => {
                       placeholder="📱 +254 700 000 000"
                     />
                   </div>
-                  
+
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <FormField
                       label="Password"
@@ -180,7 +196,9 @@ const SignUp = () => {
                       label="Confirm Password"
                       type="password"
                       value={formData.confirmPassword}
-                      onChange={(value) => updateField("confirmPassword", value)}
+                      onChange={(value) =>
+                        updateField("confirmPassword", value)
+                      }
                       required
                       error={errors.confirmPassword}
                       placeholder="Confirm your password"
@@ -188,9 +206,9 @@ const SignUp = () => {
                   </div>
 
                   <div className="mt-8">
-                    <Button 
-                      type="submit" 
-                      className="w-full" 
+                    <Button
+                      type="submit"
+                      className="w-full"
                       disabled={isSubmitting}
                       size="lg"
                     >
@@ -198,8 +216,10 @@ const SignUp = () => {
                     </Button>
                   </div>
 
-                  <div className="mt-6 p-4 bg-gray-50 rounded-lg">
-                    <h4 className="font-medium text-gray-900 mb-2">What you get with your account:</h4>
+                  <div className="mt-6 p-4 bg-muted/20 rounded-lg">
+                    <h4 className="font-medium text-gray-900 mb-2">
+                      What you get with your account:
+                    </h4>
                     <ul className="text-sm text-gray-600 space-y-1">
                       <li>• 🛍️ Participate in auctions as a buyer</li>
                       <li>• 🏪 List and sell items as a seller</li>

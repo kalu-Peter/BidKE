@@ -188,9 +188,9 @@ const TrustSecurity = () => {
         }
         return user ? <UserHeader /> : <Header />;
       })()}
-      <div className="min-h-screen bg-gray-50 pt-20">
+      <div className="min-h-screen bg-background pt-20">
         {/* Hero Section */}
-        <section className="bg-gradient-to-r from-green-600 to-blue-600 text-white py-16">
+        <section className="bg-gradient-hero text-white py-16">
           <div className="container mx-auto px-4">
             <div className="max-w-4xl mx-auto text-center">
               <div className="flex justify-center mb-6">
@@ -208,7 +208,7 @@ const TrustSecurity = () => {
               <div className="flex flex-col md:flex-row gap-4 justify-center">
                 <Button
                   size="lg"
-                  className="bg-white text-green-600 hover:bg-gray-100"
+                  className="bg-primary-foreground text-primary hover:bg-primary-foreground/90"
                 >
                   <FileText className="w-5 h-5 mr-2" />
                   Security Documentation
@@ -290,7 +290,7 @@ const TrustSecurity = () => {
                     className="text-center hover:shadow-lg transition-shadow"
                   >
                     <CardContent className="p-8">
-                      <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                      <div className="w-16 h-16 bg-accent/10 rounded-full flex items-center justify-center mx-auto mb-4">
                         <IconComponent className="w-8 h-8 text-green-600" />
                       </div>
                       <div className="text-3xl font-bold text-gray-900 mb-2">
@@ -311,7 +311,7 @@ const TrustSecurity = () => {
         </section>
 
         {/* Protection Policies */}
-        <section className="py-16 bg-gray-50">
+        <section className="py-16 bg-muted/20">
           <div className="container mx-auto px-4">
             <div className="text-center mb-12">
               <h2 className="text-3xl font-bold text-gray-900 mb-4">
@@ -354,7 +354,7 @@ const TrustSecurity = () => {
         </section>
 
         {/* Certifications */}
-        <section className="py-16 bg-white">
+        <section className="py-16 bg-background">
           <div className="container mx-auto px-4">
             <div className="text-center mb-12">
               <h2 className="text-3xl font-bold text-gray-900 mb-4">
@@ -373,10 +373,10 @@ const TrustSecurity = () => {
                   className="text-center hover:shadow-lg transition-shadow"
                 >
                   <CardContent className="p-6">
-                    <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
                       <Award className="w-8 h-8 text-blue-600" />
                     </div>
-                    <Badge className="mb-3 bg-blue-100 text-blue-800">
+                    <Badge className="mb-3 bg-primary/10 text-primary">
                       {cert.badge}
                     </Badge>
                     <h3 className="font-semibold text-gray-900 mb-2">
@@ -391,7 +391,7 @@ const TrustSecurity = () => {
         </section>
 
         {/* Incident Reporting */}
-        <section className="py-16 bg-red-50">
+        <section className="py-16 bg-destructive/10">
           <div className="container mx-auto px-4">
             <div className="text-center mb-12">
               <h2 className="text-3xl font-bold text-gray-900 mb-4">
@@ -412,7 +412,7 @@ const TrustSecurity = () => {
                     className="text-center hover:shadow-lg transition-shadow"
                   >
                     <CardContent className="p-6">
-                      <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                      <div className="w-16 h-16 bg-destructive/10 rounded-full flex items-center justify-center mx-auto mb-4">
                         <IconComponent className="w-8 h-8 text-red-600" />
                       </div>
                       <h3 className="text-xl font-semibold text-gray-900 mb-3">

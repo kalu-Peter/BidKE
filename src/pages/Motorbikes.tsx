@@ -270,7 +270,7 @@ export default function Motorbikes() {
         {error && !loading && (
           <div className="container mx-auto px-4 py-12">
             <div className="max-w-md mx-auto">
-              <Alert className="border-red-200 bg-red-50">
+              <Alert className="border-destructive bg-destructive/10 text-destructive">
                 <AlertCircle className="h-4 w-4 text-red-600" />
                 <div className="ml-2">
                   <h3 className="text-red-800 font-semibold">
@@ -325,7 +325,7 @@ export default function Motorbikes() {
                         className={`h-8 w-8 p-0 rounded-full ${
                           bike.isWatched
                             ? "bg-accent text-white"
-                            : "bg-white/90 text-muted-foreground hover:bg-white"
+                            : "bg-card/90 text-muted-foreground hover:bg-card"
                         }`}
                         onClick={(e) => {
                           e.stopPropagation();

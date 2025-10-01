@@ -268,7 +268,7 @@ const ElectronicsPage = () => {
   return (
     <>
       {user ? <UserHeader /> : <Header />}
-      <div className="min-h-screen bg-gray-50 pt-20">
+      <div className="min-h-screen bg-background pt-20">
         {/* Hero Section */}
         <section className="bg-gradient-hero text-white py-16">
           <div className="container mx-auto px-4">
@@ -367,7 +367,7 @@ const ElectronicsPage = () => {
           <section className="py-16">
             <div className="container mx-auto px-4">
               <div className="max-w-md mx-auto">
-                <Alert className="border-red-200 bg-red-50">
+                <Alert className="border-destructive bg-destructive/10 text-destructive">
                   <AlertCircle className="h-4 w-4 text-red-600" />
                   <div className="ml-2">
                     <h3 className="text-red-800 font-semibold">
@@ -445,7 +445,7 @@ const ElectronicsPage = () => {
                     key={item.id}
                     className="group hover:shadow-xl transition-all duration-300"
                   >
-                    <div className="aspect-video bg-gray-200 rounded-t-lg relative overflow-hidden">
+                    <div className="aspect-video bg-muted rounded-t-lg relative overflow-hidden">
                       <img
                         src={item.images[0] || "/placeholder.svg"}
                         alt={item.title}
@@ -462,7 +462,7 @@ const ElectronicsPage = () => {
                           className={`absolute top-3 left-3 p-2 rounded-full transition-colors ${
                             item.isWatched
                               ? "bg-accent text-white"
-                              : "bg-white/90 text-gray-400 hover:text-accent hover:bg-white"
+                              : "bg-card/90 text-muted-foreground hover:text-accent hover:bg-card"
                           }`}
                         >
                           <Heart

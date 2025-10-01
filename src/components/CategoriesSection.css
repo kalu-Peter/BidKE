@@ -14,7 +14,7 @@
   height: 100%;
 }
 
-/* Auction Card Hover Effects */
+/* Auction Card Hover Effects - Dark Navy Theme */
 .auction-card {
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   transform: translateZ(0);
@@ -22,13 +22,14 @@
 
 .auction-card:hover {
   transform: translateY(-4px) scale(1.02);
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 20px 40px rgba(32, 93, 173, 0.3), 0 10px 20px rgba(0, 7, 45, 0.4);
 }
 
-/* Category Section Background Animations */
+/* Category Section Background Animations - Dark Navy Theme */
 .category-section {
   position: relative;
   overflow: hidden;
+  /* Let the gradient backgrounds from the component handle the styling */
 }
 
 .category-section::before {
@@ -38,7 +39,7 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background: linear-gradient(45deg, transparent 30%, rgba(255,255,255,0.1) 50%, transparent 70%);
+  background: linear-gradient(45deg, transparent 30%, rgba(32, 93, 173, 0.15) 50%, transparent 70%);
   transform: translateX(-100%);
   transition: transform 0.6s;
 }

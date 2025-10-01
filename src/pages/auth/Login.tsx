@@ -264,19 +264,19 @@ const LoginPage = () => {
   return (
     <>
       <Header />
-      <div className="min-h-screen bg-gray-50 pt-24 pb-12">
+      <div className="min-h-screen bg-background pt-24 pb-12">
         <div className="container mx-auto px-4">
           <div className="max-w-md mx-auto">
             <Card>
               <CardHeader className="text-center">
                 <CardTitle className="text-2xl">Sign In to BidKE</CardTitle>
-                <p className="text-gray-600 text-sm">
+                <p className="text-muted-foreground text-sm">
                   Access your unified buyer and seller dashboard
                 </p>
               </CardHeader>
               <CardContent>
                 {successMessage && (
-                  <Alert className="mb-6 border-green-200 bg-green-50">
+                  <Alert className="mb-6 border-green-500/20 bg-green-500/10 text-green-700 dark:text-green-300">
                     <CheckCircle className="h-4 w-4 text-green-600" />
                     <AlertDescription className="text-green-800">
                       {successMessage}
@@ -285,7 +285,7 @@ const LoginPage = () => {
                 )}
 
                 {/* Unified Access Info */}
-                <div className="mb-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                <div className="mb-6 p-4 bg-primary/10 rounded-lg border border-primary/20">
                   <h4 className="font-medium text-blue-800 mb-2">
                     ✨ Unified Account Access
                   </h4>
@@ -312,11 +312,11 @@ const LoginPage = () => {
                   <form onSubmit={handleSubmit} className="space-y-6">
                     {/* Dashboard Preference Selection */}
                     <div className="space-y-3">
-                      <label className="block text-sm font-medium text-gray-700">
+                      <label className="block text-sm font-medium text-foreground">
                         Preferred Dashboard{" "}
                         <span className="text-red-500">*</span>
                       </label>
-                      <p className="text-xs text-gray-500 mb-2">
+                      <p className="text-xs text-muted-foreground mb-2">
                         Choose which dashboard to access first. You can switch
                         between buyer and seller features anytime.
                       </p>
@@ -327,7 +327,7 @@ const LoginPage = () => {
                           className={`p-3 border-2 rounded-lg text-center transition-all ${
                             formData.selectedRole === "seller"
                               ? "border-primary bg-primary/5 text-primary"
-                              : "border-gray-200 hover:border-gray-300 text-gray-700"
+                              : "border-border hover:border-border/80 text-muted-foreground"
                           }`}
                         >
                           <div className="font-medium text-sm">🏪 Seller</div>
@@ -341,7 +341,7 @@ const LoginPage = () => {
                           className={`p-3 border-2 rounded-lg text-center transition-all ${
                             formData.selectedRole === "admin"
                               ? "border-primary bg-primary/5 text-primary"
-                              : "border-gray-200 hover:border-gray-300 text-gray-700"
+                              : "border-border hover:border-border/80 text-muted-foreground"
                           }`}
                         >
                           <div className="font-medium text-sm">🛡️ Admin</div>
@@ -363,13 +363,13 @@ const LoginPage = () => {
                     />
 
                     <div className="space-y-2">
-                      <label className="block text-sm font-medium text-gray-700">
+                      <label className="block text-sm font-medium text-foreground">
                         Password <span className="text-red-500">*</span>
                       </label>
                       <div className="relative">
                         <input
                           type={showPassword ? "text" : "password"}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                          className="w-full px-3 py-2 border border-input bg-background text-foreground rounded-md focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent placeholder:text-muted-foreground"
                           placeholder="Enter your password"
                           value={formData.password}
                           onChange={(e) =>
@@ -382,9 +382,9 @@ const LoginPage = () => {
                           onClick={() => setShowPassword(!showPassword)}
                         >
                           {showPassword ? (
-                            <EyeOff className="h-4 w-4 text-gray-400" />
+                            <EyeOff className="h-4 w-4 text-muted-foreground" />
                           ) : (
-                            <Eye className="h-4 w-4 text-gray-400" />
+                            <Eye className="h-4 w-4 text-muted-foreground" />
                           )}
                         </button>
                       </div>
@@ -408,7 +408,7 @@ const LoginPage = () => {
                           type="checkbox"
                           className="h-4 w-4 text-primary focus:ring-primary border-gray-300 rounded"
                         />
-                        <span className="ml-2 text-sm text-gray-600">
+                        <span className="ml-2 text-sm text-foreground">
                           Remember me
                         </span>
                       </label>
@@ -459,14 +459,14 @@ const LoginPage = () => {
                             Admin registration
                           </Link>
                         </p>
-                        <p className="text-xs text-gray-500">
+                        <p className="text-xs text-muted-foreground">
                           New accounts get both buyer and seller access. Choose
                           your preferred starting dashboard above.
                         </p>
                       </div>
                     </div>
 
-                    <div className="mt-6 p-4 bg-blue-50 rounded-lg">
+                    <div className="mt-6 p-4 bg-primary/10 rounded-lg">
                       <h4 className="font-semibold text-blue-800 mb-2">
                         Demo Accounts:
                       </h4>

@@ -18,7 +18,7 @@ const BrowseAuctions = () => {
   return (
     <>
       {user ? <UserHeader /> : <Header />}
-      <div className="min-h-screen bg-gray-50 pt-20">
+      <div className="min-h-screen bg-background pt-20">
         <BrowseAuctionsContent />
       </div>
       <Footer />
