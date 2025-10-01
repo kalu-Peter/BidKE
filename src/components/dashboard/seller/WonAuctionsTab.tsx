@@ -122,7 +122,7 @@ const WonAuctionsTab: React.FC = () => {
           <Trophy className="w-5 h-5" />
           <span>Won Auctions</span>
         </CardTitle>
-        <p className="text-sm text-gray-600">
+        <p className="text-sm text-muted-foreground">
           Auctions you've successfully won and payment details
         </p>
       </CardHeader>
@@ -169,7 +169,7 @@ const WonAuctionsTab: React.FC = () => {
                         <h4 className="font-semibold text-lg">
                           {auction.title}
                         </h4>
-                        <div className="text-sm text-gray-600 space-y-1">
+                        <div className="text-sm text-muted-foreground space-y-1">
                           <p>{auction.category}</p>
                           <p>Won {auction.dateWon}</p>
                           <p className="flex items-center space-x-1">
@@ -275,10 +275,10 @@ const WonAuctionsTab: React.FC = () => {
         {wonAuctions.length === 0 && (
           <div className="text-center py-12">
             <Trophy className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">
+            <h3 className="text-lg font-semibold text-foreground mb-2">
               No won auctions yet
             </h3>
-            <p className="text-gray-600 mb-4">
+            <p className="text-muted-foreground mb-4">
               Start bidding on auctions to build your collection
             </p>
             <Button>Browse Auctions</Button>

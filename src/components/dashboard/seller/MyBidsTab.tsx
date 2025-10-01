@@ -158,7 +158,7 @@ const MyBidsTab: React.FC = () => {
                         <div className="flex items-center space-x-3">
                           <div>
                             <div className="font-medium">{bid.title}</div>
-                            <div className="text-sm text-gray-500">
+                            <div className="text-sm text-muted-foreground">
                               {bid.category_name}
                             </div>
                           </div>
@@ -228,10 +228,10 @@ const MyBidsTab: React.FC = () => {
         {activeBids.length === 0 && (
           <div className="text-center py-12">
             <BarChart3 className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">
+            <h3 className="text-lg font-semibold text-foreground mb-2">
               No active bids
             </h3>
-            <p className="text-gray-600 mb-4">
+            <p className="text-muted-foreground mb-4">
               Start bidding on auctions to track your activity here
             </p>
             <Button>Browse Auctions</Button>

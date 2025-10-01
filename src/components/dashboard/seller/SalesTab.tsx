@@ -137,10 +137,10 @@ const SalesTab: React.FC = () => {
           {recentSales.length === 0 && (
             <div className="text-center py-12">
               <DollarSign className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">
+              <h3 className="text-lg font-semibold text-foreground mb-2">
                 No sales yet
               </h3>
-              <p className="text-gray-600">
+              <p className="text-muted-foreground">
                 Your completed sales will appear here
               </p>
             </div>

@@ -134,7 +134,7 @@ const WatchlistTab: React.FC = () => {
           <span>My Watchlist</span>
         </CardTitle>
         <div className="flex justify-between items-center">
-          <p className="text-sm text-gray-600">
+          <p className="text-sm text-muted-foreground">
             Items you're watching and considering to bid on
           </p>
           <Badge variant="outline">
@@ -172,10 +172,12 @@ const WatchlistTab: React.FC = () => {
                   <div className="mb-2">
                     <h3 className="font-semibold text-lg">{item.title}</h3>
                     <div className="flex justify-between items-center text-sm text-gray-500">
-                      <span>
-                        {item.category} • {item.seller}
-                      </span>
-                      <span>Added {item.addedDate}</span>
+                      <div className="text-xs text-muted-foreground">
+                        <span>
+                          {item.category} • {item.seller}
+                        </span>
+                        <span>Added {item.addedDate}</span>
+                      </div>
                     </div>
                   </div>
                   <div className="mb-3">
@@ -212,10 +214,10 @@ const WatchlistTab: React.FC = () => {
         ) : (
           <div className="text-center py-12">
             <Heart className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">
+            <h3 className="text-lg font-semibold text-foreground mb-2">
               No items in watchlist
             </h3>
-            <p className="text-gray-600 mb-4">
+            <p className="text-muted-foreground mb-4">
               Start exploring auctions and add items to your watchlist
             </p>
             <Button>Browse Auctions</Button>

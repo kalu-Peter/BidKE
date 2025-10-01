@@ -197,10 +197,10 @@ const OverviewTab: React.FC = () => {
     <div className="space-y-6">
       {/* Admin Summary (Welcome + Alerts + Stats) */}
       <div>
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">
+        <h1 className="text-3xl font-bold text-foreground mb-2">
           Admin Dashboard
         </h1>
-        <p className="text-gray-600">
+        <p className="text-muted-foreground">
           Monitor platform activity, manage users, and oversee all auction
           operations.
         </p>
