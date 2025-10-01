@@ -325,12 +325,9 @@ const BrowseAuctionsContent = () => {
       {/* Search and Filters */}
       <div className="space-y-4">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">
-            Browse Live Auctions
+          <h2 className="text-2xl font-bold text-muted-foreground mb-2">
+            Live Auctions
           </h2>
-          <p className="text-gray-600">
-            Discover amazing deals from verified sellers
-          </p>
         </div>
 
         {/* Error Alert */}
@@ -398,19 +395,11 @@ const BrowseAuctionsContent = () => {
       {!loading && (
         <div className="flex justify-between items-center">
           <div>
-            <h3 className="text-lg font-semibold text-gray-900">
+            <h3 className="text-lg font-semibold text-muted-foreground">
               {searchTerm || category !== "all" || priceRange !== "all"
                 ? "Search Results"
                 : "All Auctions"}
             </h3>
-            <p className="text-gray-600 text-sm">
-              Showing {auctions.length} of {totalAuctions} auctions
-              {user && (
-                <span className="ml-2">
-                  • {auctions.filter((a) => a.isWatched).length} Watched
-                </span>
-              )}
-            </p>
           </div>
           <div className="flex gap-2">
             <Button
@@ -440,7 +429,7 @@ const BrowseAuctionsContent = () => {
         <div
           className={`grid gap-6 ${
             viewMode === "grid"
-              ? "grid-cols-1 md:grid-cols-2 lg:grid-cols-3"
+              ? "grid-cols-1 md:grid-cols-2 lg:grid-cols-5"
               : "grid-cols-1"
           }`}
         >

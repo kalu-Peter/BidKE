@@ -19,7 +19,9 @@ const BrowseAuctions = () => {
     <>
       {user ? <UserHeader /> : <Header />}
       <div className="min-h-screen bg-background pt-20">
-        <BrowseAuctionsContent />
+        <div className="container mx-auto px-4 py-8">
+          <BrowseAuctionsContent />
+        </div>
       </div>
       <Footer />
     </>
