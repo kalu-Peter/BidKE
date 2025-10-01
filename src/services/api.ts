@@ -266,7 +266,7 @@ class ApiService {
       }
     });
 
-    return this.makeRequest(`/auctions/create.php?${queryParams.toString()}`);
+    return this.makeRequest(`/auctions.php?${queryParams.toString()}`);
   }
 
   async getAuction(id: number): Promise<ApiResponse<Auction>> {

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import Header from "@/components/Header";
 import UserHeader from "@/components/UserHeader";
@@ -14,84 +14,45 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Search, Grid3X3, List, Eye, Heart, Clock } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import {
+  Search,
+  Grid3X3,
+  List,
+  Eye,
+  Heart,
+  Clock,
+  AlertCircle,
+  Loader2,
+} from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { apiService } from "@/services/api";
 
-const mockCars = [
-  {
-    id: 1,
-    title: "Toyota Land Cruiser V8",
-    category: "SUV",
-    currentBid: 2800000,
-    reservePrice: 3200000,
-    timeLeft: "2d 14h",
-    bids: 23,
-    seller: "Auto Plaza Ltd",
-    image:
-      "https://images.unsplash.com/photo-1449824913935-59a10b8d2000?auto=format&fit=crop&w=500&q=80",
-    featured: true,
-    isWatched: false,
-    brand: "Toyota",
-    year: "2019",
-    transmission: "Automatic",
-    mileage: 45000,
-  },
-  {
-    id: 2,
-    title: "Mazda Demio 2018",
-    category: "Sedan",
-    currentBid: 800000,
-    reservePrice: 950000,
-    timeLeft: "2d 12h",
-    bids: 15,
-    seller: "Auto Dealers Ltd",
-    image:
-      "https://images.unsplash.com/photo-1465156799763-2c087c332922?auto=format&fit=crop&w=500&q=80",
-    featured: false,
-    isWatched: false,
-    brand: "Mazda",
-    year: "2018",
-    transmission: "Automatic",
-    mileage: 42000,
-  },
-  {
-    id: 3,
-    title: "Honda Civic 2019",
-    category: "Sedan",
-    currentBid: 1200000,
-    reservePrice: 1450000,
-    timeLeft: "1d 14h",
-    bids: 28,
-    seller: "Premium Motors",
-    image:
-      "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?auto=format&fit=crop&w=500&q=80",
-    featured: false,
-    isWatched: false,
-    brand: "Honda",
-    year: "2019",
-    transmission: "Manual",
-    mileage: 35000,
-  },
-  {
-    id: 4,
-    title: "Toyota Axio 2016",
-    category: "Sedan",
-    currentBid: 950000,
-    reservePrice: 1100000,
-    timeLeft: "5h 30m",
-    bids: 12,
-    seller: "City Cars",
-    image:
-      "https://images.unsplash.com/photo-1503736334956-4c8f8e92946d?auto=format&fit=crop&w=500&q=80",
-    featured: false,
-    isWatched: true,
-    brand: "Toyota",
-    year: "2016",
-    transmission: "Automatic",
-    mileage: 87000,
-  },
-];
+interface CarAuction {
+  id: number;
+  title: string;
+  description: string;
+  starting_price: number;
+  current_bid: number;
+  reserve_price?: number;
+  start_time: string;
+  end_time: string;
+  status: string;
+  category_name: string;
+  seller_name: string;
+  featured: boolean;
+  view_count: number;
+  bid_count: number;
+  images: string[];
+  item_type: string;
+  vehicle_type?: string;
+  make?: string;
+  model?: string;
+  year?: number;
+  vehicle_condition?: string;
+  isWatched?: boolean;
+  timeLeft?: string; // Calculated field
+}
 
 const CarsPage = () => {
   const { user } = useAuth();
@@ -101,25 +62,133 @@ const CarsPage = () => {
   const [brand, setBrand] = useState("all");
   const [transmission, setTransmission] = useState("all");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
-  const [allCars, setAllCars] = useState(mockCars);
+  const [allCars, setAllCars] = useState<CarAuction[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // Calculate time left for auction
+  const calculateTimeLeft = (endTime: string) => {
+    const end = new Date(endTime).getTime();
+    const now = new Date().getTime();
+    const timeLeft = end - now;
+
+    if (timeLeft <= 0) return "Ended";
+
+    const days = Math.floor(timeLeft / (1000 * 60 * 60 * 24));
+    const hours = Math.floor(
+      (timeLeft % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)
+    );
+    const minutes = Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60));
+
+    if (days > 0) return `${days}d ${hours}h`;
+    if (hours > 0) return `${hours}h ${minutes}m`;
+    return `${minutes}m`;
+  };
+
+  // Fetch car auctions from API
+  const fetchCarAuctions = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const response = await apiService.getAuctions({
+        category: "cars",
+        status: "live",
+        limit: 50,
+      });
+
+      if (response.success && response.data && Array.isArray(response.data)) {
+        const carsWithTimeLeft = response.data.map((auction: any) => ({
+          ...auction,
+          timeLeft: calculateTimeLeft(auction.end_time),
+          isWatched: false, // Will be updated after watchlist check
+        }));
+        setAllCars(carsWithTimeLeft);
+
+        // Check watchlist status if user is logged in
+        if (user && user.id) {
+          try {
+            const watchlistResponse = await apiService.getWatchlist(user.id);
+            if (
+              watchlistResponse.success &&
+              Array.isArray(watchlistResponse.data)
+            ) {
+              const watchedIds = watchlistResponse.data.map((item: any) =>
+                Number(item.auction_id)
+              );
+              setAllCars((prev) =>
+                prev.map((car) => ({
+                  ...car,
+                  isWatched: watchedIds.includes(car.id),
+                }))
+              );
+            }
+          } catch (watchError) {
+            console.warn("Failed to load watchlist:", watchError);
+          }
+        }
+      } else {
+        setError(response.error || "Failed to fetch car auctions");
+      }
+    } catch (err) {
+      console.error("Error fetching car auctions:", err);
+      setError("Failed to load car auctions. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Load auctions on component mount
+  useEffect(() => {
+    fetchCarAuctions();
+  }, []);
+
+  // Update watchlist status when user changes
+  useEffect(() => {
+    if (user && user.id && allCars.length > 0) {
+      const updateWatchlistStatus = async () => {
+        try {
+          const watchlistResponse = await apiService.getWatchlist(user.id);
+          if (
+            watchlistResponse.success &&
+            Array.isArray(watchlistResponse.data)
+          ) {
+            const watchedIds = watchlistResponse.data.map((item: any) =>
+              Number(item.auction_id)
+            );
+            setAllCars((prev) =>
+              prev.map((car) => ({
+                ...car,
+                isWatched: watchedIds.includes(car.id),
+              }))
+            );
+          }
+        } catch (err) {
+          console.warn("Failed to update watchlist status:", err);
+        }
+      };
+      updateWatchlistStatus();
+    }
+  }, [user?.id, allCars.length]);
 
   // Filter cars based on search criteria
   const filteredCars = allCars.filter((car) => {
     const matchesSearch =
       car.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      car.category.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      car.seller.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (car.brand && car.brand.toLowerCase().includes(searchTerm.toLowerCase()));
+      (car.category_name &&
+        car.category_name.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (car.seller_name &&
+        car.seller_name.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (car.make && car.make.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (car.model && car.model.toLowerCase().includes(searchTerm.toLowerCase()));
     const matchesCategory =
       category === "all" ||
-      car.category.toLowerCase() === category.toLowerCase();
+      (car.category_name &&
+        car.category_name.toLowerCase() === category.toLowerCase());
     const matchesBrand =
       brand === "all" ||
-      (car.brand && car.brand.toLowerCase() === brand.toLowerCase());
-    const matchesTransmission =
-      transmission === "all" ||
-      (car.transmission &&
-        car.transmission.toLowerCase() === transmission.toLowerCase());
+      (car.make && car.make.toLowerCase() === brand.toLowerCase());
+    const matchesTransmission = transmission === "all"; // Remove transmission filter for now since it's not in our data
 
     return (
       matchesSearch && matchesCategory && matchesBrand && matchesTransmission
@@ -253,93 +322,183 @@ const CarsPage = () => {
           </div>
         </section>
 
-        {/* Main Cars Section */}
-        <section className="py-16">
-          <div className="container mx-auto px-4">
-            <div className="flex justify-between items-center mb-8">
-              <div>
-                <h2 className="text-3xl font-bold text-gray-900 mb-2">
-                  {searchTerm || category !== "all" || brand !== "all"
-                    ? "Search Results"
-                    : "All Cars"}
-                </h2>
-                <p className="text-gray-600">
-                  Showing {filteredCars.length} of {allCars.length} cars
-                  {user && (
-                    <span className="ml-2">
-                      • {filteredCars.filter((c) => c.isWatched).length} Watched
-                    </span>
-                  )}
-                </p>
-              </div>
-              <div className="flex gap-2">
-                <Button
-                  variant={viewMode === "grid" ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => setViewMode("grid")}
-                >
-                  <Grid3X3 className="w-4 h-4 mr-2" />
-                  Grid
-                </Button>
-                <Button
-                  variant={viewMode === "list" ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => setViewMode("list")}
-                >
-                  <List className="w-4 h-4 mr-2" />
-                  List
-                </Button>
+        {/* Loading State */}
+        {loading && (
+          <section className="py-16">
+            <div className="container mx-auto px-4">
+              <div className="flex justify-center items-center min-h-[400px]">
+                <div className="text-center">
+                  <Loader2 className="w-12 h-12 animate-spin text-accent mx-auto mb-4" />
+                  <p className="text-gray-600 text-lg">
+                    Loading car auctions...
+                  </p>
+                </div>
               </div>
             </div>
+          </section>
+        )}
 
-            {/* Cars Grid */}
-            <div
-              className={`grid gap-6 ${
-                viewMode === "grid"
-                  ? "grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
-                  : "grid-cols-1"
-              }`}
-            >
-              {filteredCars.map((car) => (
-                <Card
-                  key={car.id}
-                  className="group hover:shadow-xl transition-all duration-300"
-                >
-                  <div className="aspect-video bg-gray-200 rounded-t-lg relative overflow-hidden">
-                    <img
-                      src={car.image}
-                      alt={car.title}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                    />
-                    {car.featured && (
-                      <Badge className="absolute top-3 right-3 bg-accent text-white">
-                        Featured
-                      </Badge>
-                    )}
-                    {user && (
-                      <button
-                        onClick={() => handleToggleWatch(car.id)}
-                        className={`absolute top-3 left-3 p-2 rounded-full transition-colors ${
-                          car.isWatched
-                            ? "bg-accent text-white"
-                            : "bg-white/90 text-gray-400 hover:text-accent hover:bg-white"
-                        }`}
-                      >
-                        <Heart
-                          className={`w-4 h-4 ${
-                            car.isWatched ? "fill-current" : ""
-                          }`}
-                        />
-                      </button>
-                    )}
+        {/* Error State */}
+        {error && !loading && (
+          <section className="py-16">
+            <div className="container mx-auto px-4">
+              <div className="max-w-md mx-auto">
+                <Alert className="border-red-200 bg-red-50">
+                  <AlertCircle className="h-4 w-4 text-red-600" />
+                  <div className="ml-2">
+                    <h3 className="text-red-800 font-semibold">
+                      Error Loading Cars
+                    </h3>
+                    <p className="text-red-700 mt-1">{error}</p>
+                    <Button
+                      onClick={fetchCarAuctions}
+                      variant="outline"
+                      size="sm"
+                      className="mt-3 border-red-300 text-red-700 hover:bg-red-100"
+                    >
+                      Try Again
+                    </Button>
                   </div>
-                  <CardContent className="p-4">
-                    <div className="flex justify-between items-start mb-2">
-                      <Badge variant="outline" className="text-xs">
-                        {car.category}
-                      </Badge>
-                      <div className="flex items-center text-sm text-gray-500">
-                        <Clock className="w-4 h-4 mr-1" />
+                </Alert>
+              </div>
+            </div>
+          </section>
+        )}
+
+        {/* Main Cars Section */}
+        {!loading && !error && (
+          <section className="py-16">
+            <div className="container mx-auto px-4">
+              <div className="flex justify-between items-center mb-8">
+                <div>
+                  <h2 className="text-3xl font-bold text-gray-900 mb-2">
+                    {searchTerm || category !== "all" || brand !== "all"
+                      ? "Search Results"
+                      : "All Cars"}
+                  </h2>
+                  <p className="text-gray-600">
+                    Showing {filteredCars.length} of {allCars.length} cars
+                    {user && (
+                      <span className="ml-2">
+                        • {filteredCars.filter((c) => c.isWatched).length}{" "}
+                        Watched
+                      </span>
+                    )}
+                  </p>
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    variant={viewMode === "grid" ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setViewMode("grid")}
+                  >
+                    <Grid3X3 className="w-4 h-4 mr-2" />
+                    Grid
+                  </Button>
+                  <Button
+                    variant={viewMode === "list" ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setViewMode("list")}
+                  >
+                    <List className="w-4 h-4 mr-2" />
+                    List
+                  </Button>
+                </div>
+              </div>
+
+              {/* Cars Grid */}
+              <div
+                className={`grid gap-6 ${
+                  viewMode === "grid"
+                    ? "grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
+                    : "grid-cols-1"
+                }`}
+              >
+                {filteredCars.map((car) => (
+                  <Card
+                    key={car.id}
+                    className="group hover:shadow-xl transition-all duration-300"
+                  >
+                    <div className="aspect-video bg-gray-200 rounded-t-lg relative overflow-hidden">
+                      <img
+                        src={car.images[0] || "/placeholder.svg"}
+                        alt={car.title}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                      />
+                      {car.featured && (
+                        <Badge className="absolute top-3 right-3 bg-accent text-white">
+                          Featured
+                        </Badge>
+                      )}
+                      {user && (
+                        <button
+                          onClick={() => handleToggleWatch(car.id)}
+                          className={`absolute top-3 left-3 p-2 rounded-full transition-colors ${
+                            car.isWatched
+                              ? "bg-accent text-white"
+                              : "bg-white/90 text-gray-400 hover:text-accent hover:bg-white"
+                          }`}
+                        >
+                          <Heart
+                            className={`w-4 h-4 ${
+                              car.isWatched ? "fill-current" : ""
+                            }`}
+                          />
+                        </button>
+                      )}
+                    </div>
+                    <CardContent className="p-4">
+                      <div className="flex justify-between items-start mb-2">
+                        <Badge variant="outline" className="text-xs">
+                          {car.category_name}
+                        </Badge>
+                        <div className="flex items-center text-sm text-gray-500">
+                          <Clock className="w-4 h-4 mr-1" />
+                          <span
+                            className={
+                              car.timeLeft.includes("h") &&
+                              !car.timeLeft.includes("d")
+                                ? "text-accent font-medium"
+                                : ""
+                            }
+                          >
+                            {car.timeLeft}
+                          </span>
+                        </div>
+                      </div>
+                      <h3
+                        className="font-semibold text-lg mb-1 group-hover:text-primary transition-colors cursor-pointer"
+                        onClick={() => handleViewDetails(car.id)}
+                      >
+                        {car.title}
+                      </h3>
+                      <p className="text-sm text-gray-500 mb-1">
+                        by {car.seller_name}
+                      </p>
+                      <p className="text-xs text-gray-400 mb-3">
+                        {car.make} {car.model} {car.year ? `• ${car.year}` : ""}
+                      </p>
+                      <div className="space-y-2 mb-4">
+                        <div className="flex justify-between text-sm">
+                          <span className="text-gray-600">Current</span>
+                          <span className="font-semibold text-green-600">
+                            Ksh {car.current_bid.toLocaleString()}
+                          </span>
+                        </div>
+                        {car.reserve_price && (
+                          <div className="flex justify-between text-sm">
+                            <span className="text-gray-600">Reserve price</span>
+                            <span className="text-gray-900">
+                              Ksh {car.reserve_price.toLocaleString()}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex justify-between items-center text-sm text-gray-500 mb-3">
+                        <div className="flex items-center space-x-1">
+                          <Eye className="w-4 h-4" />
+                          <span>{car.bid_count} bids</span>
+                        </div>
                         <span
                           className={
                             car.timeLeft.includes("h") &&
@@ -348,104 +507,60 @@ const CarsPage = () => {
                               : ""
                           }
                         >
-                          {car.timeLeft}
-                        </span>
-                      </div>
-                    </div>
-                    <h3
-                      className="font-semibold text-lg mb-1 group-hover:text-primary transition-colors cursor-pointer"
-                      onClick={() => handleViewDetails(car.id)}
-                    >
-                      {car.title}
-                    </h3>
-                    <p className="text-sm text-gray-500 mb-1">
-                      by {car.seller}
-                    </p>
-                    <p className="text-xs text-gray-400 mb-3">
-                      {car.mileage?.toLocaleString()} km • {car.transmission}
-                    </p>
-                    <div className="space-y-2 mb-4">
-                      <div className="flex justify-between text-sm">
-                        <span className="text-gray-600">Current</span>
-                        <span className="font-semibold text-green-600">
-                          Ksh {car.currentBid.toLocaleString()}
-                        </span>
-                      </div>
-                      {car.reservePrice && (
-                        <div className="flex justify-between text-sm">
-                          <span className="text-gray-600">Reserve price</span>
-                          <span className="text-gray-900">
-                            Ksh {car.reservePrice.toLocaleString()}
-                          </span>
-                        </div>
-                      )}
-                    </div>
-                    <div className="flex justify-between items-center text-sm text-gray-500 mb-3">
-                      <div className="flex items-center space-x-1">
-                        <Eye className="w-4 h-4" />
-                        <span>{car.bids} bids</span>
-                      </div>
-                      <span
-                        className={
-                          car.timeLeft.includes("h") &&
+                          Ending{" "}
+                          {car.timeLeft.includes("h") &&
                           !car.timeLeft.includes("d")
-                            ? "text-accent font-medium"
-                            : ""
-                        }
-                      >
-                        Ending{" "}
-                        {car.timeLeft.includes("h") &&
-                        !car.timeLeft.includes("d")
-                          ? "soon"
-                          : "in " + car.timeLeft}
-                      </span>
-                    </div>
-                    <div className="flex space-x-2">
-                      <Button
-                        className="flex-1"
-                        onClick={() => handlePlaceBid(car.id)}
-                      >
-                        {user ? "Place Bid" : "Login to Bid"}
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleViewDetails(car.id)}
-                      >
-                        <Eye className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-
-            {/* Empty State */}
-            {filteredCars.length === 0 && (
-              <div className="text-center py-12">
-                <Search className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                  No cars found
-                </h3>
-                <p className="text-gray-600 mb-4">
-                  Try adjusting your search criteria or check back later for new
-                  cars
-                </p>
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    setSearchTerm("");
-                    setCategory("all");
-                    setBrand("all");
-                    setTransmission("all");
-                  }}
-                >
-                  Clear Filters
-                </Button>
+                            ? "soon"
+                            : "in " + car.timeLeft}
+                        </span>
+                      </div>
+                      <div className="flex space-x-2">
+                        <Button
+                          className="flex-1"
+                          onClick={() => handlePlaceBid(car.id)}
+                        >
+                          {user ? "Place Bid" : "Login to Bid"}
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleViewDetails(car.id)}
+                        >
+                          <Eye className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
               </div>
-            )}
-          </div>
-        </section>
+
+              {/* Empty State */}
+              {filteredCars.length === 0 && (
+                <div className="text-center py-12">
+                  <Search className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                    No cars found
+                  </h3>
+                  <p className="text-gray-600 mb-4">
+                    Try adjusting your search criteria or check back later for
+                    new cars
+                  </p>
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setSearchTerm("");
+                      setCategory("all");
+                      setBrand("all");
+                      setTransmission("all");
+                    }}
+                  >
+                    Clear Filters
+                  </Button>
+                </div>
+              )}
+            </div>
+          </section>
+        )}
       </div>
       <Footer />
     </>

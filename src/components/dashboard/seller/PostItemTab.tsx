@@ -276,6 +276,7 @@ const PostItemTab: React.FC = () => {
           auctionEndDate: "",
           auctionEndTime: "",
           vehicleType: "",
+          vehicleCategory: "",
           vehicleMake: "",
           vehicleModel: "",
           vehicleYear: "",
