@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import Header from "@/components/Header";
 import UserHeader from "@/components/UserHeader";
@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { Alert } from "@/components/ui/alert";
 import {
   Select,
   SelectContent,
@@ -14,93 +15,195 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Heart } from "lucide-react";
+import { Heart, AlertCircle, Loader2 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import { apiService } from "@/services/api";
 
-const mockBikes = [
-  {
-    id: 1,
-    title: "Honda CBR 1000RR",
-    category: "Sports Bikes",
-    currentBid: 850000,
-    reservePrice: 1200000,
-    timeLeft: "1d 8h",
-    bids: 15,
-    seller: "Moto Elite",
-    image:
-      "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?auto=format&fit=crop&w=500&q=80",
-    featured: true,
-    isWatched: false,
-    brand: "Honda",
-    year: "2020",
-    condition: "Used",
-  },
-  {
-    id: 2,
-    title: "TVS HLX 125 2021",
-    category: "Boda Boda",
-    currentBid: 54000,
-    reservePrice: 75000,
-    timeLeft: "5h 20m",
-    bids: 12,
-    seller: "Bike World",
-    image:
-      "https://images.unsplash.com/photo-1558618047-3c8c76ca7d13?auto=format&fit=crop&w=500&q=80",
-    featured: false,
-    isWatched: false,
-    brand: "TVS",
-    year: "2021",
-    condition: "Like New",
-  },
-  {
-    id: 3,
-    title: "Yamaha R15 V3",
-    category: "Sports Bikes",
-    currentBid: 85000,
-    reservePrice: 110000,
-    timeLeft: "4h 45m",
-    bids: 18,
-    seller: "Moto Elite",
-    image:
-      "https://images.unsplash.com/photo-1558618847-3f0c2cf36c38?auto=format&fit=crop&w=500&q=80",
-    featured: false,
-    isWatched: false,
-    brand: "Yamaha",
-    year: "2020",
-    condition: "Used",
-  },
-  {
-    id: 4,
-    title: "Bajaj Boxer 150cc 2022",
-    category: "Boda Boda",
-    currentBid: 68000,
-    reservePrice: 85000,
-    timeLeft: "2d 10h",
-    bids: 9,
-    seller: "City Bikes",
-    image:
-      "https://images.unsplash.com/photo-1518655048521-f130df041f66?auto=format&fit=crop&w=500&q=80",
-    featured: false,
-    isWatched: true,
-    brand: "Bajaj",
-    year: "2022",
-    condition: "Excellent",
-  },
-];
+interface MotorbikeAuction {
+  id: number;
+  title: string;
+  description: string;
+  starting_price: number;
+  current_bid: number;
+  reserve_price?: number;
+  start_time: string;
+  end_time: string;
+  status: string;
+  category_name: string;
+  seller_name: string;
+  featured: boolean;
+  view_count: number;
+  bid_count: number;
+  images: string[];
+  item_type: string;
+  vehicle_type?: string;
+  make?: string;
+  model?: string;
+  year?: number;
+  vehicle_condition?: string;
+  isWatched?: boolean;
+  timeLeft?: string; // Calculated field
+}
 
 export default function Motorbikes() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedBrand, setSelectedBrand] = useState("all");
+  const [allBikes, setAllBikes] = useState<MotorbikeAuction[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const brands = ["Honda", "Yamaha", "TVS", "Bajaj"];
 
-  const filteredBikes = mockBikes.filter((bike) => {
-    return (
-      bike.title.toLowerCase().includes(searchTerm.toLowerCase()) &&
-      (selectedBrand === "all" || bike.brand === selectedBrand)
+  // Calculate time left for auction
+  const calculateTimeLeft = (endTime: string) => {
+    const end = new Date(endTime).getTime();
+    const now = new Date().getTime();
+    const timeLeft = end - now;
+
+    if (timeLeft <= 0) return "Ended";
+
+    const days = Math.floor(timeLeft / (1000 * 60 * 60 * 24));
+    const hours = Math.floor(
+      (timeLeft % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)
     );
+    const minutes = Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60));
+
+    if (days > 0) return `${days}d ${hours}h`;
+    if (hours > 0) return `${hours}h ${minutes}m`;
+    return `${minutes}m`;
+  };
+
+  // Fetch motorbike auctions from API
+  const fetchMotorbikeAuctions = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const response = await apiService.getAuctions({
+        category: "motorcycles",
+        status: "live",
+        limit: 50,
+      });
+
+      if (response.success && response.data && Array.isArray(response.data)) {
+        const bikesWithTimeLeft = response.data.map((auction: any) => ({
+          ...auction,
+          timeLeft: calculateTimeLeft(auction.end_time),
+          isWatched: false, // Will be updated after watchlist check
+        }));
+        setAllBikes(bikesWithTimeLeft);
+
+        // Check watchlist status if user is logged in
+        if (user && user.id) {
+          try {
+            const watchlistResponse = await apiService.getWatchlist(user.id);
+            if (
+              watchlistResponse.success &&
+              Array.isArray(watchlistResponse.data)
+            ) {
+              const watchedIds = watchlistResponse.data.map((item: any) =>
+                Number(item.auction_id)
+              );
+              setAllBikes((prev) =>
+                prev.map((bike) => ({
+                  ...bike,
+                  isWatched: watchedIds.includes(bike.id),
+                }))
+              );
+            }
+          } catch (watchError) {
+            console.warn("Failed to load watchlist:", watchError);
+          }
+        }
+      } else {
+        setError(response.error || "Failed to fetch motorbike auctions");
+      }
+    } catch (err) {
+      console.error("Error fetching motorbike auctions:", err);
+      setError("Failed to load motorbike auctions. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Load auctions on component mount
+  useEffect(() => {
+    fetchMotorbikeAuctions();
+  }, []);
+
+  // Update watchlist status when user changes
+  useEffect(() => {
+    if (user && user.id && allBikes.length > 0) {
+      const updateWatchlistStatus = async () => {
+        try {
+          const watchlistResponse = await apiService.getWatchlist(user.id);
+          if (
+            watchlistResponse.success &&
+            Array.isArray(watchlistResponse.data)
+          ) {
+            const watchedIds = watchlistResponse.data.map((item: any) =>
+              Number(item.auction_id)
+            );
+            setAllBikes((prev) =>
+              prev.map((bike) => ({
+                ...bike,
+                isWatched: watchedIds.includes(bike.id),
+              }))
+            );
+          }
+        } catch (err) {
+          console.warn("Failed to update watchlist status:", err);
+        }
+      };
+      updateWatchlistStatus();
+    }
+  }, [user?.id, allBikes.length]);
+
+  const handleToggleWatch = async (bikeId: number) => {
+    if (!user?.id) {
+      navigate("/login");
+      return;
+    }
+
+    const bike = allBikes.find((b) => b.id === bikeId);
+    if (!bike) return;
+
+    // Optimistic update
+    setAllBikes((prev) =>
+      prev.map((b) => (b.id === bikeId ? { ...b, isWatched: !b.isWatched } : b))
+    );
+
+    try {
+      if (bike.isWatched) {
+        // Remove from watchlist
+        await apiService.removeFromWatchlist(user.id, bikeId);
+      } else {
+        // Add to watchlist
+        await apiService.addToWatchlist(user.id, bikeId);
+      }
+    } catch (err) {
+      console.error("Watchlist toggle failed:", err);
+      // Revert optimistic update
+      setAllBikes((prev) =>
+        prev.map((b) =>
+          b.id === bikeId ? { ...b, isWatched: !b.isWatched } : b
+        )
+      );
+    }
+  };
+
+  const filteredBikes = allBikes.filter((bike) => {
+    const matchesSearch =
+      bike.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      bike.category_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      bike.seller_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (bike.make && bike.make.toLowerCase().includes(searchTerm.toLowerCase()));
+    const matchesBrand =
+      selectedBrand === "all" ||
+      (bike.make && bike.make.toLowerCase() === selectedBrand.toLowerCase());
+    return matchesSearch && matchesBrand;
   });
 
   return (
@@ -149,132 +252,182 @@ export default function Motorbikes() {
           </div>
         </div>
 
-        {/* Main Content */}
-        <div className="container mx-auto px-4 py-12">
-          <div className="flex justify-between items-center mb-8">
-            <h2 className="text-3xl font-bold">
-              {filteredBikes.length} Motorbikes Available
-            </h2>
+        {/* Loading State */}
+        {loading && (
+          <div className="container mx-auto px-4 py-12">
+            <div className="flex justify-center items-center min-h-[400px]">
+              <div className="text-center">
+                <Loader2 className="w-12 h-12 animate-spin text-primary mx-auto mb-4" />
+                <p className="text-muted-foreground text-lg">
+                  Loading motorbike auctions...
+                </p>
+              </div>
+            </div>
           </div>
+        )}
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {filteredBikes.map((bike) => (
-              <Card
-                key={bike.id}
-                className="group hover:shadow-lg transition-all duration-300 cursor-pointer overflow-hidden"
-                onClick={() => navigate(`/auction/${bike.id}`)}
-              >
-                <div className="relative">
-                  <img
-                    src={bike.image}
-                    alt={bike.title}
-                    className="w-full h-48 object-cover group-hover:scale-105 transition-transform duration-300"
-                  />
-                  {bike.featured && (
-                    <Badge className="absolute top-2 left-2 bg-accent text-white">
-                      Featured
-                    </Badge>
-                  )}
-                  <div className="absolute top-2 right-2">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className={`h-8 w-8 p-0 rounded-full ${
-                        bike.isWatched
-                          ? "bg-accent text-white"
-                          : "bg-white/90 text-muted-foreground hover:bg-white"
-                      }`}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        // Handle watchlist toggle
-                      }}
-                    >
-                      <Heart
-                        className={`h-4 w-4 ${
-                          bike.isWatched ? "fill-current" : ""
-                        }`}
-                      />
-                    </Button>
-                  </div>
-                  <div className="absolute bottom-2 left-2">
-                    <Badge
-                      variant="secondary"
-                      className="bg-black/70 text-white"
-                    >
-                      {bike.timeLeft}
-                    </Badge>
-                  </div>
-                </div>
-
-                <CardContent className="p-4">
-                  <h3 className="font-semibold text-lg mb-2 group-hover:text-primary transition-colors">
-                    {bike.title}
+        {/* Error State */}
+        {error && !loading && (
+          <div className="container mx-auto px-4 py-12">
+            <div className="max-w-md mx-auto">
+              <Alert className="border-red-200 bg-red-50">
+                <AlertCircle className="h-4 w-4 text-red-600" />
+                <div className="ml-2">
+                  <h3 className="text-red-800 font-semibold">
+                    Error Loading Motorbikes
                   </h3>
+                  <p className="text-red-700 mt-1">{error}</p>
+                  <Button
+                    onClick={fetchMotorbikeAuctions}
+                    variant="outline"
+                    size="sm"
+                    className="mt-3 border-red-300 text-red-700 hover:bg-red-100"
+                  >
+                    Try Again
+                  </Button>
+                </div>
+              </Alert>
+            </div>
+          </div>
+        )}
 
-                  <div className="flex items-center gap-2 mb-3">
-                    <Badge variant="outline" className="text-xs">
-                      {bike.category}
-                    </Badge>
-                    <Badge variant="secondary" className="text-xs">
-                      {bike.condition}
-                    </Badge>
-                  </div>
+        {/* Main Content */}
+        {!loading && !error && (
+          <div className="container mx-auto px-4 py-12">
+            <div className="flex justify-between items-center mb-8">
+              <h2 className="text-3xl font-bold">
+                {filteredBikes.length} Motorbikes Available
+              </h2>
+            </div>
 
-                  <div className="space-y-2 mb-4">
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm text-muted-foreground">
-                        Current
-                      </span>
-                      <span className="font-semibold text-primary">
-                        KSh {bike.currentBid.toLocaleString()}
-                      </span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm text-muted-foreground">
-                        Bids
-                      </span>
-                      <span className="text-sm font-medium">{bike.bids}</span>
-                    </div>
-                  </div>
-
-                  <div className="flex gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="flex-1"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        navigate(`/auction/${bike.id}`);
-                      }}
-                    >
-                      View Details
-                    </Button>
-                    {user && (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+              {filteredBikes.map((bike) => (
+                <Card
+                  key={bike.id}
+                  className="group hover:shadow-lg transition-all duration-300 cursor-pointer overflow-hidden"
+                  onClick={() => navigate(`/auction/${bike.id}`)}
+                >
+                  <div className="relative">
+                    <img
+                      src={bike.images[0] || "/placeholder.svg"}
+                      alt={bike.title}
+                      className="w-full h-48 object-cover group-hover:scale-105 transition-transform duration-300"
+                    />
+                    {bike.featured && (
+                      <Badge className="absolute top-2 left-2 bg-accent text-white">
+                        Featured
+                      </Badge>
+                    )}
+                    <div className="absolute top-2 right-2">
                       <Button
+                        variant="ghost"
+                        size="sm"
+                        className={`h-8 w-8 p-0 rounded-full ${
+                          bike.isWatched
+                            ? "bg-accent text-white"
+                            : "bg-white/90 text-muted-foreground hover:bg-white"
+                        }`}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleToggleWatch(bike.id);
+                        }}
+                      >
+                        <Heart
+                          className={`h-4 w-4 ${
+                            bike.isWatched ? "fill-current" : ""
+                          }`}
+                        />
+                      </Button>
+                    </div>
+                    <div className="absolute bottom-2 left-2">
+                      <Badge
+                        variant="secondary"
+                        className="bg-black/70 text-white"
+                      >
+                        {bike.timeLeft}
+                      </Badge>
+                    </div>
+                  </div>
+
+                  <CardContent className="p-4">
+                    <h3 className="font-semibold text-lg mb-2 group-hover:text-primary transition-colors">
+                      {bike.title}
+                    </h3>
+
+                    <div className="flex items-center gap-2 mb-3">
+                      <Badge variant="outline" className="text-xs">
+                        {bike.category_name}
+                      </Badge>
+                      {bike.vehicle_condition && (
+                        <Badge variant="secondary" className="text-xs">
+                          {bike.vehicle_condition}
+                        </Badge>
+                      )}
+                    </div>
+
+                    <p className="text-xs text-muted-foreground mb-3">
+                      {bike.make} {bike.model}{" "}
+                      {bike.year ? `• ${bike.year}` : ""}
+                    </p>
+
+                    <div className="space-y-2 mb-4">
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm text-muted-foreground">
+                          Current
+                        </span>
+                        <span className="font-semibold text-primary">
+                          KSh {bike.current_bid.toLocaleString()}
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm text-muted-foreground">
+                          Bids
+                        </span>
+                        <span className="text-sm font-medium">
+                          {bike.bid_count}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="flex gap-2">
+                      <Button
+                        variant="outline"
                         size="sm"
                         className="flex-1"
                         onClick={(e) => {
                           e.stopPropagation();
-                          // Handle bid placement
+                          navigate(`/auction/${bike.id}`);
                         }}
                       >
-                        Place Bid
+                        View Details
                       </Button>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-
-          {filteredBikes.length === 0 && (
-            <div className="text-center py-12">
-              <p className="text-muted-foreground text-lg">
-                No motorbikes found matching your criteria
-              </p>
+                      {user && (
+                        <Button
+                          size="sm"
+                          className="flex-1"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            // Handle bid placement
+                          }}
+                        >
+                          Place Bid
+                        </Button>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
             </div>
-          )}
-        </div>
+
+            {filteredBikes.length === 0 && (
+              <div className="text-center py-12">
+                <p className="text-muted-foreground text-lg">
+                  No motorbikes found matching your criteria
+                </p>
+              </div>
+            )}
+          </div>
+        )}
       </div>
       <Footer />
     </>
