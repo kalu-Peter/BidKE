@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Header from "@/components/Header";
+import UserHeader from "@/components/UserHeader";
 import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -186,7 +187,7 @@ const ElectronicsPage = () => {
 
   return (
     <>
-      <Header />
+      {user ? <UserHeader /> : <Header />}
       <div className="min-h-screen bg-gray-50 pt-20">
         {/* Hero Section */}
         <section className="bg-gradient-hero text-white py-16">

@@ -3,7 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { LogOut, ArrowLeftRight } from "lucide-react";
+import { LogOut, ArrowLeftRight, Palette } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -72,6 +72,22 @@ const UserHeader: React.FC = () => {
               />
               <span className="text-xl font-bold text-gray-900">BidLode</span>
             </Link>
+
+            {/* Navigation Links */}
+            <nav className="hidden md:flex items-center space-x-6 ml-8">
+              <Link
+                to="/browse-auctions"
+                className="text-gray-700 hover:text-primary transition-colors font-medium"
+              >
+                Auctions
+              </Link>
+              <Link
+                to={getDashboardUrl()}
+                className="text-gray-700 hover:text-primary transition-colors font-medium"
+              >
+                Dashboard
+              </Link>
+            </nav>
           </div>
 
           <div className="flex items-center space-x-4">
@@ -102,16 +118,10 @@ const UserHeader: React.FC = () => {
                 <DropdownMenuItem asChild>
                   <Link to="/dashboard/profile">Profile</Link>
                 </DropdownMenuItem>
-                {user?.role !== "admin" && (
-                  <>
-                    <DropdownMenuItem asChild>
-                      <Link to="/dashboard/bids">My Bids</Link>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem asChild>
-                      <Link to="/dashboard/watchlist">Watchlist</Link>
-                    </DropdownMenuItem>
-                  </>
-                )}
+                <DropdownMenuItem>
+                  <Palette className="mr-2 h-4 w-4" />
+                  Theme
+                </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={handleLogout}>
                   Logout

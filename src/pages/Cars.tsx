@@ -175,7 +175,7 @@ const CarsPage = () => {
 
   return (
     <>
-      <Header />
+      {user ? <UserHeader /> : <Header />}
       <div className="min-h-screen bg-gray-50 pt-20">
         {/* Hero Section */}
         <section className="bg-gradient-hero text-white py-16">

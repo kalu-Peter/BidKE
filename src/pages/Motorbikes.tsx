@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Header from "@/components/Header";
+import UserHeader from "@/components/UserHeader";
 import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -104,7 +105,7 @@ export default function Motorbikes() {
 
   return (
     <>
-      <Header />
+      {user ? <UserHeader /> : <Header />}
       <div className="min-h-screen bg-background">
         {/* Hero Section */}
         <div className="bg-gradient-to-r from-primary via-primary to-secondary text-white py-16">
