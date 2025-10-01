@@ -162,7 +162,7 @@ const WatchlistTab: React.FC = () => {
                   <Button
                     size="sm"
                     variant="outline"
-                    className="absolute top-2 left-2 bg-white/90 hover:bg-white"
+                    className="absolute top-2 left-2 bg-card/90 hover:bg-card"
                     onClick={() => handleRemoveFromWatchlist(item.id)}
                   >
                     <Heart className="w-4 h-4 text-red-500 fill-current" />
@@ -266,7 +266,7 @@ const WatchlistTab: React.FC = () => {
         )}
 
         {/* Watchlist Tips */}
-        <div className="mt-6 p-4 bg-blue-50 rounded-lg">
+        <div className="mt-6 p-4 bg-primary/10 rounded-lg">
           <h4 className="font-medium text-blue-900 mb-2">Watchlist Tips:</h4>
           <ul className="text-sm text-blue-800 space-y-1">
             <li>• Get notified when items you're watching are ending soon</li>

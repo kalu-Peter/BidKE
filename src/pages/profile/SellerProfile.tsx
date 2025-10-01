@@ -811,7 +811,7 @@ const SellerProfile: React.FC = () => {
                 <CardContent>
                   {/* Show rejection reason if present */}
                   {sellerProfile.verificationNotes && (
-                    <div className="p-4 mb-4 border border-red-200 bg-red-50 text-red-800 rounded">
+                    <div className="p-4 mb-4 border border-destructive/20 bg-destructive/10 text-destructive rounded">
                       <div className="font-semibold flex items-center gap-2">
                         <AlertCircle className="w-4 h-4" />
                         Verification Rejected

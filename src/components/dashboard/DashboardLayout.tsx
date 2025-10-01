@@ -185,9 +185,12 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({
     const statusConfig = {
       email_verified: {
         label: "Pending Verification",
-        color: "bg-yellow-100 text-yellow-800",
+        color: "bg-yellow-500/10 text-yellow-600 dark:text-yellow-400",
       },
-      approved: { label: "Verified", color: "bg-green-100 text-green-800" },
+      approved: {
+        label: "Verified",
+        color: "bg-green-500/10 text-green-600 dark:text-green-400",
+      },
     };
 
     return statusConfig[userStatus];
@@ -215,9 +218,9 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({
 
   // Build the layout markup once and return it either wrapped by Tabs for admin
   const layout = (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-background">
       {/* Header */}
-      <header className="bg-white shadow-sm border-b">
+      <header className="bg-card shadow-sm border-b border-border">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center space-x-4">
@@ -289,7 +292,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({
                           className={`flex items-center space-x-2 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
                             isActive
                               ? "bg-primary text-white"
-                              : "text-gray-700 hover:bg-gray-100"
+                              : "text-muted-foreground hover:bg-muted/50"
                           }`}
                         >
                           <item.icon className="w-4 h-4" />

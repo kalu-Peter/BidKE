@@ -12,7 +12,7 @@ const PreviewModal: React.FC<{
   if (!item) return null;
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg p-6 w-full max-w-2xl">
+      <div className="bg-card rounded-lg p-6 w-full max-w-2xl border border-border">
         <h3 className="text-lg font-semibold mb-2">Preview: {item.title}</h3>
         <p className="text-sm text-gray-700">{item.description}</p>
         <div className="mt-4 grid grid-cols-2 gap-4">

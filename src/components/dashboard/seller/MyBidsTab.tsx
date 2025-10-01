@@ -99,25 +99,25 @@ const MyBidsTab: React.FC = () => {
       <CardContent className="space-y-6">
         {/* Bidding Stats */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <div className="bg-blue-50 p-4 rounded-lg">
+          <div className="bg-primary/10 p-4 rounded-lg">
             <div className="text-2xl font-bold text-blue-600">
               {biddingStats.activeBids}
             </div>
             <div className="text-sm text-blue-600">Active Bids</div>
           </div>
-          <div className="bg-green-50 p-4 rounded-lg">
+          <div className="bg-green-500/10 p-4 rounded-lg">
             <div className="text-2xl font-bold text-green-600">
               {biddingStats.wonAuctions}
             </div>
             <div className="text-sm text-green-600">Won Auctions</div>
           </div>
-          <div className="bg-red-50 p-4 rounded-lg">
+          <div className="bg-destructive/10 p-4 rounded-lg">
             <div className="text-2xl font-bold text-red-600">
               {biddingStats.outbid}
             </div>
             <div className="text-sm text-red-600">Currently Outbid</div>
           </div>
-          <div className="bg-gray-50 p-4 rounded-lg">
+          <div className="bg-muted/20 p-4 rounded-lg">
             <div className="text-2xl font-bold text-gray-600">
               {biddingStats.totalBids}
             </div>
@@ -130,7 +130,7 @@ const MyBidsTab: React.FC = () => {
           <h3 className="text-lg font-semibold">Active Bids</h3>
           <div className="border rounded-lg overflow-hidden">
             <table className="w-full">
-              <thead className="bg-gray-50">
+              <thead className="bg-muted/20">
                 <tr>
                   <th className="text-left p-4 font-medium">Item</th>
                   <th className="text-left p-4 font-medium">Current</th>
@@ -152,7 +152,7 @@ const MyBidsTab: React.FC = () => {
                   activeBids.map((bid) => (
                     <tr
                       key={bid.auction_id}
-                      className="border-t hover:bg-gray-50"
+                      className="border-t hover:bg-muted/20"
                     >
                       <td className="p-4">
                         <div className="flex items-center space-x-3">

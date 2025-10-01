@@ -586,7 +586,7 @@ const PostItemTab: React.FC = () => {
       <CardContent className="space-y-8">
         {/* Success Message */}
         {successMessage && (
-          <Alert className="border-green-200 bg-green-50">
+          <Alert className="border-green-500/20 bg-green-500/10 text-green-600 dark:text-green-400">
             <CheckCircle className="h-4 w-4 text-green-600" />
             <AlertDescription className="text-green-800">
               {successMessage}
