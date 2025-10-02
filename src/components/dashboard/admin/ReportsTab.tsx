@@ -391,7 +391,7 @@ const ReportsTab: React.FC = () => {
                 <SelectContent>
                   <SelectItem value="all">All Categories</SelectItem>
                   <SelectItem value="cars">Cars</SelectItem>
-                  <SelectItem value="motorbikes">Motorbikes</SelectItem>
+                  <SelectItem value="motorcycles">Motorcycles</SelectItem>
                   <SelectItem value="electronics">Electronics</SelectItem>
                 </SelectContent>
               </Select>

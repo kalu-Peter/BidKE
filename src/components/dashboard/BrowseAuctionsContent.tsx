@@ -109,7 +109,7 @@ const BrowseAuctionsContent = () => {
 
       const params = new URLSearchParams({
         page: page.toString(),
-        limit: "12",
+        limit: "20",
         status: "live", // Only fetch live auctions
         search: search,
       });
@@ -347,7 +347,7 @@ const BrowseAuctionsContent = () => {
     switch (auction.category_slug) {
       case "cars":
         return "/src/assets/category-cars.jpg";
-      case "motorbikes":
+      case "motorcycles":
         return "/src/assets/category-motorbikes.jpg";
       case "electronics":
         return "/src/assets/category-electronics.jpg";
@@ -485,7 +485,7 @@ const BrowseAuctionsContent = () => {
             <SelectContent>
               <SelectItem value="all">All Categories</SelectItem>
               <SelectItem value="cars">Cars</SelectItem>
-              <SelectItem value="motorbikes">Motorbikes</SelectItem>
+              <SelectItem value="motorcycles">Motorcycles</SelectItem>
               <SelectItem value="electronics">Electronics</SelectItem>
             </SelectContent>
           </Select>
