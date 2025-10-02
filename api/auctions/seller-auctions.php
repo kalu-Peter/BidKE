@@ -64,17 +64,29 @@ try {
 
     // Get auctions with pagination
     $stmt = $pdo->prepare("
-        SELECT a.*, 
-               COALESCE(af.file_path, ai.image_url) as image_path,
-               c.name as category_name
-        FROM auctions a
-    LEFT JOIN auction_files af ON a.id = af.auction_id AND af.file_type = 'image'
-        LEFT JOIN auction_images ai ON a.id = ai.auction_id AND ai.is_primary = true
-        LEFT JOIN categories c ON a.category_id = c.id
-        $whereClause
-        ORDER BY a.created_at DESC
-        LIMIT ? OFFSET ?
-    ");
+            SELECT a.*, 
+                         (
+                             SELECT af.file_path
+                             FROM auction_files af
+                             WHERE af.auction_id = a.id AND af.file_type = 'image'
+                             ORDER BY af.uploaded_at DESC, af.id DESC
+                             LIMIT 1
+                         ) as image_path,
+                         (
+                             SELECT ai.image_url
+                             FROM auction_images ai
+                             WHERE ai.auction_id = a.id
+                             ORDER BY ai.id DESC
+                             LIMIT 1
+                         ) as image_url,
+                   (
+                      SELECT c2.name FROM categories c2 WHERE c2.id = a.category_id LIMIT 1
+                   ) as category_name
+            FROM auctions a
+            $whereClause
+            ORDER BY a.created_at DESC
+            LIMIT ? OFFSET ?
+        ");
     $params[] = $limit;
     $params[] = $offset;
     $stmt->execute($params);
