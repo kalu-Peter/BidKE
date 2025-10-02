@@ -4,6 +4,17 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { BarChart3 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogFooter,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 const MyBidsTab: React.FC = () => {
   const [biddingStats, setBiddingStats] = useState({
@@ -18,6 +29,9 @@ const MyBidsTab: React.FC = () => {
     Record<number, { amount: number | ""; loading: boolean }>
   >({});
   const { toast } = useToast();
+  const [withdrawDialogOpenFor, setWithdrawDialogOpenFor] = useState<
+    number | null
+  >(null);
 
   useEffect(() => {
     const fetch = async () => {
@@ -316,19 +330,95 @@ const MyBidsTab: React.FC = () => {
                               >
                                 Place Bid
                               </button>
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                onClick={() =>
-                                  setBidInputs((prev) => {
-                                    const p = { ...prev };
-                                    delete p[bid.auction_id];
-                                    return p;
-                                  })
+                              <AlertDialog
+                                open={withdrawDialogOpenFor === bid.auction_id}
+                                onOpenChange={(open) =>
+                                  setWithdrawDialogOpenFor(
+                                    open ? bid.auction_id : null
+                                  )
                                 }
                               >
-                                Cancel
-                              </Button>
+                                <AlertDialogTrigger asChild>
+                                  <Button size="sm" variant="ghost">
+                                    Cancel
+                                  </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                  <AlertDialogHeader>
+                                    <AlertDialogTitle>
+                                      Withdraw Bid
+                                    </AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                      Are you sure you want to withdraw your bid
+                                      for "{bid.title}"? This will remove your
+                                      active bid from the auction.
+                                    </AlertDialogDescription>
+                                  </AlertDialogHeader>
+                                  <AlertDialogFooter>
+                                    <AlertDialogCancel>
+                                      Keep Bid
+                                    </AlertDialogCancel>
+                                    <AlertDialogAction
+                                      onClick={async () => {
+                                        try {
+                                          const resp = await fetch(
+                                            "/withdraw-bid.php",
+                                            {
+                                              method: "POST",
+                                              headers: {
+                                                "Content-Type":
+                                                  "application/json",
+                                              },
+                                              body: JSON.stringify({
+                                                auction_id: bid.auction_id,
+                                              }),
+                                            }
+                                          );
+                                          const data = await resp.json();
+                                          if (resp.ok && data.success) {
+                                            try {
+                                              (window as any).dispatchEvent(
+                                                new CustomEvent("bids:changed")
+                                              );
+                                            } catch (_) {}
+                                            toast({
+                                              title: "Bid withdrawn",
+                                              description:
+                                                "Your bid was removed",
+                                            });
+                                            setBidInputs((prev) => {
+                                              const p = { ...prev };
+                                              delete p[bid.auction_id];
+                                              return p;
+                                            });
+                                          } else {
+                                            toast({
+                                              title: "Withdraw failed",
+                                              description:
+                                                data.message ||
+                                                "Could not withdraw bid",
+                                            });
+                                          }
+                                        } catch (err) {
+                                          console.error(
+                                            "Withdraw bid error",
+                                            err
+                                          );
+                                          toast({
+                                            title: "Network error",
+                                            description:
+                                              "Failed to withdraw bid",
+                                          });
+                                        } finally {
+                                          setWithdrawDialogOpenFor(null);
+                                        }
+                                      }}
+                                    >
+                                      Withdraw
+                                    </AlertDialogAction>
+                                  </AlertDialogFooter>
+                                </AlertDialogContent>
+                              </AlertDialog>
                             </>
                           ) : (
                             <Button
