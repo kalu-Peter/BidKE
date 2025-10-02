@@ -244,6 +244,7 @@ const ListingsControlTab: React.FC = () => {
       case "rejected":
         return "bg-red-100 text-red-800";
       case "live":
+      case "active":
         return "bg-blue-100 text-blue-800";
       case "ended":
         return "bg-gray-100 text-gray-800";
@@ -266,6 +267,9 @@ const ListingsControlTab: React.FC = () => {
         return <Clock className="w-4 h-4 text-gray-600" />;
     }
   };
+
+  const isActiveOrLive = (status: string) =>
+    status === "active" || status === "live";
 
   const handleApproveListing = async (listingId: number) => {
     const success = await updateAuctionStatus(listingId, "approve");
@@ -328,6 +332,26 @@ const ListingsControlTab: React.FC = () => {
     const success = await updateAuctionStatus(listingId, "make_live");
     if (success) {
       console.log("Auction is now live");
+    }
+  };
+
+  const handleToggleFeature = async (listingId: number) => {
+    const listing = listings.find((l) => l.id === listingId);
+    if (!listing) return;
+
+    const action = listing.featured ? "unfeature" : "feature";
+    const proceed = window.confirm(
+      `Are you sure you want to ${action} this auction? ${
+        listing.featured
+          ? "This will remove it from featured listings."
+          : "This will make it a featured auction with increased visibility."
+      }`
+    );
+    if (!proceed) return;
+
+    const success = await updateAuctionStatus(listingId, "toggle_feature");
+    if (success) {
+      console.log(`Auction ${action}d successfully`);
     }
   };
 
@@ -509,6 +533,11 @@ const ListingsControlTab: React.FC = () => {
                         <Badge className={getStatusColor(listing.status)}>
                           {listing.status.replace("_", " ")}
                         </Badge>
+                        {listing.featured && (
+                          <Badge className="bg-yellow-100 text-yellow-800 border-yellow-300">
+                            ★ Featured
+                          </Badge>
+                        )}
                         <div className="flex items-center space-x-1">
                           {getVerificationIcon(listing.verification_status)}
                         </div>
@@ -546,7 +575,7 @@ const ListingsControlTab: React.FC = () => {
                     </div>
 
                     {/* Live Auction Info */}
-                    {listing.status === "live" && (
+                    {isActiveOrLive(listing.status) && (
                       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4 p-3 bg-blue-50 rounded-lg">
                         <div>
                           <p className="text-sm text-blue-600">Current</p>
@@ -649,6 +678,22 @@ const ListingsControlTab: React.FC = () => {
                         <Eye className="w-4 h-4 mr-1" />
                         View Details
                       </Button>
+
+                      {isActiveOrLive(listing.status) && (
+                        <Button
+                          variant={listing.featured ? "secondary" : "default"}
+                          size="sm"
+                          onClick={() => handleToggleFeature(listing.id)}
+                          className={
+                            listing.featured
+                              ? "bg-yellow-100 text-yellow-800 hover:bg-yellow-200"
+                              : "bg-blue-600 hover:bg-blue-700"
+                          }
+                        >
+                          <ShieldCheck className="w-4 h-4 mr-1" />
+                          {listing.featured ? "Unfeature" : "Feature"}
+                        </Button>
+                      )}
 
                       {(listing.status === "draft" ||
                         listing.status === "pending_review") && (

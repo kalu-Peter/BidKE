@@ -79,7 +79,7 @@ try {
 
         // Select fields (alias current_price -> current_bid for admin UI compatibility)
         // Select a conservative set of fields that are present across schemas
-        $select = "SELECT a.id, a.title, a.description, a.starting_price, COALESCE(a.current_price, 0) as current_bid, a.reserve_price, a.start_time, a.end_time, a.status, a.featured, a.created_at, c.name as category_name, c.slug as category_slug, COALESCE(u.full_name, u.username) as seller_name, u.email as seller_email, v.make as vehicle_make, v.model as vehicle_model, v.condition as vehicle_condition, e.brand as electronics_brand, e.model as electronics_model, e.condition as electronics_condition";
+        $select = "SELECT a.id, a.title, a.description, a.starting_price, COALESCE(a.current_price, 0) as current_bid, a.reserve_price, a.start_time, a.end_time, a.status, COALESCE(a.featured, false) as featured, COALESCE(a.location, '') as location, a.created_at, c.name as category_name, c.slug as category_slug, COALESCE(u.full_name, u.username) as seller_name, u.email as seller_email, v.make as vehicle_make, v.model as vehicle_model, v.condition as vehicle_condition, e.brand as electronics_brand, e.model as electronics_model, e.condition as electronics_condition";
 
         $query = $select . ' ' . $baseQuery . " ORDER BY a.created_at DESC LIMIT :limit OFFSET :offset";
         $stmt = $pdo->prepare($query);
@@ -108,7 +108,13 @@ try {
             $listing['starting_price'] = isset($listing['starting_price']) ? (float)$listing['starting_price'] : 0;
             $listing['current_bid'] = isset($listing['current_bid']) ? (float)$listing['current_bid'] : 0;
             $listing['reserve_price'] = $listing['reserve_price'] !== null ? (float)$listing['reserve_price'] : null;
-            $listing['featured'] = (bool)$listing['featured'];
+            $listing['featured'] = isset($listing['featured']) ? (bool)$listing['featured'] : false;
+
+            // Add fallback values for fields that might not exist in the database
+            $listing['view_count'] = 0;
+            $listing['bid_count'] = 0;
+            $listing['auction_duration'] = 7;
+            $listing['verification_status'] = 'pending';
 
             // images
             $images = [];
@@ -251,7 +257,7 @@ try {
             $pdo->beginTransaction();
 
             // Lock the row for update
-            $checkStmt = $pdo->prepare("SELECT id, title, status, seller_id, start_time, end_time FROM auctions WHERE id = :id FOR UPDATE");
+            $checkStmt = $pdo->prepare("SELECT id, title, status, seller_id, start_time, end_time, featured FROM auctions WHERE id = :id FOR UPDATE");
             $checkStmt->execute([':id' => $auction_id]);
             $auction = $checkStmt->fetch(PDO::FETCH_ASSOC);
 
@@ -335,6 +341,17 @@ try {
                 $updateQuery = "UPDATE auctions SET status = :status, updated_at = CURRENT_TIMESTAMP WHERE id = :id";
                 $updateStmt = $pdo->prepare($updateQuery);
                 $updateStmt->execute([':status' => $newStatus, ':id' => $auction_id]);
+            } elseif ($action === 'toggle_feature') {
+                // Toggle the featured status of the auction
+                $currentFeatured = (bool)($auction['featured'] ?? false);
+                $newFeatured = !$currentFeatured;
+
+                $updateQuery = "UPDATE auctions SET featured = :featured, updated_at = CURRENT_TIMESTAMP WHERE id = :id";
+                $updateStmt = $pdo->prepare($updateQuery);
+                $updateStmt->execute([':featured' => $newFeatured ? 't' : 'f', ':id' => $auction_id]);
+
+                // Don't change status for this action
+                $newStatus = $currentStatus;
             } else {
                 $pdo->rollBack();
                 send_json(['success' => false, 'error' => 'Unknown action: ' . $action], 400);
