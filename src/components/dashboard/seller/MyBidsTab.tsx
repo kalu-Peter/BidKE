@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { BarChart3 } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 
 const MyBidsTab: React.FC = () => {
   const [biddingStats, setBiddingStats] = useState({
@@ -13,6 +14,10 @@ const MyBidsTab: React.FC = () => {
   });
   const [activeBids, setActiveBids] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
+  const [bidInputs, setBidInputs] = useState<
+    Record<number, { amount: number | ""; loading: boolean }>
+  >({});
+  const { toast } = useToast();
 
   useEffect(() => {
     const fetch = async () => {
@@ -21,20 +26,49 @@ const MyBidsTab: React.FC = () => {
         const { apiService } = await import("@/services/api");
         const res = await apiService.getMyBids();
         if (res && res.success && res.data) {
-          const seller = res.data.seller_listings || [];
-          setActiveBids(seller);
+          // Use buyer_bids (auctions the user has placed bids on)
+          const buyer = res.data.buyer_bids || [];
+          // Compute timeLeft and normalize some fields
+          const nowTs = Date.now();
+          const normalized = buyer.map((b: any) => {
+            const endTs = b.end_time ? new Date(b.end_time).getTime() : nowTs;
+            const timeRemaining = Math.max(
+              0,
+              Math.floor((endTs - nowTs) / 1000)
+            );
+            return {
+              ...b,
+              time_remaining: timeRemaining,
+              timeLeft: formatTimeLeft(timeRemaining),
+              current_bid: Number(b.current_bid || 0),
+              bid_count: Number(b.bid_count || 0),
+              my_bid: Number(b.my_bid || 0),
+            };
+          });
+
+          setActiveBids(normalized);
+          // Stats: active bids (auctions still active), won auctions (ended and my_bid >= current_bid), outbid (active and my_bid < current_bid), totalBids sum of auction bid_count
+          const activeCount = normalized.filter(
+            (s: any) => s.status === "active"
+          ).length;
+          const wonCount = normalized.filter(
+            (s: any) =>
+              s.status === "ended" && (s.my_bid || 0) >= (s.current_bid || 0)
+          ).length;
+          const outbidCount = normalized.filter(
+            (s: any) =>
+              s.status === "active" && (s.my_bid || 0) < (s.current_bid || 0)
+          ).length;
+          const totalBids = normalized.reduce(
+            (sum: number, s: any) => sum + ((s.bid_count as number) || 0),
+            0
+          );
+
           setBiddingStats({
-            activeBids: seller.length,
-            wonAuctions: seller.filter(
-              (s: any) => s.status === "ended" && (s.current_bid || 0) > 0
-            ).length,
-            outbid: seller.filter(
-              (s: any) => s.status === "active" && (s.bid_count || 0) === 0
-            ).length,
-            totalBids: seller.reduce(
-              (sum: number, s: any) => sum + ((s.bid_count as number) || 0),
-              0
-            ),
+            activeBids: activeCount,
+            wonAuctions: wonCount,
+            outbid: outbidCount,
+            totalBids: totalBids,
           });
         }
       } catch (err) {
@@ -64,6 +98,20 @@ const MyBidsTab: React.FC = () => {
   }, []);
 
   const bidHistory: any[] = [];
+
+  const formatTimeLeft = (timeRemaining: number) => {
+    if (timeRemaining <= 0) return "Ended";
+    const hours = Math.floor(timeRemaining / 3600);
+    const minutes = Math.floor((timeRemaining % 3600) / 60);
+    if (hours > 24) {
+      const days = Math.floor(hours / 24);
+      return `${days}d ${hours % 24}h`;
+    } else if (hours > 0) {
+      return `${hours}h ${minutes}m`;
+    } else {
+      return `${minutes}m`;
+    }
+  };
 
   const getStatusBadge = (status: string) => {
     const configs = {
@@ -171,14 +219,126 @@ const MyBidsTab: React.FC = () => {
                       <td className="p-4">{bid.status}</td>
                       <td className="p-4">{bid.timeLeft || ""}</td>
                       <td className="p-4">
-                        <div className="flex space-x-2">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => handleViewItem(bid.auction_id)}
-                          >
-                            View Item
-                          </Button>
+                        <div className="flex items-center space-x-2">
+                          {bid.status === "active" ? (
+                            <>
+                              <input
+                                type="number"
+                                min={Math.max(
+                                  (bid.current_bid || 0) + 100,
+                                  (bid.my_bid || 0) + 100
+                                )}
+                                step={100}
+                                value={bidInputs[bid.auction_id]?.amount ?? ""}
+                                onChange={(e) => {
+                                  const v =
+                                    e.target.value === ""
+                                      ? ""
+                                      : Number(e.target.value);
+                                  setBidInputs((prev) => ({
+                                    ...prev,
+                                    [bid.auction_id]: {
+                                      ...(prev[bid.auction_id] || {
+                                        amount: "",
+                                        loading: false,
+                                      }),
+                                      amount: v,
+                                    },
+                                  }));
+                                }}
+                                className="border rounded px-2 py-1 w-28"
+                                placeholder={`Ksh ${Math.max(
+                                  (bid.current_bid || 0) + 100,
+                                  (bid.my_bid || 0) + 100
+                                ).toLocaleString()}`}
+                              />
+                              <button
+                                className="px-3 py-1 rounded border text-sm bg-primary/5"
+                                onClick={async () => {
+                                  const entry = bidInputs[bid.auction_id] || {
+                                    amount: "",
+                                  };
+                                  const amount = Number(entry.amount || 0);
+                                  if (
+                                    !amount ||
+                                    amount <= (bid.current_bid || 0)
+                                  ) {
+                                    alert(
+                                      "Enter an amount higher than the current bid"
+                                    );
+                                    return;
+                                  }
+                                  setBidInputs((prev) => ({
+                                    ...prev,
+                                    [bid.auction_id]: {
+                                      ...(prev[bid.auction_id] || { amount }),
+                                      loading: true,
+                                    },
+                                  }));
+                                  try {
+                                    const { apiService } = await import(
+                                      "@/services/api"
+                                    );
+                                    const res = await apiService.placeBid(
+                                      bid.auction_id,
+                                      amount
+                                    );
+                                    if (res && res.success) {
+                                      // Refresh via event
+                                      try {
+                                        (window as any).dispatchEvent(
+                                          new CustomEvent("bids:changed")
+                                        );
+                                      } catch (_) {}
+                                      alert("Bid placed successfully");
+                                    } else {
+                                      alert(
+                                        res.error ||
+                                          res.message ||
+                                          "Failed to place bid"
+                                      );
+                                    }
+                                  } catch (err) {
+                                    console.error("Place bid error", err);
+                                    alert("Failed to place bid");
+                                  } finally {
+                                    setBidInputs((prev) => ({
+                                      ...prev,
+                                      [bid.auction_id]: {
+                                        ...(prev[bid.auction_id] || {
+                                          amount: "",
+                                        }),
+                                        loading: false,
+                                      },
+                                    }));
+                                  }
+                                }}
+                              >
+                                Place Bid
+                              </button>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() =>
+                                  setBidInputs((prev) => {
+                                    const p = { ...prev };
+                                    delete p[bid.auction_id];
+                                    return p;
+                                  })
+                                }
+                              >
+                                Cancel
+                              </Button>
+                            </>
+                          ) : (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleViewItem(bid.auction_id)}
+                            >
+                              View Item
+                            </Button>
+                          )}
                         </div>
                       </td>
                     </tr>
