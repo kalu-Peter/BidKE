@@ -33,6 +33,7 @@ const ReportsTab: React.FC = () => {
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [selectedMetric, setSelectedMetric] = useState<any>(null);
+  const [userAnalytics, setUserAnalytics] = useState<any | null>(null);
 
   // Mock data for reports
   const reportData = {
@@ -405,51 +406,10 @@ const ReportsTab: React.FC = () => {
           </div>
         </div>
 
-        {/* Report Header */}
-        <div className="border-b pb-4">
-          <h2 className="text-2xl font-bold text-gray-900">
-            {currentData.title}
-          </h2>
-          <p className="text-gray-600 flex items-center space-x-2">
-            <Calendar className="w-4 h-4" />
-            <span>{currentData.period}</span>
-          </p>
-        </div>
+        {/* (user metrics moved into the conditional 'users' view below) */}
 
-        {/* Platform Overview Report */}
         {selectedReport === "overview" && (
           <div className="space-y-6">
-            {/* Key Metrics Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {currentData.metrics.map((metric: any, index: number) => (
-                <div
-                  key={index}
-                  className="bg-white border rounded-lg p-6 hover:shadow-md transition-shadow cursor-pointer"
-                  onClick={() => handleViewDetails(metric)}
-                >
-                  <div className="flex items-center justify-between mb-2">
-                    <h3 className="text-sm font-medium text-gray-600">
-                      {metric.label}
-                    </h3>
-                    {getTrendIcon(metric.trend)}
-                  </div>
-                  <div className="flex items-end justify-between">
-                    <p className="text-2xl font-bold text-gray-900">
-                      {metric.value}
-                    </p>
-                    <p
-                      className={`text-sm font-medium ${getTrendColor(
-                        metric.trend
-                      )}`}
-                    >
-                      {metric.change}
-                    </p>
-                  </div>
-                  <p className="text-xs text-gray-500 mt-2">{metric.details}</p>
-                </div>
-              ))}
-            </div>
-
             {/* Chart Placeholders */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <div className="bg-white border rounded-lg p-6">
@@ -638,37 +598,116 @@ const ReportsTab: React.FC = () => {
           <div className="space-y-6">
             {/* User Metrics */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {currentData.userMetrics?.map((metric: any, index: number) => (
-                <div key={index} className="bg-white border rounded-lg p-6">
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="font-semibold text-gray-900">
-                      {metric.label}
+              {/* Total Users */}
+              <div className="bg-white border rounded-lg p-6">
+                <div className="flex items-center justify-between mb-2">
+                  <div>
+                    <h3 className="text-sm font-medium text-gray-600">
+                      Total Users
                     </h3>
-                    <div className="flex items-center space-x-2">
-                      {getTrendIcon(metric.trend)}
-                      <span
-                        className={`text-sm font-medium ${getTrendColor(
-                          metric.trend
-                        )}`}
-                      >
-                        {metric.change}
-                      </span>
+                    <div className="text-xs text-gray-500">Overall</div>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-sm font-medium text-green-600">
+                      +8.5%
+                    </div>
+                    <div className="text-2xl font-bold text-gray-900">
+                      {userAnalytics
+                        ? userAnalytics.total_users ?? "—"
+                        : currentData.userMetrics?.[0]?.value ?? "—"}
                     </div>
                   </div>
-                  <p className="text-2xl font-bold text-gray-900 mb-4">
-                    {metric.value}
-                  </p>
+                </div>
 
-                  <div className="space-y-2">
-                    {Object.entries(metric.breakdown).map(([key, value]) => (
-                      <div key={key} className="flex justify-between text-sm">
-                        <span className="text-gray-600">{key}:</span>
-                        <span className="font-medium">{String(value)}</span>
-                      </div>
-                    ))}
+                <div className="mt-4 space-y-2 text-sm text-gray-700">
+                  <div className="flex justify-between">
+                    <span>Active Buyers:</span>
+                    <span className="font-medium">
+                      {userAnalytics
+                        ? (userAnalytics.top_buyers || []).length
+                        : currentData.userMetrics?.[0]?.breakdown?.[
+                            "Active Buyers"
+                          ] ?? "—"}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Active Sellers:</span>
+                    <span className="font-medium">
+                      {userAnalytics
+                        ? (userAnalytics.top_sellers || []).length
+                        : currentData.userMetrics?.[0]?.breakdown?.[
+                            "Active Sellers"
+                          ] ?? "—"}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Inactive:</span>
+                    <span className="font-medium">
+                      {userAnalytics
+                        ? Math.max(
+                            0,
+                            (userAnalytics.total_users || 0) -
+                              (userAnalytics.top_buyers || []).length -
+                              (userAnalytics.top_sellers || []).length
+                          )
+                        : currentData.userMetrics?.[0]?.breakdown?.Inactive ??
+                          "—"}
+                    </span>
                   </div>
                 </div>
-              ))}
+              </div>
+
+              {/* New Registrations */}
+              <div className="bg-white border rounded-lg p-6">
+                <div className="flex items-center justify-between mb-2">
+                  <div>
+                    <h3 className="text-sm font-medium text-gray-600">
+                      New Registrations
+                    </h3>
+                    <div className="text-xs text-gray-500">Last 30 days</div>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-sm font-medium text-green-600">
+                      +25.6%
+                    </div>
+                    <div className="text-2xl font-bold text-gray-900">
+                      {userAnalytics
+                        ? userAnalytics.new_users_total ?? 0
+                        : currentData.userMetrics?.[1]?.value ?? "—"}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mt-4 space-y-2 text-sm text-gray-700">
+                  <div className="flex justify-between">
+                    <span>Buyers:</span>
+                    <span className="font-medium">
+                      {userAnalytics?.new_users_by_role?.buyers ??
+                        currentData.userMetrics?.[1]?.breakdown?.Buyers ??
+                        "—"}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Sellers:</span>
+                    <span className="font-medium">
+                      {userAnalytics?.new_users_by_role?.sellers ??
+                        currentData.userMetrics?.[1]?.breakdown?.Sellers ??
+                        "—"}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* third placeholder */}
+              <div className="bg-white border rounded-lg p-6">
+                <div className="text-sm text-gray-600">
+                  Additional user metrics
+                </div>
+                <div className="mt-4 text-sm text-gray-700">
+                  Use the sub-views to see Top Buyers / Top Sellers / New Users
+                  chart.
+                </div>
+              </div>
             </div>
 
             {/* Top Users */}
