@@ -26,6 +26,7 @@ import {
   ShoppingBag,
   User,
 } from "lucide-react";
+const WonAuctionsAdmin = React.lazy(() => import("./WonAuctionsAdmin"));
 
 const ReportsTab: React.FC = () => {
   const [selectedReport, setSelectedReport] = useState("overview");
@@ -364,6 +365,9 @@ const ReportsTab: React.FC = () => {
                 <SelectItem value="financial">Financial Performance</SelectItem>
                 <SelectItem value="categories">Category Analysis</SelectItem>
                 <SelectItem value="users">User Analytics</SelectItem>
+                <SelectItem value="won_auctions">
+                  Won Auctions (Admin)
+                </SelectItem>
               </SelectContent>
             </Select>
 
@@ -590,6 +594,16 @@ const ReportsTab: React.FC = () => {
                 </div>
               ))}
             </div>
+          </div>
+        )}
+
+        {/* Won Auctions Admin */}
+        {selectedReport === "won_auctions" && (
+          <div className="space-y-6">
+            {/* Lazy-load admin component */}
+            <React.Suspense fallback={<div>Loading...</div>}>
+              <WonAuctionsAdmin />
+            </React.Suspense>
           </div>
         )}
 

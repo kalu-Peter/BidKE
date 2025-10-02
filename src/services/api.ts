@@ -314,6 +314,23 @@ class ApiService {
     return this.makeRequest('/won-auctions.php');
   }
 
+  // Admin: get paginated won auctions (uses admin/won_auctions.php)
+  async adminGetWonAuctions(params: { page?: number; limit?: number } = {}): Promise<ApiResponse<{ winner_record_id: number; auction_id: number; auction_title: string; winning_amount: number; won_at: string; winner_id?: number; winner_username?: string; seller_id?: number; seller_name?: string }[] & { total?: number }>> {
+    const qp = new URLSearchParams();
+    if (params.page) qp.append('page', String(params.page));
+    if (params.limit) qp.append('limit', String(params.limit));
+    const url = `/admin/won_auctions.php?${qp.toString()}`;
+    return this.makeRequest(url);
+  }
+
+  // Admin: delete a winner record by id
+  async adminDeleteWinner(id: number): Promise<ApiResponse> {
+    return this.makeRequest('/admin/won_auctions.php', {
+      method: 'DELETE',
+      body: JSON.stringify({ id })
+    });
+  }
+
   /**
    * Category Methods
    */
