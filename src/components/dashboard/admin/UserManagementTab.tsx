@@ -669,11 +669,14 @@ const UserManagementTab: React.FC = () => {
         {/* View Details Modal */}
         {viewingDetails.data && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-            <div className="bg-white rounded-lg p-6 w-full max-w-2xl overflow-auto">
+            <div className="bg-slate-800 rounded-lg p-6 w-full max-w-2xl overflow-auto">
               <div className="flex justify-between items-start">
-                <h3 className="text-lg font-semibold mb-2">User Details</h3>
+                <h3 className="text-lg font-semibold mb-2 text-white">
+                  User Details
+                </h3>
                 <Button
                   variant="ghost"
+                  className="text-white hover:bg-slate-700"
                   onClick={() =>
                     setViewingDetails({
                       loading: false,
@@ -686,57 +689,65 @@ const UserManagementTab: React.FC = () => {
                 </Button>
               </div>
 
-              {viewingDetails.loading && <div>Loading...</div>}
+              {viewingDetails.loading && (
+                <div className="text-white">Loading...</div>
+              )}
               {viewingDetails.error && (
-                <div className="text-red-700">{viewingDetails.error}</div>
+                <div className="text-red-400">{viewingDetails.error}</div>
               )}
 
               {viewingDetails.data && (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <h4 className="font-medium">Personal</h4>
-                    <p>
-                      <strong>Full name:</strong>{" "}
+                    <h4 className="font-medium text-slate-200 mb-3">
+                      Personal
+                    </h4>
+                    <p className="text-slate-300 mb-2">
+                      <strong className="text-slate-200">Full name:</strong>{" "}
                       {viewingDetails.data.user.full_name ||
                         viewingDetails.data.user.username}
                     </p>
-                    <p>
-                      <strong>Email:</strong> {viewingDetails.data.user.email}
+                    <p className="text-slate-300 mb-2">
+                      <strong className="text-slate-200">Email:</strong>{" "}
+                      {viewingDetails.data.user.email}
                     </p>
-                    <p>
-                      <strong>Phone:</strong> {viewingDetails.data.user.phone}
+                    <p className="text-slate-300 mb-2">
+                      <strong className="text-slate-200">Phone:</strong>{" "}
+                      {viewingDetails.data.user.phone}
                     </p>
-                    <p>
-                      <strong>Address:</strong>{" "}
+                    <p className="text-slate-300 mb-2">
+                      <strong className="text-slate-200">Address:</strong>{" "}
                       {viewingDetails.data.user.address || "—"}
                     </p>
-                    <p>
-                      <strong>City:</strong>{" "}
+                    <p className="text-slate-300 mb-2">
+                      <strong className="text-slate-200">City:</strong>{" "}
                       {viewingDetails.data.user.city || "—"}
                     </p>
-                    <p>
-                      <strong>State:</strong>{" "}
+                    <p className="text-slate-300 mb-2">
+                      <strong className="text-slate-200">State:</strong>{" "}
                       {viewingDetails.data.user.state || "—"}
                     </p>
-                    <p>
-                      <strong>Postal code:</strong>{" "}
+                    <p className="text-slate-300 mb-2">
+                      <strong className="text-slate-200">Postal code:</strong>{" "}
                       {viewingDetails.data.user.postal_code ||
                         viewingDetails.data.user.postalCode ||
                         "—"}
                     </p>
                   </div>
                   <div>
-                    <h4 className="font-medium">Buyer / KYC</h4>
-                    <p>
-                      <strong>National ID:</strong>{" "}
+                    <h4 className="font-medium text-slate-200 mb-3">
+                      Buyer / KYC
+                    </h4>
+                    <p className="text-slate-300 mb-2">
+                      <strong className="text-slate-200">National ID:</strong>{" "}
                       {viewingDetails.data.profile?.national_id || "—"}
                     </p>
-                    <p>
-                      <strong>KYC type:</strong>{" "}
+                    <p className="text-slate-300 mb-2">
+                      <strong className="text-slate-200">KYC type:</strong>{" "}
                       {viewingDetails.data.profile?.kyc_type || "—"}
                     </p>
-                    <div>
-                      <strong>KYC documents:</strong>
+                    <div className="mb-2">
+                      <strong className="text-slate-200">KYC documents:</strong>
                       <div className="mt-2 space-y-2">
                         {Array.isArray(
                           viewingDetails.data.profile?.kyc_documents
@@ -749,7 +760,7 @@ const UserManagementTab: React.FC = () => {
                                 className="flex items-center space-x-2"
                               >
                                 <a
-                                  className="text-blue-600 underline"
+                                  className="text-blue-400 underline hover:text-blue-300"
                                   href={u}
                                   target="_blank"
                                   rel="noreferrer"
@@ -760,13 +771,15 @@ const UserManagementTab: React.FC = () => {
                             )
                           )
                         ) : (
-                          <div>—</div>
+                          <div className="text-slate-300">—</div>
                         )}
                       </div>
                     </div>
                     <div className="mt-4">
-                      <strong>Preferred payment methods:</strong>
-                      <div>
+                      <strong className="text-slate-200">
+                        Preferred payment methods:
+                      </strong>
+                      <div className="text-slate-300">
                         {Array.isArray(
                           viewingDetails.data.profile?.preferred_payment_methods
                         )
