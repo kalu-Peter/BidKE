@@ -21,6 +21,8 @@ import HowItWorks from "./pages/HowItWorks";
 import TrustSecurity from "./pages/TrustSecurity";
 import Contact from "./pages/Contact";
 import SellerProfile from "./pages/profile/SellerProfile";
+import ForgotPassword from "./pages/auth/ForgotPassword";
+import ResetPassword from "./pages/auth/ResetPassword";
 
 const queryClient = new QueryClient();
 
@@ -58,6 +60,8 @@ const App = () => (
               element={<Navigate to="/signup" replace />}
             />
             <Route path="/login" element={<Login />} />
+            <Route path="/forgot-password" element={<ForgotPassword />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
 
             {/* Dashboard Routes */}
             <Route
