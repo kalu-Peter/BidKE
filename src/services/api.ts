@@ -310,6 +310,10 @@ class ApiService {
     return this.makeRequest('/bids.php');
   }
 
+  async getWonAuctions(): Promise<ApiResponse<{ id: number; title: string; winningBid: number; status: string; end_time: string; location?: string; primary_image?: string }[]>> {
+    return this.makeRequest('/won-auctions.php');
+  }
+
   /**
    * Category Methods
    */

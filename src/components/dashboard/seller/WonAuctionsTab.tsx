@@ -5,65 +5,34 @@ import { Badge } from "@/components/ui/badge";
 import { Trophy, Receipt, Eye } from "lucide-react";
 
 const WonAuctionsTab: React.FC = () => {
-  // Mock won auctions data
-  const wonAuctions = [
-    {
-      id: 1,
-      title: "Yamaha R15 V3",
-      category: "Motorbikes",
-      winningBid: 85000,
-      status: "payment_pending",
-      dateDue: "2025-09-12",
-      dateWon: "2 days ago",
-      seller: "Bike World",
-      image:
-        "https://images.unsplash.com/photo-1558618047-3c8c76ca7d13?auto=format&fit=crop&w=80&q=80",
-      collectionLocation: "Nairobi - Industrial Area",
-      paymentDeadline: "3 days remaining",
-    },
-    {
-      id: 2,
-      title: "iPhone 13 Pro",
-      category: "Electronics",
-      winningBid: 65000,
-      status: "paid",
-      datePaid: "2025-09-03",
-      dateWon: "1 week ago",
-      seller: "TechHub Kenya",
-      image:
-        "https://images.unsplash.com/photo-1592750475338-74b7b21085ab?auto=format&fit=crop&w=80&q=80",
-      collectionLocation: "Nairobi - CBD",
-      collectionDate: "Available for collection",
-    },
-    {
-      id: 3,
-      title: "Toyota Vitz 2015",
-      category: "Cars",
-      winningBid: 275000,
-      status: "collected",
-      datePaid: "2025-08-28",
-      dateWon: "2 weeks ago",
-      seller: "Auto Dealers Ltd",
-      image:
-        "https://images.unsplash.com/photo-1503736334956-4c8f8e92946d?auto=format&fit=crop&w=80&q=80",
-      collectionLocation: "Mombasa - Nyali",
-      collectionDate: "Collected on 2025-09-01",
-    },
-    {
-      id: 4,
-      title: "MacBook Air M2",
-      category: "Electronics",
-      winningBid: 95000,
-      status: "paid",
-      datePaid: "2025-08-25",
-      dateWon: "3 weeks ago",
-      seller: "Digital Solutions",
-      image:
-        "https://images.unsplash.com/photo-1541807084-5c52b6b3adef?auto=format&fit=crop&w=80&q=80",
-      collectionLocation: "Kisumu - Town Center",
-      collectionDate: "Ready for collection",
-    },
-  ];
+  const [wonAuctions, setWonAuctions] = React.useState<any[]>([]);
+  const [loading, setLoading] = React.useState(false);
+
+  React.useEffect(() => {
+    let mounted = true;
+    setLoading(true);
+    import("@/services/api").then(({ apiService }) => {
+      apiService
+        .getWonAuctions()
+        .then((res) => {
+          if (!mounted) return;
+          setLoading(false);
+          if (res && res.success && res.data) {
+            setWonAuctions(res.data);
+          } else {
+            setWonAuctions([]);
+          }
+        })
+        .catch(() => {
+          if (!mounted) return;
+          setLoading(false);
+          setWonAuctions([]);
+        });
+    });
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   const getStatusConfig = (status: string) => {
     const configs = {
