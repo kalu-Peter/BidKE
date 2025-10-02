@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -321,8 +321,162 @@ const BrowseAuctionsContent = () => {
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
+  // Lightweight hero swiper component (no external deps)
+  const HeroSwiper: React.FC<{
+    slides: Auction[];
+    onView: (id: number) => void;
+    onBid: (id: number) => void;
+  }> = ({ slides, onView, onBid }) => {
+    const [index, setIndex] = useState(0);
+    const intervalRef = useRef<number | null>(null);
+    const touchStartX = useRef<number | null>(null);
+
+    useEffect(() => {
+      if ((slides || []).length <= 1) return;
+      intervalRef.current = window.setInterval(() => {
+        setIndex((i) => (i + 1) % slides.length);
+      }, 5000);
+      return () => {
+        if (intervalRef.current) window.clearInterval(intervalRef.current);
+      };
+    }, [slides.length]);
+
+    const prev = () => {
+      setIndex((i) => (i - 1 + slides.length) % slides.length);
+      if (intervalRef.current) {
+        window.clearInterval(intervalRef.current);
+        intervalRef.current = window.setInterval(
+          () => setIndex((i) => (i + 1) % slides.length),
+          5000
+        );
+      }
+    };
+
+    const next = () => {
+      setIndex((i) => (i + 1) % slides.length);
+      if (intervalRef.current) {
+        window.clearInterval(intervalRef.current);
+        intervalRef.current = window.setInterval(
+          () => setIndex((i) => (i + 1) % slides.length),
+          5000
+        );
+      }
+    };
+
+    const onTouchStart = (e: React.TouchEvent) => {
+      touchStartX.current = e.touches[0].clientX;
+    };
+
+    const onTouchEnd = (e: React.TouchEvent) => {
+      if (touchStartX.current == null) return;
+      const dx = e.changedTouches[0].clientX - touchStartX.current;
+      if (dx > 50) prev();
+      else if (dx < -50) next();
+      touchStartX.current = null;
+    };
+
+    if (!slides || slides.length === 0) {
+      // placeholder hero
+      return (
+        <div className="w-full rounded-lg overflow-hidden bg-gradient-to-r from-primary/10 to-primary/5 p-6">
+          <div className="max-w-6xl mx-auto text-center">
+            <h2 className="text-3xl font-bold mb-2">Discover great auctions</h2>
+            <p className="text-gray-600">
+              Browse featured items and latest listings
+            </p>
+          </div>
+        </div>
+      );
+    }
+
+    const slide = slides[index];
+    return (
+      <div
+        className="w-full rounded-lg overflow-hidden relative"
+        onTouchStart={onTouchStart}
+        onTouchEnd={onTouchEnd}
+      >
+        <div className="aspect-[16/6] relative bg-gray-200">
+          <img
+            src={getAuctionImage(slide)}
+            alt={slide.title}
+            className="w-full h-full object-cover"
+            onError={(e) =>
+              ((e.target as HTMLImageElement).src = "/placeholder.svg")
+            }
+          />
+          <div className="absolute inset-0 bg-gradient-to-r from-black/40 via-black/10 to-black/40"></div>
+          <div className="absolute inset-0 flex items-center">
+            <div className="max-w-4xl mx-auto px-6 text-white">
+              <div className="mb-2">
+                <Badge className="bg-white/10 text-white">
+                  {slide.category_name}
+                </Badge>
+              </div>
+              <h2 className="text-3xl md:text-4xl font-bold leading-tight mb-2">
+                {slide.title}
+              </h2>
+              <p className="text-sm md:text-base text-white/90 mb-4 line-clamp-2">
+                {slide.description}
+              </p>
+              <div className="flex space-x-3">
+                <Button
+                  onClick={() => onView(slide.id)}
+                  className="bg-white text-black"
+                >
+                  View details
+                </Button>
+                <Button onClick={() => onBid(slide.id)} variant="outline">
+                  Place bid
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Navigation */}
+        <button
+          aria-label="Previous slide"
+          onClick={prev}
+          className="absolute left-4 top-1/2 -translate-y-1/2 bg-white/80 rounded-full p-2 shadow-md"
+        >
+          ‹
+        </button>
+        <button
+          aria-label="Next slide"
+          onClick={next}
+          className="absolute right-4 top-1/2 -translate-y-1/2 bg-white/80 rounded-full p-2 shadow-md"
+        >
+          ›
+        </button>
+
+        {/* Indicators */}
+        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex space-x-2">
+          {slides.map((_, i) => (
+            <button
+              key={i}
+              aria-label={`Go to slide ${i + 1}`}
+              onClick={() => setIndex(i)}
+              className={`h-2 w-8 rounded-full ${
+                i === index ? "bg-white" : "bg-white/40"
+              }`}
+            />
+          ))}
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="space-y-6">
+      {/* Hero swiper showing featured auctions */}
+      <div>
+        <HeroSwiper
+          slides={auctions.filter((a) => a.featured).slice(0, 6)}
+          onView={(id) => handleViewDetails(id)}
+          onBid={(id) => handlePlaceBid(id)}
+        />
+      </div>
       {/* Search and Filters */}
       <div className="space-y-4">
         <div>
