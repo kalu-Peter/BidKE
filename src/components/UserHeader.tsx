@@ -64,20 +64,20 @@ const UserHeader: React.FC = () => {
                 alt="BidLode Logo"
                 className="w-8 h-8 object-contain"
               />
-              <span className="text-xl font-bold text-white">BidLode</span>
+              <span className="text-xl font-bold text-foreground">BidLode</span>
             </Link>
 
             {/* Navigation Links */}
             <nav className="hidden md:flex items-center space-x-6 ml-8">
               <Link
                 to="/browse-auctions"
-                className="text-gray-700 hover:text-primary transition-colors font-medium"
+                className="text-muted-foreground hover:text-primary transition-colors font-medium"
               >
                 Auctions
               </Link>
               <Link
                 to={getDashboardUrl()}
-                className="text-gray-700 hover:text-primary transition-colors font-medium"
+                className="text-muted-foreground hover:text-primary transition-colors font-medium"
               >
                 Dashboard
               </Link>
@@ -101,7 +101,7 @@ const UserHeader: React.FC = () => {
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 <div className="px-4 py-3">
-                  <div className="font-medium">
+                  <div className="font-medium text-foreground">
                     {user?.name || user?.username}
                   </div>
                   <div className="text-xs text-muted-foreground">

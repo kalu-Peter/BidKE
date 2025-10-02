@@ -292,7 +292,7 @@ const OverviewTab: React.FC = () => {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center space-x-2">
+            <CardTitle className="flex items-center space-x-2 text-foreground">
               <AlertTriangle className="w-5 h-5" />
               <span>Recent Platform Activity</span>
             </CardTitle>
@@ -310,10 +310,12 @@ const OverviewTab: React.FC = () => {
                       className={`w-5 h-5 ${activity.iconColor}`}
                     />
                     <div className="flex-1">
-                      <p className="font-medium text-gray-900">
+                      <p className="font-medium text-foreground">
                         {activity.message}
                       </p>
-                      <p className="text-sm text-gray-600">{activity.time}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {activity.time}
+                      </p>
                     </div>
                   </div>
                 );
@@ -329,7 +331,7 @@ const OverviewTab: React.FC = () => {
 
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center space-x-2">
+            <CardTitle className="flex items-center space-x-2 text-foreground">
               <CheckCircle className="w-5 h-5" />
               <span>Quick Actions</span>
             </CardTitle>
@@ -358,7 +360,7 @@ const OverviewTab: React.FC = () => {
       {/* System Health Metrics */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center space-x-2">
+          <CardTitle className="flex items-center space-x-2 text-foreground">
             <BarChart3 className="w-5 h-5" />
             <span>System Health & Performance</span>
           </CardTitle>
@@ -374,13 +376,15 @@ const OverviewTab: React.FC = () => {
                 >
                   <IconComponent className={`w-8 h-8 ${metric.color}`} />
                   <div>
-                    <p className="text-2xl font-bold text-gray-900">
+                    <p className="text-2xl font-bold text-foreground">
                       {metric.value}
                     </p>
-                    <p className="text-sm font-medium text-gray-900">
+                    <p className="text-sm font-medium text-foreground">
                       {metric.title}
                     </p>
-                    <p className="text-xs text-gray-600">{metric.subtitle}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {metric.subtitle}
+                    </p>
                   </div>
                 </div>
               );
@@ -393,44 +397,52 @@ const OverviewTab: React.FC = () => {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <Card>
           <CardHeader>
-            <CardTitle className="text-lg">Top Categories</CardTitle>
+            <CardTitle className="text-lg text-foreground">
+              Top Categories
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
               <div className="flex justify-between items-center">
-                <span className="text-sm font-medium">Cars</span>
+                <span className="text-sm font-medium text-foreground">
+                  Cars
+                </span>
                 <div className="flex items-center space-x-2">
-                  <div className="w-24 bg-gray-200 rounded-full h-2">
+                  <div className="w-24 bg-muted rounded-full h-2">
                     <div
                       className="bg-blue-500 h-2 rounded-full"
                       style={{ width: "65%" }}
                     ></div>
                   </div>
-                  <span className="text-sm text-gray-600">65%</span>
+                  <span className="text-sm text-muted-foreground">65%</span>
                 </div>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-sm font-medium">Electronics</span>
+                <span className="text-sm font-medium text-foreground">
+                  Electronics
+                </span>
                 <div className="flex items-center space-x-2">
-                  <div className="w-24 bg-gray-200 rounded-full h-2">
+                  <div className="w-24 bg-muted rounded-full h-2">
                     <div
                       className="bg-green-500 h-2 rounded-full"
                       style={{ width: "45%" }}
                     ></div>
                   </div>
-                  <span className="text-sm text-gray-600">45%</span>
+                  <span className="text-sm text-muted-foreground">45%</span>
                 </div>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-sm font-medium">Motorbikes</span>
+                <span className="text-sm font-medium text-foreground">
+                  Motorbikes
+                </span>
                 <div className="flex items-center space-x-2">
-                  <div className="w-24 bg-gray-200 rounded-full h-2">
+                  <div className="w-24 bg-muted rounded-full h-2">
                     <div
                       className="bg-yellow-500 h-2 rounded-full"
                       style={{ width: "30%" }}
                     ></div>
                   </div>
-                  <span className="text-sm text-gray-600">30%</span>
+                  <span className="text-sm text-muted-foreground">30%</span>
                 </div>
               </div>
             </div>
@@ -439,25 +451,33 @@ const OverviewTab: React.FC = () => {
 
         <Card>
           <CardHeader>
-            <CardTitle className="text-lg">User Growth</CardTitle>
+            <CardTitle className="text-lg text-foreground">
+              User Growth
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
               <div className="flex justify-between">
-                <span className="text-sm text-gray-600">New Users Today</span>
-                <span className="font-semibold">24</span>
+                <span className="text-sm text-muted-foreground">
+                  New Users Today
+                </span>
+                <span className="font-semibold text-foreground">24</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-sm text-gray-600">This Week</span>
-                <span className="font-semibold">156</span>
+                <span className="text-sm text-muted-foreground">This Week</span>
+                <span className="font-semibold text-foreground">156</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-sm text-gray-600">This Month</span>
-                <span className="font-semibold">642</span>
+                <span className="text-sm text-muted-foreground">
+                  This Month
+                </span>
+                <span className="font-semibold text-foreground">642</span>
               </div>
               <div className="pt-2 border-t">
                 <div className="flex justify-between">
-                  <span className="text-sm font-medium">Growth Rate</span>
+                  <span className="text-sm font-medium text-foreground">
+                    Growth Rate
+                  </span>
                   <span className="font-semibold text-green-600">+15.2%</span>
                 </div>
               </div>
@@ -467,25 +487,37 @@ const OverviewTab: React.FC = () => {
 
         <Card>
           <CardHeader>
-            <CardTitle className="text-lg">Revenue Overview</CardTitle>
+            <CardTitle className="text-lg text-foreground">
+              Revenue Overview
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
               <div className="flex justify-between">
-                <span className="text-sm text-gray-600">Today</span>
-                <span className="font-semibold">Ksh 45,000</span>
+                <span className="text-sm text-muted-foreground">Today</span>
+                <span className="font-semibold text-foreground">
+                  Ksh 45,000
+                </span>
               </div>
               <div className="flex justify-between">
-                <span className="text-sm text-gray-600">This Week</span>
-                <span className="font-semibold">Ksh 287,500</span>
+                <span className="text-sm text-muted-foreground">This Week</span>
+                <span className="font-semibold text-foreground">
+                  Ksh 287,500
+                </span>
               </div>
               <div className="flex justify-between">
-                <span className="text-sm text-gray-600">This Month</span>
-                <span className="font-semibold">Ksh 1,245,000</span>
+                <span className="text-sm text-muted-foreground">
+                  This Month
+                </span>
+                <span className="font-semibold text-foreground">
+                  Ksh 1,245,000
+                </span>
               </div>
               <div className="pt-2 border-t">
                 <div className="flex justify-between">
-                  <span className="text-sm font-medium">Commission</span>
+                  <span className="text-sm font-medium text-foreground">
+                    Commission
+                  </span>
                   <span className="font-semibold text-blue-600">
                     Ksh 124,500
                   </span>

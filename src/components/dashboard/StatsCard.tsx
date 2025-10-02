@@ -24,7 +24,7 @@ const StatsCard: React.FC<StatsCardProps> = ({
       case "negative":
         return "text-red-600";
       default:
-        return "text-gray-600";
+        return "text-muted-foreground";
     }
   };
 
@@ -32,14 +32,20 @@ const StatsCard: React.FC<StatsCardProps> = ({
     <div className="bg-card p-6 rounded-lg shadow-sm border border-border">
       <div className="flex items-center justify-between">
         <div className="flex-1">
-          <p className="text-sm text-gray-600 mb-1">{title}</p>
-          <p className="text-2xl font-bold text-gray-900">{value}</p>
-          {subtitle && <p className="text-xs text-gray-500 mt-1">{subtitle}</p>}
+          <p className="text-sm text-muted-foreground font-medium mb-1">
+            {title}
+          </p>
+          <p className="text-2xl font-bold text-foreground">{value}</p>
+          {subtitle && (
+            <p className="text-xs text-muted-foreground mt-1">{subtitle}</p>
+          )}
           {change && (
-            <p className={`text-sm mt-2 ${getChangeColor()}`}>{change}</p>
+            <p className={`text-sm mt-2 font-medium ${getChangeColor()}`}>
+              {change}
+            </p>
           )}
         </div>
-        <div className="text-gray-400">{icon}</div>
+        <div className="text-muted-foreground">{icon}</div>
       </div>
     </div>
   );
