@@ -118,7 +118,7 @@ const WonAuctionsAdmin: React.FC = () => {
             <select
               value={limit}
               onChange={(e) => setLimit(Number(e.target.value))}
-              className="border rounded px-2 py-1"
+              className="border rounded bg-primary/20 px-2 py-1"
             >
               <option value={10}>10</option>
               <option value={25}>25</option>
@@ -238,7 +238,7 @@ const WonAuctionsAdmin: React.FC = () => {
                         className="w-12 h-8 object-cover rounded"
                       />
                     ) : (
-                      <div className="w-12 h-8 bg-gray-100 rounded flex items-center justify-center text-xs text-gray-400">
+                      <div className="w-12 h-8 bg-primary/20 rounded flex items-center justify-center text-xs text-gray-400">
                         No
                       </div>
                     )}
