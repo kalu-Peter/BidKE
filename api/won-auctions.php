@@ -20,7 +20,7 @@ try {
     $hasWinnersTable = (bool)$check->fetchColumn();
 
     if ($hasWinnersTable) {
-        $query = "SELECT aw.auction_id as id, a.title, aw.winning_amount AS winningBid, a.status, a.end_time, a.location, ai.image_url as primary_image, aw.created_at as won_at
+        $query = "SELECT aw.auction_id as id, a.title, aw.winning_amount AS winning_amount, a.status, a.end_time, a.location, ai.image_url as primary_image, aw.created_at as won_at
                   FROM auction_winners aw
                   JOIN auctions a ON a.id = aw.auction_id
                   LEFT JOIN auction_images ai ON ai.auction_id = a.id AND ai.is_primary = TRUE
@@ -32,20 +32,20 @@ try {
         $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
     } else {
         // Fallback to previous method (join bids)
-        $query = "SELECT a.id, a.title, COALESCE(a.current_price, a.starting_price) AS winningBid, a.status, a.end_time, a.location,
-                    ai.image_url as primary_image
-                  FROM auctions a
-                  LEFT JOIN auction_images ai ON ai.auction_id = a.id AND ai.is_primary = TRUE
-                  JOIN bids b ON b.auction_id = a.id AND b." . $bidderCol . " = :uid AND b.bid_status = 'won'
-                  WHERE a.status = 'ended'
-                  ORDER BY a.end_time DESC
-                  LIMIT 200";
+        $query = "SELECT a.id, a.title, COALESCE(a.current_price, a.starting_price) AS winning_amount, a.status, a.end_time, a.location,
+                                        ai.image_url as primary_image
+                                    FROM auctions a
+                                    LEFT JOIN auction_images ai ON ai.auction_id = a.id AND ai.is_primary = TRUE
+                                    JOIN bids b ON b.auction_id = a.id AND b." . $bidderCol . " = :uid AND b.bid_status = 'won'
+                                    WHERE a.status = 'ended'
+                                    ORDER BY a.end_time DESC
+                                    LIMIT 200";
         $stmt = $db->prepare($query);
         $stmt->execute([':uid' => $userId]);
         $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
-    // Normalize image url
+    // Normalize image url and ensure numeric winning_amount
     foreach ($rows as &$r) {
         if (!empty($r['primary_image'])) {
             // If image_url is a relative path, prefix with base URL
@@ -54,6 +54,15 @@ try {
             }
         } else {
             $r['primary_image'] = null;
+        }
+        // Normalize winning_amount to numeric if present
+        if (isset($r['winning_amount'])) {
+            $r['winning_amount'] = is_numeric($r['winning_amount']) ? (float)$r['winning_amount'] : floatval(str_replace(',', '', $r['winning_amount']));
+        } elseif (isset($r['winningBid'])) {
+            // Backward compatibility: if older alias present, normalize it
+            $r['winning_amount'] = is_numeric($r['winningBid']) ? (float)$r['winningBid'] : floatval(str_replace(',', '', $r['winningBid']));
+        } else {
+            $r['winning_amount'] = null;
         }
     }
 

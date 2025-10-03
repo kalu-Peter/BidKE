@@ -82,17 +82,11 @@ const WonAuctionsTab: React.FC = () => {
   ).length;
   const totalSpent = wonAuctions
     .filter((a) => a.status !== "payment_pending")
-    .reduce((sum, auction) => sum + auction.winningBid, 0);
+    .reduce((sum, auction) => sum + (Number(auction.winning_amount) || 0), 0);
 
-  // Helper to safely extract and format the winning amount from various API shapes
+  // Helper to format the canonical `winning_amount` field returned by the API
   const formatWinningAmount = (auction: any) => {
-    // The backend may return different field names or string numbers depending on path
-    const raw =
-      auction.winningBid ??
-      auction.winning_amount ??
-      auction.winningAmount ??
-      auction.winning_amount ??
-      (auction.winning || null);
+    const raw = auction.winning_amount;
     if (raw === null || raw === undefined) return "—";
     const n = typeof raw === "number" ? raw : Number(raw);
     if (isNaN(n)) return String(raw);

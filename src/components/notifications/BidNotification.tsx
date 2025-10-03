@@ -1,19 +1,19 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState } from "react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { 
-  CheckCircle, 
-  AlertTriangle, 
-  X, 
+import {
+  CheckCircle,
+  AlertTriangle,
+  X,
   Bell,
   Mail,
-  MessageSquare
-} from 'lucide-react';
+  MessageSquare,
+} from "lucide-react";
 
 export interface NotificationData {
   id: string;
-  type: 'outbid' | 'winning' | 'won' | 'lost' | 'starting' | 'ending';
+  type: "outbid" | "winning" | "won" | "lost" | "starting" | "ending";
   title: string;
   message: string;
   auctionId: number;
@@ -29,17 +29,17 @@ interface BidNotificationProps {
   onSMSAlert?: () => void;
 }
 
-const BidNotification: React.FC<BidNotificationProps> = ({ 
-  notification, 
-  onClose, 
-  onEmailAlert, 
-  onSMSAlert 
+const BidNotification: React.FC<BidNotificationProps> = ({
+  notification,
+  onClose,
+  onEmailAlert,
+  onSMSAlert,
 }) => {
   const [isVisible, setIsVisible] = useState(true);
 
   useEffect(() => {
     // Auto-hide after 10 seconds for non-critical notifications
-    if (notification.type !== 'outbid' && notification.type !== 'won') {
+    if (notification.type !== "outbid" && notification.type !== "won") {
       const timer = setTimeout(() => {
         setIsVisible(false);
         setTimeout(onClose, 300); // Allow fade out animation
@@ -51,17 +51,17 @@ const BidNotification: React.FC<BidNotificationProps> = ({
 
   const getNotificationIcon = () => {
     switch (notification.type) {
-      case 'outbid':
+      case "outbid":
         return <AlertTriangle className="w-5 h-5 text-red-500" />;
-      case 'winning':
+      case "winning":
         return <CheckCircle className="w-5 h-5 text-green-500" />;
-      case 'won':
+      case "won":
         return <CheckCircle className="w-5 h-5 text-green-600" />;
-      case 'lost':
+      case "lost":
         return <AlertTriangle className="w-5 h-5 text-orange-500" />;
-      case 'starting':
+      case "starting":
         return <Bell className="w-5 h-5 text-blue-500" />;
-      case 'ending':
+      case "ending":
         return <Bell className="w-5 h-5 text-yellow-500" />;
       default:
         return <Bell className="w-5 h-5 text-gray-500" />;
@@ -70,27 +70,29 @@ const BidNotification: React.FC<BidNotificationProps> = ({
 
   const getNotificationColor = () => {
     switch (notification.type) {
-      case 'outbid':
-        return 'border-red-200 bg-red-50';
-      case 'winning':
-        return 'border-green-200 bg-green-50';
-      case 'won':
-        return 'border-green-300 bg-green-100';
-      case 'lost':
-        return 'border-orange-200 bg-orange-50';
-      case 'starting':
-        return 'border-blue-200 bg-blue-50';
-      case 'ending':
-        return 'border-yellow-200 bg-yellow-50';
+      case "outbid":
+        return "border-red-200 bg-red-50";
+      case "winning":
+        return "border-green-200 bg-green-50";
+      case "won":
+        return "border-green-300 bg-green-100";
+      case "lost":
+        return "border-orange-200 bg-orange-50";
+      case "starting":
+        return "border-blue-200 bg-blue-50";
+      case "ending":
+        return "border-yellow-200 bg-yellow-50";
       default:
-        return 'border-gray-200 bg-gray-50';
+        return "border-gray-200 bg-gray-50";
     }
   };
 
   if (!isVisible) return null;
 
   return (
-    <Card className={`fixed top-24 right-4 z-50 w-96 shadow-lg transition-all duration-300 ${getNotificationColor()}`}>
+    <Card
+      className={`fixed top-24 right-4 z-50 w-96 shadow-lg transition-all duration-300 ${getNotificationColor()}`}
+    >
       <CardContent className="p-4">
         <div className="flex items-start space-x-3">
           {getNotificationIcon()}
@@ -108,15 +110,14 @@ const BidNotification: React.FC<BidNotificationProps> = ({
                 <X className="w-4 h-4" />
               </Button>
             </div>
-            <p className="text-sm text-gray-700 mb-2">
-              {notification.message}
-            </p>
+            <p className="text-sm text-gray-700 mb-2">{notification.message}</p>
             <p className="text-xs text-gray-500 mb-3">
               Auction: {notification.auctionTitle}
             </p>
-            
+
             {/* Action buttons for outbid and won notifications */}
-            {(notification.type === 'outbid' || notification.type === 'won') && (
+            {(notification.type === "outbid" ||
+              notification.type === "won") && (
               <div className="flex space-x-2">
                 {onEmailAlert && (
                   <Button
@@ -153,26 +154,28 @@ const BidNotification: React.FC<BidNotificationProps> = ({
 export const useNotifications = () => {
   const [notifications, setNotifications] = useState<NotificationData[]>([]);
 
-  const addNotification = (notification: Omit<NotificationData, 'id' | 'timestamp' | 'isRead'>) => {
+  const addNotification = (
+    notification: Omit<NotificationData, "id" | "timestamp" | "isRead">
+  ) => {
     const newNotification: NotificationData = {
       ...notification,
       id: Math.random().toString(36).substr(2, 9),
       timestamp: new Date(),
-      isRead: false
+      isRead: false,
     };
-    
-    setNotifications(prev => [newNotification, ...prev]);
+
+    setNotifications((prev) => [newNotification, ...prev]);
     return newNotification.id;
   };
 
   const removeNotification = (id: string) => {
-    setNotifications(prev => prev.filter(n => n.id !== id));
+    setNotifications((prev) => prev.filter((n) => n.id !== id));
   };
 
   const markAsRead = (id: string) => {
-    setNotifications(prev => prev.map(n => 
-      n.id === id ? { ...n, isRead: true } : n
-    ));
+    setNotifications((prev) =>
+      prev.map((n) => (n.id === id ? { ...n, isRead: true } : n))
+    );
   };
 
   const clearAll = () => {
@@ -180,63 +183,88 @@ export const useNotifications = () => {
   };
 
   // Common notification creators
-  const notifyOutbid = (auctionId: number, auctionTitle: string, currentBid: number) => {
+  const notifyOutbid = (
+    auctionId: number,
+    auctionTitle: string,
+    currentBid: number
+  ) => {
     return addNotification({
-      type: 'outbid',
-      title: 'You have been outbid!',
+      type: "outbid",
+      title: "You have been outbid!",
       message: `Someone placed a higher bid of KES ${currentBid.toLocaleString()}. Place a new bid to stay in the game!`,
       auctionId,
-      auctionTitle
+      auctionTitle,
     });
   };
 
   const notifyWinning = (auctionId: number, auctionTitle: string) => {
     return addNotification({
-      type: 'winning',
-      title: 'Congratulations!',
-      message: "You're currently the highest bidder! Keep an eye on the auction.",
+      type: "winning",
+      title: "Congratulations!",
+      message:
+        "You're currently the highest bidder! Keep an eye on the auction.",
       auctionId,
-      auctionTitle
+      auctionTitle,
     });
   };
 
-  const notifyWon = (auctionId: number, auctionTitle: string, winningBid: number) => {
+  const notifyWon = (
+    auctionId: number,
+    auctionTitle: string,
+    winning_amount: number
+  ) => {
     return addNotification({
-      type: 'won',
-      title: 'Auction Won!',
-      message: `Congratulations! You won this auction with a bid of KES ${winningBid.toLocaleString()}.`,
+      type: "won",
+      title: "Auction Won!",
+      message: `Congratulations! You won this auction with a bid of KES ${Number(
+        winning_amount
+      ).toLocaleString()}.`,
       auctionId,
-      auctionTitle
+      auctionTitle,
     });
   };
 
-  const notifyLost = (auctionId: number, auctionTitle: string, winningBid: number) => {
+  const notifyLost = (
+    auctionId: number,
+    auctionTitle: string,
+    winning_amount: number
+  ) => {
     return addNotification({
-      type: 'lost',
-      title: 'Auction Ended',
-      message: `This auction ended with a winning bid of KES ${winningBid.toLocaleString()}. Better luck next time!`,
+      type: "lost",
+      title: "Auction Ended",
+      message: `This auction ended with a winning bid of KES ${Number(
+        winning_amount
+      ).toLocaleString()}. Better luck next time!`,
       auctionId,
-      auctionTitle
+      auctionTitle,
     });
   };
 
-  const notifyAuctionStarting = (auctionId: number, auctionTitle: string, startTime: string) => {
+  const notifyAuctionStarting = (
+    auctionId: number,
+    auctionTitle: string,
+    startTime: string
+  ) => {
     return addNotification({
-      type: 'starting',
-      title: 'Auction Starting Soon',
+      type: "starting",
+      title: "Auction Starting Soon",
       message: `The auction you're watching starts at ${startTime}. Get ready to bid!`,
       auctionId,
-      auctionTitle
+      auctionTitle,
     });
   };
 
-  const notifyAuctionEnding = (auctionId: number, auctionTitle: string, timeLeft: string) => {
+  const notifyAuctionEnding = (
+    auctionId: number,
+    auctionTitle: string,
+    timeLeft: string
+  ) => {
     return addNotification({
-      type: 'ending',
-      title: 'Auction Ending Soon',
+      type: "ending",
+      title: "Auction Ending Soon",
       message: `This auction ends in ${timeLeft}. Place your final bids now!`,
       auctionId,
-      auctionTitle
+      auctionTitle,
     });
   };
 
@@ -252,7 +280,7 @@ export const useNotifications = () => {
     notifyWon,
     notifyLost,
     notifyAuctionStarting,
-    notifyAuctionEnding
+    notifyAuctionEnding,
   };
 };
 
@@ -268,7 +296,7 @@ export const NotificationContainer: React.FC<NotificationContainerProps> = ({
   notifications,
   onClose,
   onEmailAlert,
-  onSMSAlert
+  onSMSAlert,
 }) => {
   return (
     <div className="fixed top-0 right-0 z-50 space-y-2">
@@ -277,7 +305,9 @@ export const NotificationContainer: React.FC<NotificationContainerProps> = ({
           key={notification.id}
           notification={notification}
           onClose={() => onClose(notification.id)}
-          onEmailAlert={onEmailAlert ? () => onEmailAlert(notification) : undefined}
+          onEmailAlert={
+            onEmailAlert ? () => onEmailAlert(notification) : undefined
+          }
           onSMSAlert={onSMSAlert ? () => onSMSAlert(notification) : undefined}
         />
       ))}

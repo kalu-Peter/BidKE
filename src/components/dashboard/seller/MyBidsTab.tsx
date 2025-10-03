@@ -461,7 +461,7 @@ const MyBidsTab: React.FC = () => {
                         Winning bid:
                       </span>
                       <span className="font-medium">
-                        Ksh {bid.winningBid.toLocaleString()}
+                        Ksh {(Number(bid.winning_amount) || 0).toLocaleString()}
                       </span>
                     </div>
                     <Badge className={getStatusBadge(bid.status).color}>

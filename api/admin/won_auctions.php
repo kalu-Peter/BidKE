@@ -102,6 +102,27 @@ try {
         $cnt = $cntStmt->fetchColumn();
     }
 
+    // Normalize rows to ensure frontend/crud consumers always receive
+    // a numeric `winning_amount` and a compatible `winningBid` field.
+    foreach ($rows as &$r) {
+        // Prefer explicit winning_amount column, fall back to bid_amount or other names
+        if (isset($r['winning_amount'])) {
+            $r['winning_amount'] = is_numeric($r['winning_amount']) ? (float)$r['winning_amount'] : floatval(str_replace(',', '', $r['winning_amount']));
+        } elseif (isset($r['bid_amount'])) {
+            $r['winning_amount'] = (float)$r['bid_amount'];
+        } else {
+            $r['winning_amount'] = null;
+        }
+
+        // Add a compatibility alias `winningBid` used by some front-end components
+        $r['winningBid'] = $r['winning_amount'];
+
+        // Ensure there's an `id` field representing the auction id for list keys
+        if (!isset($r['id']) && isset($r['auction_id'])) {
+            $r['id'] = $r['auction_id'];
+        }
+    }
+
     echo json_encode(['success' => true, 'data' => $rows, 'total' => (int)$cnt, 'page' => $page, 'limit' => $limit]);
 } catch (Exception $e) {
     error_log('admin/won_auctions.php error: ' . $e->getMessage());
