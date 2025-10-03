@@ -314,6 +314,19 @@ class ApiService {
     return this.makeRequest('/won-auctions.php');
   }
 
+  /**
+   * Process a payment for a won auction. Backend endpoint should create payment, commission and payout records.
+   */
+  async processPayment(auctionId: number, amount: number, payment_method?: string, metadata?: any): Promise<ApiResponse<{ payment_id?: string }>> {
+    const body: any = { auction_id: auctionId, amount };
+    if (payment_method) body.payment_method = payment_method;
+    if (metadata) body.metadata = metadata;
+    return this.makeRequest('/payments/process.php', {
+      method: 'POST',
+      body: JSON.stringify(body)
+    });
+  }
+
   // Admin: get paginated won auctions (uses admin/won_auctions.php)
   async adminGetWonAuctions(params: { page?: number; limit?: number } = {}): Promise<ApiResponse<{ winner_record_id: number; auction_id: number; auction_title: string; winning_amount: number; won_at: string; winner_id?: number; winner_username?: string; seller_id?: number; seller_name?: string }[] & { total?: number }>> {
     const qp = new URLSearchParams();
@@ -321,6 +334,22 @@ class ApiService {
     if (params.limit) qp.append('limit', String(params.limit));
     const url = `/admin/won_auctions.php?${qp.toString()}`;
     return this.makeRequest(url);
+  }
+
+  // Admin: list pending payments for manual confirmation
+  async adminListPendingPayments(params: { page?: number; limit?: number } = {}): Promise<ApiResponse<any[]>> {
+    const q = new URLSearchParams();
+    if (params.page) q.append('page', String(params.page));
+    if (params.limit) q.append('limit', String(params.limit));
+    return this.makeRequest(`/payments/admin/list_pending.php?${q.toString()}`);
+  }
+
+  // Admin: confirm a pending payment (idempotent)
+  async adminConfirmPayment(paymentId: number): Promise<ApiResponse> {
+    return this.makeRequest('/payments/admin/confirm.php', {
+      method: 'POST',
+      body: JSON.stringify({ payment_id: paymentId })
+    });
   }
 
   // Admin: delete a winner record by id

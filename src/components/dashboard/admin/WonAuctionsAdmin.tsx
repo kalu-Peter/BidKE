@@ -2,10 +2,12 @@ import React from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { apiService } from "@/services/api";
-import { Trophy, Trash2, Printer } from "lucide-react";
+import { Trophy, Trash2, Printer, Eye } from "lucide-react";
 
 const WonAuctionsAdmin: React.FC = () => {
   const [rows, setRows] = React.useState<any[]>([]);
+  const [pendingPayments, setPendingPayments] = React.useState<any[]>([]);
+  const [showPending, setShowPending] = React.useState(false);
   const [detailRow, setDetailRow] = React.useState<any | null>(null);
   const [page, setPage] = React.useState(1);
   const [limit, setLimit] = React.useState(25);
@@ -39,6 +41,31 @@ const WonAuctionsAdmin: React.FC = () => {
   React.useEffect(() => {
     fetchPage(1, limit);
   }, [limit]);
+
+  React.useEffect(() => {
+    if (showPending) {
+      fetchPending(1, 50);
+    }
+  }, [showPending]);
+
+  const fetchPending = React.useCallback(async (p = 1, l = 50) => {
+    setLoading(true);
+    try {
+      const res = await apiService.adminListPendingPayments({
+        page: p,
+        limit: l,
+      });
+      if (res && res.success) {
+        setPendingPayments(res.data || []);
+      } else {
+        setPendingPayments([]);
+      }
+    } catch (e) {
+      setPendingPayments([]);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   const handleDelete = async (id: number) => {
     if (!confirm("Delete winner record #" + id + "?")) return;
@@ -107,6 +134,13 @@ const WonAuctionsAdmin: React.FC = () => {
             >
               Refresh
             </Button>
+            <Button
+              size="sm"
+              variant={showPending ? "secondary" : "ghost"}
+              onClick={() => setShowPending(!showPending)}
+            >
+              Pending Payments
+            </Button>
             <Button size="sm" variant="outline" onClick={handlePrint}>
               <Printer className="w-4 h-4 mr-1" />
               Print
@@ -115,6 +149,71 @@ const WonAuctionsAdmin: React.FC = () => {
         </div>
 
         <div id="won-admin-print">
+          {showPending && (
+            <div className="mb-4">
+              <h4 className="font-semibold mb-2">Pending Payments</h4>
+              <table className="w-full text-sm mb-4">
+                <thead>
+                  <tr>
+                    <th>Payment ID</th>
+                    <th>Auction</th>
+                    <th>Winner</th>
+                    <th>Amount</th>
+                    <th>Txn Ref</th>
+                    <th>Created</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {pendingPayments.map((p) => (
+                    <tr key={p.payment_id} className="align-top">
+                      <td className="p-2">{p.payment_id}</td>
+                      <td className="p-2">
+                        {p.auction_title} ({p.auction_id})
+                      </td>
+                      <td className="p-2">{p.winner_username}</td>
+                      <td className="p-2">
+                        Ksh {Number(p.amount).toLocaleString()}
+                      </td>
+                      <td className="p-2">{p.transaction_ref}</td>
+                      <td className="p-2">{p.created_at}</td>
+                      <td className="p-2">
+                        <div className="flex gap-2">
+                          <Button
+                            size="sm"
+                            onClick={async () => {
+                              if (
+                                !confirm(
+                                  "Confirm payment #" + p.payment_id + "?"
+                                )
+                              )
+                                return;
+                              setLoading(true);
+                              const res = await apiService.adminConfirmPayment(
+                                p.payment_id
+                              );
+                              setLoading(false);
+                              if (res && res.success) {
+                                alert("Payment confirmed");
+                                fetchPending(1, 50);
+                                fetchPage(page, limit);
+                              } else {
+                                alert(
+                                  "Confirm failed: " + (res?.message || "error")
+                                );
+                              }
+                            }}
+                          >
+                            Confirm
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
           <table className="w-full text-sm">
             <thead>
               <tr>

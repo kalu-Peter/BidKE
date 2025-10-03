@@ -188,7 +188,58 @@ const WonAuctionsTab: React.FC = () => {
 
   const handlePayNow = (auctionId: number) => {
     console.log("Pay now for auction:", auctionId);
-    // Handle payment logic
+    // Previously a placeholder. We'll keep Pay Now as a client-side trigger for the payment flow.
+    // For now redirect to a payment page or open the payment modal (not implemented here).
+  };
+
+  const handleProcessPayment = async (auction: any) => {
+    // Use API to process payment (creates payment, commission and payout records)
+    try {
+      // Optimistic UI: mark as processing locally
+      setWonAuctions((prev) =>
+        prev.map((a) =>
+          a.id === auction.id ? { ...a, status: "processing_payment" } : a
+        )
+      );
+      const { apiService } = await import("@/services/api");
+      const amount = Number(auction.winning_amount) || 0;
+      const res = await apiService.processPayment(
+        Number(auction.id),
+        amount,
+        "mpesa"
+      );
+      if (res && res.success) {
+        // Update to paid
+        setWonAuctions((prev) =>
+          prev.map((a) => (a.id === auction.id ? { ...a, status: "paid" } : a))
+        );
+        // Optionally show a global event
+        try {
+          const ev = new CustomEvent("payments:processed", {
+            detail: {
+              auction_id: auction.id,
+              payment_id: (res.data as any)?.payment_id,
+            },
+          });
+          window.dispatchEvent(ev);
+        } catch (_) {}
+      } else {
+        // Revert optimistic state
+        setWonAuctions((prev) =>
+          prev.map((a) =>
+            a.id === auction.id ? { ...a, status: "payment_pending" } : a
+          )
+        );
+        alert("Payment failed: " + (res.error || res.message || "Unknown"));
+      }
+    } catch (err) {
+      setWonAuctions((prev) =>
+        prev.map((a) =>
+          a.id === auction.id ? { ...a, status: "payment_pending" } : a
+        )
+      );
+      alert("Payment processing error");
+    }
   };
 
   const handleViewReceipt = (auctionId: number) => {
@@ -330,6 +381,13 @@ const WonAuctionsTab: React.FC = () => {
                           className="bg-green-600 hover:bg-green-700"
                         >
                           Pay Now
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleProcessPayment(auction)}
+                        >
+                          Process Payment
                         </Button>
                         <Button
                           size="sm"
