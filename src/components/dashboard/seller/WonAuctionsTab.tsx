@@ -84,6 +84,21 @@ const WonAuctionsTab: React.FC = () => {
     .filter((a) => a.status !== "payment_pending")
     .reduce((sum, auction) => sum + auction.winningBid, 0);
 
+  // Helper to safely extract and format the winning amount from various API shapes
+  const formatWinningAmount = (auction: any) => {
+    // The backend may return different field names or string numbers depending on path
+    const raw =
+      auction.winningBid ??
+      auction.winning_amount ??
+      auction.winningAmount ??
+      auction.winning_amount ??
+      (auction.winning || null);
+    if (raw === null || raw === undefined) return "—";
+    const n = typeof raw === "number" ? raw : Number(raw);
+    if (isNaN(n)) return String(raw);
+    return n.toLocaleString();
+  };
+
   return (
     <Card>
       <CardHeader>
@@ -150,7 +165,7 @@ const WonAuctionsTab: React.FC = () => {
                     </div>
                     <div className="text-right">
                       <div className="text-xl font-bold text-green-600 mb-2">
-                        Ksh {auction.winningBid.toLocaleString()}
+                        Ksh {formatWinningAmount(auction)}
                       </div>
                       <Badge className={statusConfig.color}>
                         {statusConfig.label}
