@@ -46,3 +46,5 @@ CREATE INDEX IF NOT EXISTS idx_payments_user_id ON payments(user_id);
 CREATE INDEX IF NOT EXISTS idx_payments_auction_id ON payments(auction_id);
 CREATE INDEX IF NOT EXISTS idx_commissions_payment_id ON commissions(payment_id);
 CREATE INDEX IF NOT EXISTS idx_payouts_seller_id ON payouts(seller_id);
+-- Ensure transaction_ref is unique when present
+CREATE UNIQUE INDEX IF NOT EXISTS idx_payments_transaction_ref_unique ON payments ((transaction_ref)) WHERE transaction_ref IS NOT NULL;

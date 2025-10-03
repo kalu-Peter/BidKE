@@ -182,6 +182,11 @@ const WonAuctionsTab: React.FC = () => {
         color: "bg-green-100 text-green-800",
         description: "Item successfully collected",
       },
+      processing: {
+        label: "Processing",
+        color: "bg-indigo-100 text-indigo-800",
+        description: "Payment is being processed",
+      },
     };
     return configs[status as keyof typeof configs] || configs.paid;
   };
@@ -312,7 +317,21 @@ const WonAuctionsTab: React.FC = () => {
           <h3 className="text-lg font-semibold">Your Wins</h3>
           <div className="space-y-4">
             {wonAuctions.map((auction) => {
-              const statusConfig = getStatusConfig(auction.status);
+              // Determine payment UI state: prefer explicit payment_status from API when available
+              let uiStatus = auction.status;
+              if (auction.payment_status) {
+                if (auction.payment_status === "pending")
+                  uiStatus = "payment_pending";
+                else if (
+                  auction.payment_status === "completed" ||
+                  auction.payment_status === "paid"
+                )
+                  uiStatus = "paid";
+                else if (auction.payment_status === "processing")
+                  uiStatus = "processing";
+                else uiStatus = auction.payment_status;
+              }
+              const statusConfig = getStatusConfig(uiStatus);
               return (
                 <Card
                   key={auction.id}
@@ -350,20 +369,25 @@ const WonAuctionsTab: React.FC = () => {
                       <Badge className={statusConfig.color}>
                         {statusConfig.label}
                       </Badge>
+                      {auction.payment_status && (
+                        <p className="text-xs text-gray-500 mt-1">
+                          Payment status: {auction.payment_status}
+                        </p>
+                      )}
                       <p className="text-xs text-gray-500 mt-1 max-w-48">
                         {statusConfig.description}
                       </p>
-                      {auction.status === "payment_pending" && (
+                      {uiStatus === "payment_pending" && (
                         <p className="text-xs text-red-600 mt-1 font-medium">
                           ⏰ {auction.paymentDeadline}
                         </p>
                       )}
-                      {auction.status === "paid" && (
+                      {uiStatus === "paid" && (
                         <p className="text-xs text-blue-600 mt-1">
                           📦 {auction.collectionDate}
                         </p>
                       )}
-                      {auction.status === "collected" && (
+                      {uiStatus === "collected" && (
                         <p className="text-xs text-green-600 mt-1">
                           ✅ {auction.collectionDate}
                         </p>
@@ -373,7 +397,7 @@ const WonAuctionsTab: React.FC = () => {
 
                   {/* Action Buttons */}
                   <div className="flex justify-end space-x-2 mt-4 pt-4 border-t">
-                    {auction.status === "payment_pending" && (
+                    {uiStatus === "payment_pending" && (
                       <>
                         <Button
                           size="sm"
@@ -398,7 +422,7 @@ const WonAuctionsTab: React.FC = () => {
                         </Button>
                       </>
                     )}
-                    {auction.status === "paid" && (
+                    {uiStatus === "paid" && (
                       <>
                         <Button
                           size="sm"

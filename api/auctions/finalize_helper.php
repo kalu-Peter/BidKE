@@ -49,6 +49,36 @@ function finalizeAuction(PDO $db, int $auctionId)
             try {
                 $ins = $db->prepare("INSERT INTO auction_winners (auction_id, winner_id, winning_bid_id, winning_amount, created_at) VALUES (:aid, :uid, :bidid, :amount, NOW())");
                 $ins->execute([':aid' => $auctionId, ':uid' => $winnerBid['bidder_id'], ':bidid' => $winnerBid['id'], ':amount' => $winnerBid['bid_amount']]);
+                // Also create a pending payment record for this winner so payments table is in sync
+                try {
+                    // Ensure payments table exists (best-effort)
+                    $db->exec("CREATE TABLE IF NOT EXISTS payments (
+                        payment_id BIGSERIAL PRIMARY KEY,
+                        user_id BIGINT NOT NULL,
+                        auction_id BIGINT NOT NULL,
+                        amount NUMERIC(12,2) NOT NULL DEFAULT 0,
+                        status VARCHAR(20) NOT NULL DEFAULT 'pending',
+                        payment_method VARCHAR(64),
+                        transaction_ref VARCHAR(128),
+                        created_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
+                        updated_at TIMESTAMP WITH TIME ZONE DEFAULT now()
+                    )");
+
+                    // generate a transaction_ref for gateway correlation
+                    $transactionRef = 'txn_' . bin2hex(random_bytes(8));
+                    $pstmt = $db->prepare('INSERT INTO payments (user_id, auction_id, amount, status, transaction_ref, created_at, updated_at) VALUES (:uid, :aid, :amount, :status, :tx, NOW(), NOW()) RETURNING payment_id');
+                    $pstmt->execute([':uid' => $winnerBid['bidder_id'], ':aid' => $auctionId, ':amount' => $winnerBid['bid_amount'], ':status' => 'pending', ':tx' => $transactionRef]);
+                    $pRow = $pstmt->fetch(PDO::FETCH_ASSOC);
+                    $paymentId = isset($pRow['payment_id']) ? (int)$pRow['payment_id'] : null;
+                    if ($paymentId) {
+                        // expose the payment info to the finalize response for downstream flows
+                        $result['payment_id'] = $paymentId;
+                        $result['transaction_ref'] = $transactionRef;
+                    }
+                } catch (Exception $pe) {
+                    // Non-fatal: log payment insert failure but allow finalization to succeed
+                    error_log('finalizeAuction: failed to create pending payment: ' . $pe->getMessage());
+                }
             } catch (Exception $ie) {
                 // Non-fatal: table may not exist, log and continue
                 error_log('auction_winners insert failed (finalize helper): ' . $ie->getMessage());

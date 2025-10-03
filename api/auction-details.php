@@ -202,6 +202,11 @@ try {
                     $stmt = $db->prepare($query);
                     $stmt->execute([':auction_id' => $auctionId]);
                     $auction = $stmt->fetch(PDO::FETCH_ASSOC);
+                    // If finalize created a payment, include its transaction_ref in the response
+                    if (!empty($fres['transaction_ref'])) {
+                        $auction['pending_payment_transaction_ref'] = $fres['transaction_ref'];
+                        $auction['pending_payment_id'] = $fres['payment_id'] ?? null;
+                    }
                 }
             }
         } catch (Exception $e) {

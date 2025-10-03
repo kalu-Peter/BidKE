@@ -20,10 +20,15 @@ try {
     $hasWinnersTable = (bool)$check->fetchColumn();
 
     if ($hasWinnersTable) {
-        $query = "SELECT aw.auction_id as id, a.title, aw.winning_amount AS winning_amount, a.status, a.end_time, a.location, ai.image_url as primary_image, aw.created_at as won_at
+        // join to payments (latest payment for this auction and user) to include payment status and transaction ref
+        $query = "SELECT aw.auction_id as id, a.title, aw.winning_amount AS winning_amount, a.status, a.end_time, a.location, ai.image_url as primary_image, aw.created_at as won_at,
+                          p.payment_id as payment_id, p.status as payment_status, p.transaction_ref as transaction_ref
                   FROM auction_winners aw
                   JOIN auctions a ON a.id = aw.auction_id
                   LEFT JOIN auction_images ai ON ai.auction_id = a.id AND ai.is_primary = TRUE
+                  LEFT JOIN LATERAL (
+                      SELECT * FROM payments WHERE auction_id = aw.auction_id AND user_id = aw.winner_id ORDER BY created_at DESC LIMIT 1
+                  ) p ON true
                   WHERE aw.winner_id = :uid
                   ORDER BY aw.created_at DESC
                   LIMIT 200";
