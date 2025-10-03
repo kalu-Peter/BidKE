@@ -327,6 +327,16 @@ class ApiService {
     });
   }
 
+  /**
+   * Initiate a payment for a finalized auction (server creates a pending payment and returns transaction_ref)
+   */
+  async initiateAuctionPayment(auctionId: number): Promise<ApiResponse<{ payment_id?: number; transaction_ref?: string }>> {
+    return this.makeRequest('/payments/process_auction.php', {
+      method: 'POST',
+      body: JSON.stringify({ auction_id: auctionId })
+    });
+  }
+
   // Admin: get paginated won auctions (uses admin/won_auctions.php)
   async adminGetWonAuctions(params: { page?: number; limit?: number } = {}): Promise<ApiResponse<{ winner_record_id: number; auction_id: number; auction_title: string; winning_amount: number; won_at: string; winner_id?: number; winner_username?: string; seller_id?: number; seller_name?: string }[] & { total?: number }>> {
     const qp = new URLSearchParams();

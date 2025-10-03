@@ -17,6 +17,7 @@ import SellerDashboard from "./pages/dashboard/SellerDashboard";
 import AdminDashboard from "./pages/dashboard/AdminDashboard";
 import BrowseAuctions from "./pages/BrowseAuctions";
 import AuctionDetails from "./pages/AuctionDetails";
+import Checkout from "./pages/Checkout";
 import HowItWorks from "./pages/HowItWorks";
 import TrustSecurity from "./pages/TrustSecurity";
 import Contact from "./pages/Contact";
@@ -40,6 +41,7 @@ const App = () => (
             <Route path="/electronics" element={<Electronics />} />
             <Route path="/browse-auctions" element={<BrowseAuctions />} />
             <Route path="/auction/:id" element={<AuctionDetails />} />
+            <Route path="/checkout" element={<Checkout />} />
             {/* Redirect old browse-categories route to new browse-auctions route */}
             <Route
               path="/browse-categories"

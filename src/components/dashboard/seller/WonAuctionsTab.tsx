@@ -101,6 +101,100 @@ const WonAuctionsTab: React.FC = () => {
     };
   }, []);
 
+  // Listen for global payment processed events (dispatched by admin/process endpoints)
+  React.useEffect(() => {
+    const onProcessed = (ev: any) => {
+      const detail = ev?.detail;
+      if (!detail) return;
+      const { auction_id, payment_id } = detail;
+      setWonAuctions((prev) =>
+        prev.map((a) =>
+          a.id === auction_id
+            ? { ...a, payment_status: "completed", payment_id }
+            : a
+        )
+      );
+    };
+    window.addEventListener("payments:processed", onProcessed as EventListener);
+    return () =>
+      window.removeEventListener(
+        "payments:processed",
+        onProcessed as EventListener
+      );
+  }, []);
+
+  // Poll payment status for pending payments (per-auction poller)
+  React.useEffect(() => {
+    const timers: Record<string, number> = {};
+
+    const startPoll = (auction: any) => {
+      const tx = auction.transaction_ref;
+      if (!tx) return;
+      const key = String(tx);
+      // avoid duplicate timers
+      if (timers[key]) return;
+
+      const poll = async () => {
+        try {
+          const res = await fetch(
+            `/payments/status.php?transaction_ref=${encodeURIComponent(key)}`
+          );
+          if (!res.ok) return;
+          const j = await res.json();
+          if (j && j.success && j.data) {
+            const status = j.data.status;
+            if (status === "completed" || status === "paid") {
+              // update UI to show confirmation
+              setWonAuctions((prev) =>
+                prev.map((a) =>
+                  a.transaction_ref === key
+                    ? {
+                        ...a,
+                        payment_status: "completed",
+                        payment_id: j.data.payment_id,
+                        justPaid: true,
+                      }
+                    : a
+                )
+              );
+              // clear timer
+              clearInterval(timers[key]);
+              delete timers[key];
+              // remove justPaid flag after short delay
+              setTimeout(() => {
+                setWonAuctions((prev) =>
+                  prev.map((a) =>
+                    a.transaction_ref === key ? { ...a, justPaid: false } : a
+                  )
+                );
+              }, 4000);
+            }
+          }
+        } catch (_e) {
+          // ignore network errors
+        }
+      };
+
+      // start interval
+      timers[key] = window.setInterval(poll, 3000);
+      // run once immediately
+      poll();
+    };
+
+    // start pollers for any pending payments
+    wonAuctions.forEach((a) => {
+      const status = a.payment_status || a.status;
+      if (status === "pending" || status === "payment_pending") {
+        startPoll(a);
+      }
+    });
+
+    return () => {
+      // clear all timers
+      Object.values(timers).forEach((t) => clearInterval(t));
+    };
+  }, [wonAuctions]);
+
   // Load modal image when detailAuction opens
   React.useEffect(() => {
     let mounted = true;
@@ -192,9 +286,62 @@ const WonAuctionsTab: React.FC = () => {
   };
 
   const handlePayNow = (auctionId: number) => {
-    console.log("Pay now for auction:", auctionId);
-    // Previously a placeholder. We'll keep Pay Now as a client-side trigger for the payment flow.
-    // For now redirect to a payment page or open the payment modal (not implemented here).
+    (async () => {
+      try {
+        const { apiService } = await import("@/services/api");
+        // Optimistic UI: mark as processing for this auction
+        setWonAuctions((prev) =>
+          prev.map((a) =>
+            a.id === auctionId ? { ...a, status: "processing" } : a
+          )
+        );
+        const res = await apiService.initiateAuctionPayment(auctionId);
+        if (res && res.success && res.data) {
+          const tx = (res.data as any).transaction_ref;
+          const pid = (res.data as any).payment_id;
+          const checkoutUrl = (res.data as any).checkout_url || null;
+          // Update local row with payment info
+          setWonAuctions((prev) =>
+            prev.map((a) =>
+              a.id === auctionId
+                ? {
+                    ...a,
+                    payment_status: "pending",
+                    transaction_ref: tx,
+                    payment_id: pid,
+                    status: "payment_pending",
+                  }
+                : a
+            )
+          );
+          // Open gateway/checkout page - for now we'll open a simple /checkout?tx=... page (implement actual gateway separately)
+          const urlToOpen =
+            checkoutUrl ||
+            `/checkout?tx=${encodeURIComponent(
+              tx
+            )}&auction_id=${encodeURIComponent(String(auctionId))}`;
+          window.open(urlToOpen, "_blank");
+        } else {
+          // revert UI
+          setWonAuctions((prev) =>
+            prev.map((a) =>
+              a.id === auctionId ? { ...a, status: "payment_pending" } : a
+            )
+          );
+          alert(
+            "Failed to initiate payment: " +
+              (res?.message || res?.error || "Unknown")
+          );
+        }
+      } catch (err) {
+        setWonAuctions((prev) =>
+          prev.map((a) =>
+            a.id === auctionId ? { ...a, status: "payment_pending" } : a
+          )
+        );
+        alert("Error initiating payment");
+      }
+    })();
   };
 
   const handleProcessPayment = async (auction: any) => {
@@ -369,6 +516,11 @@ const WonAuctionsTab: React.FC = () => {
                       <Badge className={statusConfig.color}>
                         {statusConfig.label}
                       </Badge>
+                      {auction.justPaid && (
+                        <div className="mt-2 inline-block bg-green-600 text-white text-xs px-2 py-1 rounded">
+                          Payment confirmed ✓
+                        </div>
+                      )}
                       {auction.payment_status && (
                         <p className="text-xs text-gray-500 mt-1">
                           Payment status: {auction.payment_status}

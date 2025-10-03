@@ -10,9 +10,36 @@ if (in_array($origin, $allowed_origins)) {
 }
 
 require_once __DIR__ . '/../config/connect.php';
+require_once __DIR__ . '/../config/config.php';
 
-// Read webhook payload (gateway should POST JSON)
-$input = json_decode(file_get_contents('php://input'), true);
+// Read raw body and parse JSON
+$rawBody = file_get_contents('php://input');
+$input = json_decode($rawBody, true);
+
+// Verify webhook signature if configured (HMAC SHA256)
+$sigHeader = $_SERVER['HTTP_X_SIGNATURE'] ?? $_SERVER['HTTP_X_HUB_SIGNATURE'] ?? null;
+if (defined('PAYMENT_WEBHOOK_SECRET') && PAYMENT_WEBHOOK_SECRET) {
+    if (!$sigHeader) {
+        http_response_code(401);
+        echo json_encode(['success' => false, 'message' => 'Missing signature header']);
+        exit();
+    }
+    // Signature may be in form: sha256=hex
+    $provided = $sigHeader;
+    if (strpos($provided, '=') !== false) {
+        list($algo, $hex) = explode('=', $provided, 2);
+        $provided = $hex;
+    }
+    $calculated = hash_hmac('sha256', $rawBody, PAYMENT_WEBHOOK_SECRET);
+    if (!hash_equals($calculated, $provided)) {
+        http_response_code(401);
+        echo json_encode(['success' => false, 'message' => 'Invalid signature']);
+        exit();
+    }
+}
+
+// Continue processing
+// $input already set above
 
 $transaction_ref = $input['transaction_ref'] ?? $input['tx_ref'] ?? null;
 $status = $input['status'] ?? null; // expected 'success' or similar

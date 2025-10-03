@@ -105,8 +105,15 @@ try {
 
     $db->commit();
 
-    // Return payment id and transaction_ref so front-end can redirect to gateway
-    echo json_encode(['success' => true, 'message' => 'Pending payment created', 'data' => ['payment_id' => $paymentId, 'transaction_ref' => $transactionRef]]);
+    // Build a checkout_url if payment provider configured
+    $checkoutUrl = null;
+    if (defined('PAYMENT_PROVIDER_URL') && PAYMENT_PROVIDER_URL) {
+        // Basic example: append tx and auction_id as query params
+        $checkoutUrl = PAYMENT_PROVIDER_URL . (strpos(PAYMENT_PROVIDER_URL, '?') === false ? '?' : '&') . http_build_query(['tx' => $transactionRef, 'auction_id' => $auctionId]);
+    }
+
+    // Return payment id, transaction_ref and optional checkout_url so front-end can redirect to gateway
+    echo json_encode(['success' => true, 'message' => 'Pending payment created', 'data' => ['payment_id' => $paymentId, 'transaction_ref' => $transactionRef, 'checkout_url' => $checkoutUrl]]);
     exit();
 } catch (Exception $e) {
     if ($db->inTransaction()) $db->rollBack();

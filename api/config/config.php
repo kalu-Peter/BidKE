@@ -1,4 +1,5 @@
 <?php
+
 /**
  * API Configuration
  * BidKE Auction Platform
@@ -31,4 +32,8 @@ define('SMTP_PASSWORD', '');
 define('DEFAULT_PAGE_SIZE', 20);
 define('MAX_PAGE_SIZE', 100);
 
-?>
+// Payment gateway settings (configure in production)
+define('PAYMENT_PROVIDER_URL', 'https://example-payment-gateway.local/checkout');
+// Shared secret used to verify webhook signatures (HMAC SHA256)
+// In development leave empty to allow local mock checkouts. Set a strong secret in production.
+define('PAYMENT_WEBHOOK_SECRET', '');
