@@ -6,6 +6,7 @@ import { Trophy, Trash2, Printer } from "lucide-react";
 
 const WonAuctionsAdmin: React.FC = () => {
   const [rows, setRows] = React.useState<any[]>([]);
+  const [detailRow, setDetailRow] = React.useState<any | null>(null);
   const [page, setPage] = React.useState(1);
   const [limit, setLimit] = React.useState(25);
   const [total, setTotal] = React.useState(0);
@@ -117,6 +118,7 @@ const WonAuctionsAdmin: React.FC = () => {
           <table className="w-full text-sm">
             <thead>
               <tr>
+                <th></th>
                 <th>ID</th>
                 <th>Auction</th>
                 <th>Winner</th>
@@ -128,24 +130,45 @@ const WonAuctionsAdmin: React.FC = () => {
             </thead>
             <tbody>
               {rows.map((r) => (
-                <tr key={r.winner_record_id}>
-                  <td>{r.winner_record_id}</td>
-                  <td>
+                <tr key={r.winner_record_id} className="align-top">
+                  <td className="p-2 w-16">
+                    {r.primary_image ? (
+                      <img
+                        src={r.primary_image}
+                        alt={r.auction_title}
+                        className="w-12 h-8 object-cover rounded"
+                      />
+                    ) : (
+                      <div className="w-12 h-8 bg-gray-100 rounded flex items-center justify-center text-xs text-gray-400">
+                        No
+                      </div>
+                    )}
+                  </td>
+                  <td className="p-2">{r.winner_record_id}</td>
+                  <td className="p-2">
                     {r.auction_title} ({r.auction_id})
                   </td>
-                  <td>{r.winner_username ?? "—"}</td>
-                  <td>{r.seller_name ?? "—"}</td>
-                  <td>Ksh {Number(r.winning_amount).toLocaleString()}</td>
-                  <td>{r.won_at}</td>
-                  <td>
-                    <Button
-                      size="sm"
-                      variant="destructive"
-                      onClick={() => handleDelete(r.winner_record_id)}
-                    >
-                      <Trash2 className="w-4 h-4 mr-1" />
-                      Delete
-                    </Button>
+                  <td className="p-2">{r.winner_username ?? "—"}</td>
+                  <td className="p-2">{r.seller_name ?? "—"}</td>
+                  <td className="p-2">
+                    Ksh {Number(r.winning_amount).toLocaleString()}
+                  </td>
+                  <td className="p-2">{r.won_at}</td>
+                  <td className="p-2">
+                    <div className="flex gap-2">
+                      <Button size="sm" onClick={() => setDetailRow(r)}>
+                        <Eye className="w-4 h-4 mr-1" />
+                        Details
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="destructive"
+                        onClick={() => handleDelete(r.winner_record_id)}
+                      >
+                        <Trash2 className="w-4 h-4 mr-1" />
+                        Delete
+                      </Button>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -185,6 +208,62 @@ const WonAuctionsAdmin: React.FC = () => {
           </div>
         </div>
       </CardContent>
+
+      {/* Details Modal */}
+      {detailRow && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="bg-white rounded-lg w-full max-w-2xl p-6">
+            <div className="flex items-start justify-between mb-4">
+              <h3 className="text-lg font-semibold">Auction Winner Details</h3>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setDetailRow(null)}
+              >
+                Close
+              </Button>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="md:col-span-1">
+                {detailRow.primary_image ? (
+                  <img
+                    src={detailRow.primary_image}
+                    alt={detailRow.auction_title}
+                    className="w-full h-56 object-cover rounded"
+                  />
+                ) : (
+                  <div className="w-full h-56 bg-gray-100 rounded flex items-center justify-center text-gray-400">
+                    No image
+                  </div>
+                )}
+              </div>
+              <div className="md:col-span-2">
+                <h4 className="text-xl font-bold mb-2">
+                  {detailRow.auction_title}
+                </h4>
+                <p className="text-sm text-muted-foreground mb-2">
+                  Auction ID: {detailRow.auction_id}
+                </p>
+                <p className="mb-2">
+                  <strong>Winner:</strong> {detailRow.winner_username ?? "—"}{" "}
+                  (ID: {detailRow.winner_id ?? "—"})
+                </p>
+                <p className="mb-2">
+                  <strong>Seller:</strong> {detailRow.seller_name ?? "—"} (ID:{" "}
+                  {detailRow.seller_id ?? "—"})
+                </p>
+                <p className="mb-2">
+                  <strong>Winning Amount:</strong> Ksh{" "}
+                  {Number(detailRow.winning_amount).toLocaleString()}
+                </p>
+                <p className="mb-2">
+                  <strong>Won At:</strong> {detailRow.won_at}
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </Card>
   );
 };

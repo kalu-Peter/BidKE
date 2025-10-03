@@ -58,9 +58,6 @@ try {
         // Normalize winning_amount to numeric if present
         if (isset($r['winning_amount'])) {
             $r['winning_amount'] = is_numeric($r['winning_amount']) ? (float)$r['winning_amount'] : floatval(str_replace(',', '', $r['winning_amount']));
-        } elseif (isset($r['winningBid'])) {
-            // Backward compatibility: if older alias present, normalize it
-            $r['winning_amount'] = is_numeric($r['winningBid']) ? (float)$r['winningBid'] : floatval(str_replace(',', '', $r['winningBid']));
         } else {
             $r['winning_amount'] = null;
         }

@@ -63,9 +63,11 @@ try {
     if ($hasWinnersTable) {
         $sql = "SELECT aw.id as winner_record_id, aw.auction_id, a.title as auction_title, aw.winning_amount, aw.created_at as won_at,
                        u.id as winner_id, u.username as winner_username, u.email as winner_email,
-                       s.id as seller_id, COALESCE(s.full_name, s.username) as seller_name, s.email as seller_email
+                       s.id as seller_id, COALESCE(s.full_name, s.username) as seller_name, s.email as seller_email,
+                       ai.image_url as primary_image
                 FROM auction_winners aw
                 JOIN auctions a ON a.id = aw.auction_id
+                LEFT JOIN auction_images ai ON ai.auction_id = a.id AND ai.is_primary = TRUE
                 LEFT JOIN users u ON u.id = aw.winner_id
                 LEFT JOIN users s ON s.id = a.seller_id
                 ORDER BY aw.created_at DESC
@@ -81,15 +83,17 @@ try {
     } else {
         // Fallback: find auctions ended and join with bids where bid_status='won'
         $sql = "SELECT b.id as winner_record_id, a.id as auction_id, a.title as auction_title, b.bid_amount as winning_amount, a.end_time as won_at,
-                       u.id as winner_id, u.username as winner_username, u.email as winner_email,
-                       s.id as seller_id, COALESCE(s.full_name, s.username) as seller_name, s.email as seller_email
-                FROM auctions a
-                JOIN bids b ON b.auction_id = a.id AND b.bid_status = 'won'
-                LEFT JOIN users u ON u.id = b.bidder_id
-                LEFT JOIN users s ON s.id = a.seller_id
-                WHERE a.status = 'ended'
-                ORDER BY a.end_time DESC
-                LIMIT :limit OFFSET :offset";
+               u.id as winner_id, u.username as winner_username, u.email as winner_email,
+               s.id as seller_id, COALESCE(s.full_name, s.username) as seller_name, s.email as seller_email,
+               ai.image_url as primary_image
+        FROM auctions a
+        JOIN bids b ON b.auction_id = a.id AND b.bid_status = 'won'
+        LEFT JOIN auction_images ai ON ai.auction_id = a.id AND ai.is_primary = TRUE
+        LEFT JOIN users u ON u.id = b.bidder_id
+        LEFT JOIN users s ON s.id = a.seller_id
+        WHERE a.status = 'ended'
+        ORDER BY a.end_time DESC
+        LIMIT :limit OFFSET :offset";
         $stmt = $db->prepare($sql);
         $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
         $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
@@ -103,7 +107,7 @@ try {
     }
 
     // Normalize rows to ensure frontend/crud consumers always receive
-    // a numeric `winning_amount` and a compatible `winningBid` field.
+    // a numeric `winning_amount` and a fully-qualified `primary_image` URL when available.
     foreach ($rows as &$r) {
         // Prefer explicit winning_amount column, fall back to bid_amount or other names
         if (isset($r['winning_amount'])) {
@@ -114,12 +118,22 @@ try {
             $r['winning_amount'] = null;
         }
 
-        // Add a compatibility alias `winningBid` used by some front-end components
-        $r['winningBid'] = $r['winning_amount'];
+        // Do not expose legacy `winningBid` field — API now uses `winning_amount` exclusively
 
         // Ensure there's an `id` field representing the auction id for list keys
         if (!isset($r['id']) && isset($r['auction_id'])) {
             $r['id'] = $r['auction_id'];
+        }
+
+        // Normalize primary_image to a full URL when present
+        if (!empty($r['primary_image'])) {
+            if (strpos($r['primary_image'], 'http') !== 0) {
+                $scheme = isset($_SERVER['REQUEST_SCHEME']) ? $_SERVER['REQUEST_SCHEME'] : 'http';
+                $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
+                $r['primary_image'] = $scheme . '://' . $host . '/' . ltrim($r['primary_image'], '/');
+            }
+        } else {
+            $r['primary_image'] = null;
         }
     }
 

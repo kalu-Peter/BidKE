@@ -7,32 +7,163 @@ import { Trophy, Receipt, Eye } from "lucide-react";
 const WonAuctionsTab: React.FC = () => {
   const [wonAuctions, setWonAuctions] = React.useState<any[]>([]);
   const [loading, setLoading] = React.useState(false);
+  const [detailAuction, setDetailAuction] = React.useState<any | null>(null);
+  const [modalImage, setModalImage] = React.useState<string | null>(null);
+
+  const normalizeUrl = (url: string | null) => {
+    if (!url) return null;
+    if (url.startsWith("http")) return url;
+    try {
+      const scheme = window.location.protocol.replace(":", "");
+      const host = window.location.host;
+      return `${scheme}://${host}/${url.replace(/^\//, "")}`;
+    } catch (_err) {
+      return url;
+    }
+  };
+
+  const cacheKey = "wonAuctions_primary_images_v1";
 
   React.useEffect(() => {
     let mounted = true;
     setLoading(true);
-    import("@/services/api").then(({ apiService }) => {
-      apiService
-        .getWonAuctions()
-        .then((res) => {
-          if (!mounted) return;
-          setLoading(false);
-          if (res && res.success && res.data) {
-            setWonAuctions(res.data);
-          } else {
-            setWonAuctions([]);
+    import("@/services/api").then(async ({ apiService }) => {
+      try {
+        const res = await apiService.getWonAuctions();
+        if (!mounted) return;
+        setLoading(false);
+        if (res && res.success && res.data) {
+          const rows = res.data as any[];
+
+          let cache: Record<string, string | null> = {};
+          try {
+            const raw = localStorage.getItem(cacheKey);
+            if (raw) cache = JSON.parse(raw);
+          } catch (_e) {
+            cache = {};
           }
-        })
-        .catch(() => {
+
+          // Start with whatever the list provides, but prefer cache when available
+          let items = rows.map((r) => {
+            const id = String(r.id ?? r.auction_id ?? "");
+            const provided =
+              r.primary_image || r.primaryImage || r.image || null;
+            const cached = cache[id] ?? null;
+            return { ...r, primary_image: cached || provided };
+          });
+
+          // For items missing primary_image, fetch auction detail (limited batch)
+          const missing = items.filter((i) => !i.primary_image).slice(0, 10);
+          if (missing.length > 0) {
+            await Promise.all(
+              missing.map(async (m) => {
+                try {
+                  const det = await apiService.getAuction(Number(m.id));
+                  if (det && det.success && det.data) {
+                    const img = (det.data as any).images?.[0] || null;
+                    const norm = normalizeUrl(img);
+                    m.primary_image = norm;
+                    const id = String(m.id ?? m.auction_id ?? "");
+                    cache[id] = norm;
+                  }
+                } catch (_e) {
+                  // ignore per-item failures
+                }
+              })
+            );
+
+            // Persist cache
+            try {
+              localStorage.setItem(cacheKey, JSON.stringify(cache));
+            } catch (_e) {
+              // ignore storage failures
+            }
+          }
+
+          items = items.map((it) => ({
+            ...it,
+            primary_image: normalizeUrl(it.primary_image),
+          }));
+
           if (!mounted) return;
-          setLoading(false);
+          setWonAuctions(items);
+        } else {
           setWonAuctions([]);
-        });
+        }
+      } catch (_err) {
+        if (!mounted) return;
+        setLoading(false);
+        setWonAuctions([]);
+      }
     });
     return () => {
       mounted = false;
     };
   }, []);
+
+  // Load modal image when detailAuction opens
+  React.useEffect(() => {
+    let mounted = true;
+    const load = async () => {
+      if (!detailAuction) {
+        setModalImage(null);
+        return;
+      }
+
+      const id = String(detailAuction.id ?? detailAuction.auction_id ?? "");
+
+      let cache: Record<string, string | null> = {};
+      try {
+        const raw = localStorage.getItem(cacheKey);
+        if (raw) cache = JSON.parse(raw);
+      } catch (_e) {
+        cache = {};
+      }
+
+      const cached = cache[id] ?? null;
+      if (cached) {
+        if (!mounted) return;
+        setModalImage(normalizeUrl(cached));
+        return;
+      }
+
+      // If the detailAuction already contains a primary_image, use it
+      const provided =
+        detailAuction.primary_image || detailAuction.image || null;
+      if (provided) {
+        const n = normalizeUrl(provided);
+        cache[id] = n;
+        try {
+          localStorage.setItem(cacheKey, JSON.stringify(cache));
+        } catch (_e) {}
+        if (!mounted) return;
+        setModalImage(n);
+        return;
+      }
+
+      // Fetch auction details for image
+      try {
+        const { apiService } = await import("@/services/api");
+        const det = await apiService.getAuction(Number(id));
+        if (det && det.success && det.data) {
+          const img = (det.data as any).images?.[0] || null;
+          const norm = normalizeUrl(img);
+          cache[id] = norm;
+          try {
+            localStorage.setItem(cacheKey, JSON.stringify(cache));
+          } catch (_e) {}
+          if (!mounted) return;
+          setModalImage(norm);
+        }
+      } catch (_e) {
+        // ignore
+      }
+    };
+    load();
+    return () => {
+      mounted = false;
+    };
+  }, [detailAuction]);
 
   const getStatusConfig = (status: string) => {
     const configs = {
@@ -139,9 +270,13 @@ const WonAuctionsTab: React.FC = () => {
                   <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-4">
                       <img
-                        src={auction.image}
+                        src={auction.primary_image || auction.image}
                         alt={auction.title}
                         className="w-16 h-16 rounded object-cover"
+                        onError={(e) => {
+                          const t = e.target as HTMLImageElement;
+                          t.src = "/placeholder.svg";
+                        }}
                       />
                       <div>
                         <h4 className="font-semibold text-lg">
@@ -237,7 +372,7 @@ const WonAuctionsTab: React.FC = () => {
                     <Button
                       size="sm"
                       variant="outline"
-                      onClick={() => handleViewDetails(auction.id)}
+                      onClick={() => setDetailAuction(auction)}
                     >
                       <Eye className="w-4 h-4 mr-1" />
                       Details
@@ -248,6 +383,81 @@ const WonAuctionsTab: React.FC = () => {
             })}
           </div>
         </div>
+
+        {/* Details Modal */}
+        {detailAuction && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+            <div className="bg-[#001f3f] text-white rounded-lg w-full max-w-3xl p-6">
+              <div className="flex items-start justify-between mb-4">
+                <div>
+                  <h3 className="text-xl font-semibold">
+                    {detailAuction.title}
+                  </h3>
+                  <p className="text-sm text-white/80">
+                    Auction ID: {detailAuction.id}
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-white"
+                    onClick={() => {
+                      setDetailAuction(null);
+                      setModalImage(null);
+                    }}
+                  >
+                    Close
+                  </Button>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="md:col-span-1">
+                  <img
+                    src={
+                      modalImage ||
+                      detailAuction.primary_image ||
+                      detailAuction.image
+                    }
+                    alt={detailAuction.title}
+                    className="w-full h-64 object-cover rounded"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).src = "/placeholder.svg";
+                    }}
+                  />
+                </div>
+                <div className="md:col-span-2">
+                  <p className="mb-2">
+                    <strong>Winning Amount:</strong> Ksh{" "}
+                    {formatWinningAmount(detailAuction)}
+                  </p>
+                  <p className="mb-2">
+                    <strong>Winner:</strong>{" "}
+                    {detailAuction.winner_username ?? "—"}
+                  </p>
+                  <p className="mb-2">
+                    <strong>Seller:</strong> {detailAuction.seller_name ?? "—"}
+                  </p>
+                  <p className="mb-2">
+                    <strong>Won At:</strong>{" "}
+                    {detailAuction.won_at ?? detailAuction.dateWon ?? "—"}
+                  </p>
+                  <p className="mb-2">
+                    <strong>Collection Location:</strong>{" "}
+                    {detailAuction.collectionLocation ?? "—"}
+                  </p>
+                  <div className="mt-4">
+                    <h4 className="font-medium mb-2 text-white">Description</h4>
+                    <p className="text-sm text-white/80">
+                      {detailAuction.description ?? "No description available."}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Empty State */}
         {wonAuctions.length === 0 && (
