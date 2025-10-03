@@ -182,7 +182,8 @@ class Auth
             header("Access-Control-Allow-Credentials: true");
             header('Content-Type: application/json');
             http_response_code(401);
-            echo json_encode(['error' => 'Authentication required']);
+            // Provide a slightly more informative error for client debugging (do not leak secrets)
+            echo json_encode(['error' => 'Authentication required', 'reason' => 'missing_or_invalid_token']);
             exit;
         }
 
@@ -193,7 +194,9 @@ class Auth
             header("Access-Control-Allow-Credentials: true");
             header('Content-Type: application/json');
             http_response_code(403);
-            echo json_encode(['error' => 'Insufficient permissions']);
+            // Return role information so client can understand failure (sanitized)
+            $user_role = isset($user_data['login_role']) ? $user_data['login_role'] : null;
+            echo json_encode(['error' => 'Insufficient permissions', 'reason' => 'insufficient_role', 'your_role' => $user_role]);
             exit;
         }
 

@@ -4,12 +4,31 @@ require_once __DIR__ . '/../config/connect.php';
 require_once __DIR__ . '/../models/Auth.php';
 
 try {
-    $user = Auth::requireAuth();
-    // require admin role (simple check - adapt to your auth rules)
-    if (!($user['is_admin'] ?? false)) {
-        http_response_code(403);
-        echo json_encode(['success' => false, 'error' => 'Forbidden']);
-        exit;
+    // Require authentication and admin role. Auth::requireAuth will return
+    // a 401 or 403 JSON response and exit if the caller is not authenticated
+    // or lacks the required role. This is more reliable than checking a
+    // non-standard 'is_admin' flag on the token payload.
+    $user = Auth::requireAuth('admin');
+
+    // Best-effort: trigger auction finalization in the background so ended
+    // auctions get their winner/bid statuses updated. We attempt both Unix
+    // and Windows background execution methods and swallow any errors so
+    // this never prevents the admin endpoint from working.
+    try {
+        $finalizePath = __DIR__ . '/../auctions/finalize.php';
+        if (is_file($finalizePath)) {
+            // Use PHP_BINARY to invoke the CLI PHP executable if available
+            $phpBin = defined('PHP_BINARY') ? PHP_BINARY : 'php';
+            if (stripos(PHP_OS, 'WIN') === 0) {
+                // Windows: use start /B to run in background
+                @pclose(@popen("start /B " . escapeshellarg($phpBin) . ' ' . escapeshellarg($finalizePath), 'r'));
+            } else {
+                // Unix-like: redirect output and background
+                @exec(escapeshellarg($phpBin) . ' ' . escapeshellarg($finalizePath) . ' > /dev/null 2>&1 &');
+            }
+        }
+    } catch (Exception $e) {
+        // ignore - background finalize is optional
     }
 
     $db = Database::getInstance()->getConnection();

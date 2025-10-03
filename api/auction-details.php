@@ -18,6 +18,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 }
 
 require_once 'config/connect.php';
+require_once __DIR__ . '/auctions/finalize_helper.php';
 
 try {
     $database = Database::getInstance();
@@ -189,9 +190,27 @@ try {
             ];
         }
 
-        // Calculate time remaining
-        $endTime = new DateTime($auction['end_time']);
-        $now = new DateTime();
+        // If auction end_time passed but status is not yet 'ended', finalize it
+        try {
+            $endDT = new DateTime($auction['end_time'] . ' UTC');
+            $nowDT = new DateTime('now', new DateTimeZone('UTC'));
+            if ($nowDT >= $endDT && strtolower($auction['status']) !== 'ended') {
+                // Attempt to finalize in-process to update DB (best-effort)
+                $fres = finalizeAuction($db, (int)$auctionId);
+                // If finalize succeeded, reload auction row to pick up status/current price
+                if (!empty($fres['success'])) {
+                    $stmt = $db->prepare($query);
+                    $stmt->execute([':auction_id' => $auctionId]);
+                    $auction = $stmt->fetch(PDO::FETCH_ASSOC);
+                }
+            }
+        } catch (Exception $e) {
+            // ignore finalize errors; we'll compute time_remaining below
+        }
+
+        // Calculate time remaining (using the possibly-updated auction)
+        $endTime = new DateTime($auction['end_time'] . ' UTC');
+        $now = new DateTime('now', new DateTimeZone('UTC'));
         $timeRemaining = $now < $endTime ? $endTime->getTimestamp() - $now->getTimestamp() : 0;
 
         $auction['time_remaining'] = $timeRemaining;
