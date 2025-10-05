@@ -142,8 +142,6 @@ const TransactionsTab: React.FC = () => {
     switch (type) {
       case "auction_payment":
         return <CreditCard className="w-5 h-5" />;
-      case "listing_fee":
-        return <User className="w-5 h-5" />;
       case "refund":
         return <RefreshCw className="w-5 h-5" />;
       case "commission":
@@ -391,8 +389,14 @@ const TransactionsTab: React.FC = () => {
 
         // Determine which endpoint to call based on typeFilter
         let endpoint = `/payments/admin/list_payouts.php`; // default to payouts
+        let queryParams = `?page=${page}&limit=${limit}`;
+
         if (typeFilter === "auction_payment") {
           endpoint = `/payments/admin/list_payments.php`;
+        } else if (typeFilter === "refund") {
+          // For refunds, get payments that have been refunded
+          endpoint = `/payments/admin/list_payments.php`;
+          queryParams += `&refunded_only=1`; // Add parameter to filter refunded payments
         } else if (typeFilter === "commission") {
           endpoint = `/payments/admin/list_commissions.php`;
         } else if (typeFilter === "payout" || typeFilter === "all") {
@@ -403,10 +407,10 @@ const TransactionsTab: React.FC = () => {
         const backendUrl = `http://localhost:8000${endpoint}`;
 
         console.log(
-          `[TransactionsTab] Fetching from: ${backendUrl}?page=${page}&limit=${limit}`
+          `[TransactionsTab] Fetching from: ${backendUrl}${queryParams}`
         );
 
-        const res = await fetch(`${backendUrl}?page=${page}&limit=${limit}`);
+        const res = await fetch(`${backendUrl}${queryParams}`);
 
         if (!res.ok) {
           const errorText = await res.text();
@@ -626,8 +630,7 @@ const TransactionsTab: React.FC = () => {
             <SelectContent>
               <SelectItem value="all">All Types</SelectItem>
               <SelectItem value="auction_payment">Auction Payments</SelectItem>
-              <SelectItem value="listing_fee">Listing Fees</SelectItem>
-              <SelectItem value="refund">Refunds</SelectItem>
+              <SelectItem value="refund">Refunded Payments</SelectItem>
               <SelectItem value="commission">Commissions</SelectItem>
               <SelectItem value="payout">Payouts</SelectItem>
             </SelectContent>
@@ -661,8 +664,13 @@ const TransactionsTab: React.FC = () => {
                       <div>
                         <div className="flex items-center space-x-3 mb-1">
                           <h3 className="font-semibold text-lg">
-                            Payment for auction #
-                            {transaction.auction_id || transaction.id}
+                            {typeFilter === "refund" || transaction.refunded
+                              ? `Refunded payment for auction #${
+                                  transaction.auction_id || transaction.id
+                                }`
+                              : `Payment for auction #${
+                                  transaction.auction_id || transaction.id
+                                }`}
                           </h3>
                           <span className="font-bold text-lg text-green-600">
                             {formatAmount(

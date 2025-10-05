@@ -6,7 +6,7 @@ I have successfully updated the TransactionsTab component to display only the es
 
 ### Main List View Now Shows:
 
-1. **Payment Title**: "Payment for auction #[auction_id]"
+1. **Payment Title**: "Payment for auction #[auction_id]" or "Refunded payment for auction #[auction_id]"
 2. **Amount**: Prominently displayed transaction amount (KSH format)
 3. **Status Badge**: Colored status indicator (completed, pending, etc.)
 4. **Payment Method**: The method used for payment
@@ -36,10 +36,27 @@ I have successfully updated the TransactionsTab component to display only the es
 
 ### Example Display Format:
 
+**Normal Payment:**
+
 ```
 Payment for auction #19                    KSh 42,000.00
 [completed] [Credit Card]                  Created: 10/3/2025, 10:21:02 PM  [⋮]
 ```
+
+**Refunded Payment:**
+
+```
+Refunded payment for auction #19           KSh 42,000.00  [Refunded]
+[completed] [Credit Card]                  Created: 10/3/2025, 10:21:02 PM  [⋮]
+```
+
+### Transaction Type Filters:
+
+- **All Types**: Shows all transactions
+- **Auction Payments**: Shows payment transactions for auctions
+- **Refunded Payments**: Shows payments that have been refunded
+- **Commissions**: Shows platform commission records
+- **Payouts**: Shows seller payout records
 
 ### Action Menu Contains:
 

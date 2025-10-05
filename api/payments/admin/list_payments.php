@@ -12,14 +12,31 @@ try {
     $limit = isset($_GET['limit']) ? max(1, min(100, intval($_GET['limit']))) : 20;
     $offset = ($page - 1) * $limit;
 
-    // Get total count
-    $countQuery = "SELECT COUNT(*) as total FROM payments";
+    // Check if we should only show refunded payments
+    $refundedOnly = isset($_GET['refunded_only']) && $_GET['refunded_only'] == '1';
+
+    // Build WHERE clause for refunded filter
+    $whereClause = "";
+    if ($refundedOnly) {
+        $whereClause = "WHERE EXISTS (
+            SELECT 1 FROM payments r 
+            WHERE r.auction_id = payments.auction_id 
+            AND r.user_id = payments.user_id 
+            AND r.amount < 0 
+            AND r.status = 'completed'
+        )";
+    }
+
+    // Get total count with filter
+    $countAdditionalWhere = $whereClause ? " AND amount > 0" : "WHERE amount > 0";
+    $countQuery = "SELECT COUNT(*) as total FROM payments " . $whereClause . $countAdditionalWhere;
     $countStmt = $db->prepare($countQuery);
     $countStmt->execute();
     $totalResult = $countStmt->fetch(PDO::FETCH_ASSOC);
     $total = $totalResult['total'];
 
-    // Get payments data
+    // Get payments data with filter
+    $additionalWhere = $whereClause ? " AND amount > 0" : "WHERE amount > 0";
     $query = "
         SELECT 
             payment_id,
@@ -30,8 +47,16 @@ try {
             payment_method,
             transaction_ref,
             created_at,
-            updated_at
+            updated_at,
+            CASE WHEN EXISTS (
+                SELECT 1 FROM payments r 
+                WHERE r.auction_id = payments.auction_id 
+                AND r.user_id = payments.user_id 
+                AND r.amount < 0 
+                AND r.status = 'completed'
+            ) THEN 1 ELSE 0 END as refunded
         FROM payments
+        " . $whereClause . $additionalWhere . "
         ORDER BY created_at DESC
         LIMIT :limit OFFSET :offset
     ";
@@ -45,10 +70,11 @@ try {
 
     // Format the data for frontend consumption
     $formattedPayments = array_map(function ($payment) {
+        $isRefunded = $payment['refunded'] == 1;
         return [
             'id' => $payment['payment_id'],
             'payment_id' => $payment['payment_id'],
-            'type' => 'auction_payment',
+            'type' => $isRefunded ? 'refund' : 'auction_payment',
             'status' => $payment['status'],
             'amount' => $payment['amount'],
             'currency' => 'KSH',
@@ -57,7 +83,8 @@ try {
             'updated_at' => $payment['updated_at'],
             'auction_id' => $payment['auction_id'],
             'user_id' => $payment['user_id'],
-            'description' => 'Payment for auction #' . $payment['auction_id'],
+            'refunded' => $isRefunded,
+            'description' => ($isRefunded ? 'Refunded payment' : 'Payment') . ' for auction #' . $payment['auction_id'],
             'auction' => [
                 'title' => 'Auction #' . $payment['auction_id'],
                 'winning_amount' => $payment['amount']
