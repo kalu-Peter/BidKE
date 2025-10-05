@@ -30,223 +30,46 @@ const TransactionsTab: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [typeFilter, setTypeFilter] = useState("all");
+
+  // Reset page to 1 when type filter changes
+  const handleTypeFilterChange = (newType: string) => {
+    setTypeFilter(newType);
+    setPage(1);
+  };
   const [dateRange, setDateRange] = useState("all");
   const [selectedTransaction, setSelectedTransaction] = useState<any>(null);
 
-  // Mock data for transactions
-  const allTransactions = [
-    {
-      id: "TXN001",
-      type: "auction_payment",
-      amount: 1050000,
-      currency: "KSH",
-      status: "completed",
-      payer: {
-        name: "John Kamau",
-        email: "john@example.com",
-        id: "USR123",
-      },
-      recipient: {
-        name: "ABC Auctioneers Ltd",
-        email: "abc@auctioneers.com",
-        id: "USR456",
-      },
-      auction: {
-        id: "AUC789",
-        title: "Honda Civic 2019 - Sedan",
-        winning_amount: 1050000,
-      },
-      paymentMethod: "M-Pesa",
-      processingFee: 21000, // 2%
-      platformFee: 31500, // 3%
-      sellerPayout: 997500,
-      transactionDate: "2024-01-22T14:30:00Z",
-      completedDate: "2024-01-22T14:32:00Z",
-      reference: "MP240122143000",
-      description: "Payment for winning bid on Honda Civic auction",
-    },
-    {
-      id: "TXN002",
-      type: "listing_fee",
-      amount: 500,
-      currency: "KSH",
-      status: "completed",
-      payer: {
-        name: "Tech Repos Ltd",
-        email: "info@techrepos.com",
-        id: "USR789",
-      },
-      recipient: {
-        name: "BidLode Platform",
-        email: "admin@bidlode.com",
-        id: "PLATFORM",
-      },
-      listing: {
-        id: "LST456",
-        title: "Samsung Galaxy S21 Ultra - 256GB",
-      },
-      paymentMethod: "Credit Card",
-      processingFee: 15, // 3%
-      platformRevenue: 485,
-      transactionDate: "2024-01-21T09:15:00Z",
-      completedDate: "2024-01-21T09:16:00Z",
-      reference: "CC240121091500",
-      description: "Listing fee for Samsung Galaxy smartphone",
-    },
-    {
-      id: "TXN003",
-      type: "refund",
-      amount: 25000,
-      currency: "KSH",
-      status: "pending",
-      payer: {
-        name: "BidLode Platform",
-        email: "admin@bidlode.com",
-        id: "PLATFORM",
-      },
-      recipient: {
-        name: "Mary Wanjiku",
-        email: "mary@example.com",
-        id: "USR321",
-      },
-      auction: {
-        id: "AUC654",
-        title: "iPhone 13 Pro - 128GB",
-        refundReason: "Item not as described",
-      },
-      paymentMethod: "M-Pesa",
-      processingFee: 500,
-      refundAmount: 24500,
-      transactionDate: "2024-01-20T16:45:00Z",
-      initiatedDate: "2024-01-20T16:45:00Z",
-      reference: "RF240120164500",
-      description: "Refund for disputed iPhone purchase",
-      estimatedCompletion: "2024-01-23T16:45:00Z",
-    },
-    {
-      id: "TXN004",
-      type: "auction_payment",
-      amount: 85000,
-      currency: "KSH",
-      status: "failed",
-      payer: {
-        name: "Peter Ochieng",
-        email: "peter@example.com",
-        id: "USR654",
-      },
-      recipient: {
-        name: "Digital Solutions",
-        email: "sales@digitalsol.com",
-        id: "USR987",
-      },
-      auction: {
-        id: "AUC321",
-        title: "MacBook Pro 2020 - M1 Chip",
-        winning_amount: 85000,
-      },
-      paymentMethod: "Bank Transfer",
-      processingFee: 1700,
-      platformFee: 2550,
-      failureReason: "Insufficient funds",
-      transactionDate: "2024-01-19T11:20:00Z",
-      failedDate: "2024-01-19T11:25:00Z",
-      reference: "BT240119112000",
-      description: "Payment attempt for MacBook auction win",
-      retryCount: 2,
-      nextRetry: "2024-01-23T11:20:00Z",
-    },
-    {
-      id: "TXN005",
-      type: "commission",
-      amount: 75000,
-      currency: "KSH",
-      status: "completed",
-      payer: {
-        name: "Premium Motors",
-        email: "info@premiummotors.com",
-        id: "USR111",
-      },
-      recipient: {
-        name: "BidLode Platform",
-        email: "admin@bidlode.com",
-        id: "PLATFORM",
-      },
-      auction: {
-        id: "AUC555",
-        title: "Toyota Hilux 2018 - Double Cab",
-        finalPrice: 1500000,
-        commissionRate: 5,
-      },
-      paymentMethod: "Auto-deduction",
-      platformRevenue: 75000,
-      transactionDate: "2024-01-18T13:10:00Z",
-      completedDate: "2024-01-18T13:10:00Z",
-      reference: "COM240118131000",
-      description: "5% commission on Toyota Hilux sale",
-    },
-    {
-      id: "TXN006",
-      type: "deposit",
-      amount: 50000,
-      currency: "KSH",
-      status: "completed",
-      payer: {
-        name: "Grace Mutindi",
-        email: "grace@example.com",
-        id: "USR999",
-      },
-      recipient: {
-        name: "BidLode Escrow",
-        email: "escrow@bidlode.com",
-        id: "ESCROW",
-      },
-      auction: {
-        id: "AUC888",
-        title: "Yamaha R15 V3 - Sport Bike",
-        requiredDeposit: 50000,
-      },
-      paymentMethod: "M-Pesa",
-      processingFee: 1000,
-      escrowAmount: 49000,
-      transactionDate: "2024-01-17T08:30:00Z",
-      completedDate: "2024-01-17T08:32:00Z",
-      reference: "DEP240117083000",
-      description: "Security deposit for motorcycle auction participation",
-      releaseCondition: "Auction completion or non-winning",
-    },
-  ];
+  const [allPayouts, setAllPayouts] = useState<any[]>([]);
+  const [loadingPayouts, setLoadingPayouts] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(20);
+  const [total, setTotal] = useState(0);
 
-  const filteredTransactions = allTransactions.filter((transaction) => {
+  const filteredTransactions = allPayouts.filter((p) => {
     const matchesSearch =
-      transaction.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      transaction.payer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      transaction.recipient.name
-        .toLowerCase()
-        .includes(searchTerm.toLowerCase()) ||
-      (transaction.auction?.title || transaction.listing?.title || "")
-        .toLowerCase()
-        .includes(searchTerm.toLowerCase());
+      String(p.payout_id).includes(searchTerm) ||
+      p.seller.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      String(p.auction_id).includes(searchTerm);
 
-    const matchesStatus =
-      statusFilter === "all" || transaction.status === statusFilter;
-    const matchesType = typeFilter === "all" || transaction.type === typeFilter;
+    const matchesStatus = statusFilter === "all" || p.status === statusFilter;
 
     // Simple date filtering (could be enhanced with actual date range picker)
     let matchesDate = true;
-    const transactionDate = new Date(transaction.transactionDate);
+    const created = new Date(p.created_at);
     const now = new Date();
 
     if (dateRange === "today") {
-      matchesDate = transactionDate.toDateString() === now.toDateString();
+      matchesDate = created.toDateString() === now.toDateString();
     } else if (dateRange === "week") {
       const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-      matchesDate = transactionDate >= weekAgo;
+      matchesDate = created >= weekAgo;
     } else if (dateRange === "month") {
       const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-      matchesDate = transactionDate >= monthAgo;
+      matchesDate = created >= monthAgo;
     }
 
-    return matchesSearch && matchesStatus && matchesType && matchesDate;
+    return matchesSearch && matchesStatus && matchesDate;
   });
 
   const getStatusColor = (status: string) => {
@@ -266,86 +89,294 @@ const TransactionsTab: React.FC = () => {
     }
   };
 
-  const getTypeIcon = (type: string) => {
-    switch (type) {
-      case "auction_payment":
-        return <DollarSign className="w-4 h-4 text-green-600" />;
-      case "listing_fee":
-        return <CreditCard className="w-4 h-4 text-blue-600" />;
-      case "refund":
-        return <RefreshCw className="w-4 h-4 text-orange-600" />;
-      case "commission":
-        return <TrendingUp className="w-4 h-4 text-purple-600" />;
-      case "deposit":
-        return <CheckCircle className="w-4 h-4 text-teal-600" />;
+  const getPayoutIcon = (status: string) => {
+    switch (status) {
+      case "completed":
+        return <CheckCircle className="w-4 h-4 text-green-600" />;
+      case "pending":
+        return <Clock className="w-4 h-4 text-yellow-600" />;
+      case "processing":
+        return <TrendingUp className="w-4 h-4 text-indigo-600" />;
+      case "failed":
+        return <AlertTriangle className="w-4 h-4 text-red-600" />;
       default:
-        return <CreditCard className="w-4 h-4 text-gray-600" />;
+        return <DollarSign className="w-4 h-4 text-gray-600" />;
     }
   };
 
   const formatAmount = (amount: number, currency: string = "KSH") => {
-    return `${currency} ${amount.toLocaleString()}`;
+    return `${currency} ${Number(amount).toLocaleString()}`;
   };
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleString();
   };
 
-  const handleViewDetails = (transactionId: string) => {
-    const transaction = allTransactions.find((t) => t.id === transactionId);
-    setSelectedTransaction(transaction);
+  const handleViewDetails = (payoutId: number) => {
+    const p = allPayouts.find((x) => x.payout_id === payoutId);
+    setSelectedTransaction(p);
   };
 
-  const handleRetryTransaction = (transactionId: string) => {
-    console.log("Retry transaction:", transactionId);
-    // Handle transaction retry logic
+  // Simple type icon mapper (fallbacks to DollarSign)
+  const getTypeIcon = (type?: string) => {
+    switch (type) {
+      case "auction_payment":
+        return <CreditCard className="w-5 h-5" />;
+      case "listing_fee":
+        return <User className="w-5 h-5" />;
+      case "refund":
+        return <RefreshCw className="w-5 h-5" />;
+      case "commission":
+        return <TrendingUp className="w-5 h-5" />;
+      default:
+        return <DollarSign className="w-5 h-5" />;
+    }
   };
 
-  const handleRefundTransaction = (transactionId: string) => {
-    console.log("Process refund for transaction:", transactionId);
-    // Handle refund processing logic
+  const handleRetryTransaction = async (transactionId: number) => {
+    // Optimistic local update; in production this should call a backend retry endpoint
+    setAllPayouts((prev) =>
+      prev.map((t) =>
+        t.id === transactionId || t.payout_id === transactionId
+          ? { ...t, status: "processing" }
+          : t
+      )
+    );
+    setSelectedTransaction((prev) =>
+      prev && (prev.id === transactionId || prev.payout_id === transactionId)
+        ? { ...prev, status: "processing" }
+        : prev
+    );
   };
+
+  const handleRefundTransaction = async (transactionId: number) => {
+    // Refund workflow not implemented yet; show a helpful message
+    setError("Refund action is not implemented in this dev UI.");
+    // Optionally you could call a refund endpoint here and update state
+  };
+
+  const handleMarkPaid = async (payoutId: number) => {
+    try {
+      setLoadingPayouts(true);
+      setError(null);
+      const res = await fetch(
+        `http://localhost:8000/payments/admin/mark_payout.php`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ payout_id: payoutId }),
+        }
+      );
+      const j = await res.json();
+      if (j && j.success) {
+        // refresh list
+        setAllPayouts((prev) =>
+          prev.map((p) =>
+            p.payout_id === payoutId ? { ...p, status: "completed" } : p
+          )
+        );
+        setSelectedTransaction((prev) =>
+          prev && prev.payout_id === payoutId
+            ? { ...prev, status: "completed" }
+            : prev
+        );
+      } else {
+        setError(j?.message || "Failed to mark payout");
+      }
+    } catch (e: any) {
+      setError(e?.message || "Network error");
+    } finally {
+      setLoadingPayouts(false);
+    }
+  };
+
+  // Fetch data when page/limit/typeFilter change
+  React.useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        setLoadingPayouts(true);
+        setError(null);
+
+        // Determine which endpoint to call based on typeFilter
+        let endpoint = `/payments/admin/list_payouts.php`; // default to payouts
+        if (typeFilter === "auction_payment") {
+          endpoint = `/payments/admin/list_payments.php`;
+        } else if (typeFilter === "commission") {
+          endpoint = `/payments/admin/list_commissions.php`;
+        } else if (typeFilter === "payout" || typeFilter === "all") {
+          endpoint = `/payments/admin/list_payouts.php`;
+        }
+
+        // Use the backend server URL (PHP server typically runs on port 8000)
+        const backendUrl = `http://localhost:8000${endpoint}`;
+
+        console.log(
+          `[TransactionsTab] Fetching from: ${backendUrl}?page=${page}&limit=${limit}`
+        );
+
+        const res = await fetch(`${backendUrl}?page=${page}&limit=${limit}`);
+
+        if (!res.ok) {
+          const errorText = await res.text();
+          console.error(
+            `[TransactionsTab] HTTP Error ${res.status}:`,
+            errorText
+          );
+          throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+        }
+
+        const responseText = await res.text();
+        console.log(
+          `[TransactionsTab] Raw response:`,
+          responseText.substring(0, 200)
+        );
+
+        let j;
+        try {
+          j = JSON.parse(responseText);
+        } catch (parseError) {
+          console.error(`[TransactionsTab] JSON Parse Error:`, parseError);
+          console.error(
+            `[TransactionsTab] Response was:`,
+            responseText.substring(0, 500)
+          );
+          throw new Error(`Invalid JSON response: ${parseError}`);
+        }
+
+        console.log(`[TransactionsTab] Parsed response:`, j);
+
+        if (!mounted) return;
+
+        if (j && j.success) {
+          setAllPayouts(j.data || []);
+          setTotal(j.total || 0);
+        } else {
+          setError(j?.message || "Failed to load data");
+        }
+      } catch (e: any) {
+        console.error(`[TransactionsTab] Fetch error:`, e);
+        if (mounted) {
+          setError(e?.message || "Network error");
+        }
+      } finally {
+        if (mounted) setLoadingPayouts(false);
+      }
+    })();
+    return () => {
+      mounted = false;
+    };
+  }, [page, limit, typeFilter]);
 
   // Calculate statistics
   const stats = {
-    total: allTransactions.length,
-    completed: allTransactions.filter((t) => t.status === "completed").length,
-    pending: allTransactions.filter((t) => t.status === "pending").length,
-    failed: allTransactions.filter((t) => t.status === "failed").length,
-    totalVolume: allTransactions
+    total: allPayouts.length,
+    completed: allPayouts.filter((t) => t.status === "completed").length,
+    pending: allPayouts.filter((t) => t.status === "pending").length,
+    failed: allPayouts.filter((t) => t.status === "failed").length,
+    totalVolume: allPayouts
       .filter((t) => t.status === "completed")
-      .reduce((sum, t) => sum + t.amount, 0),
-    totalRevenue: allTransactions
-      .filter(
-        (t) =>
-          t.status === "completed" &&
-          (t.type === "commission" || t.type === "listing_fee")
-      )
-      .reduce((sum, t) => {
-        if (t.type === "commission") return sum + t.platformRevenue;
-        if (t.type === "listing_fee")
-          return sum + (t.platformRevenue || t.amount);
-        return sum;
-      }, 0),
+      .reduce((sum, t) => sum + Number(t.gross_amount), 0),
+    totalPayouts: allPayouts
+      .filter((t) => t.status === "completed")
+      .reduce((sum, t) => sum + Number(t.net_amount), 0),
   };
 
   return (
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center space-x-2">
-          <CreditCard className="w-5 h-5" />
-          <span>Transaction Management</span>
+          <DollarSign className="w-5 h-5" />
+          <span>Payouts</span>
         </CardTitle>
         <p className="text-sm text-gray-600">
-          Monitor payments, refunds, fees, and platform revenue
+          Manage seller payouts and payout status
         </p>
       </CardHeader>
       <CardContent className="space-y-6">
+        {/* Pagination Controls */}
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center space-x-2">
+            <button
+              className="px-3 py-1 bg-gray-200 rounded disabled:opacity-50"
+              disabled={page <= 1}
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+            >
+              Prev
+            </button>
+
+            <button
+              className="px-3 py-1 bg-gray-200 rounded disabled:opacity-50"
+              disabled={page * limit >= (total || 0)}
+              onClick={() => setPage((p) => p + 1)}
+            >
+              Next
+            </button>
+
+            <span className="text-sm text-gray-600">Page</span>
+            <input
+              type="number"
+              min={1}
+              value={page}
+              onChange={(e) =>
+                setPage(Math.max(1, Number(e.target.value || 1)))
+              }
+              className="w-16 px-2 py-1 border rounded"
+            />
+
+            <span className="text-sm text-gray-600">
+              of {Math.max(1, Math.ceil((total || 0) / limit))}
+            </span>
+          </div>
+
+          <div className="flex items-center space-x-2">
+            <label className="text-sm text-gray-600">Page size</label>
+            <select
+              value={limit}
+              onChange={(e) => {
+                setLimit(Number(e.target.value));
+                setPage(1);
+              }}
+              className="px-2 py-1 border rounded"
+            >
+              <option value={10}>10</option>
+              <option value={20}>20</option>
+              <option value={50}>50</option>
+              <option value={100}>100</option>
+            </select>
+          </div>
+        </div>
+
+        {/* Error Display */}
+        {error && (
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
+            <div className="flex items-center space-x-2">
+              <AlertTriangle className="w-5 h-5 text-red-600" />
+              <span className="font-medium text-red-800">Error</span>
+            </div>
+            <p className="text-red-700 mt-1">{error}</p>
+            <button
+              onClick={() => setError(null)}
+              className="mt-2 text-sm text-red-600 hover:text-red-800 underline"
+            >
+              Dismiss
+            </button>
+          </div>
+        )}
+
+        {/* Loading Indicator */}
+        {loadingPayouts && (
+          <div className="flex items-center justify-center py-8">
+            <RefreshCw className="w-6 h-6 animate-spin text-blue-600 mr-2" />
+            <span className="text-gray-600">Loading transactions...</span>
+          </div>
+        )}
+
         {/* Transaction Statistics */}
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
           <div className="bg-blue-50 p-4 rounded-lg text-center">
             <p className="text-2xl font-bold text-blue-800">{stats.total}</p>
-            <p className="text-sm text-blue-600">Total</p>
+            <p className="text-sm text-blue-600">Total Payouts</p>
           </div>
           <div className="bg-green-50 p-4 rounded-lg text-center">
             <p className="text-2xl font-bold text-green-800">
@@ -367,13 +398,13 @@ const TransactionsTab: React.FC = () => {
             <p className="text-xl font-bold text-purple-800">
               {formatAmount(stats.totalVolume)}
             </p>
-            <p className="text-sm text-purple-600">Volume</p>
+            <p className="text-sm text-purple-600">Gross Volume (completed)</p>
           </div>
           <div className="bg-teal-50 p-4 rounded-lg text-center">
             <p className="text-xl font-bold text-teal-800">
-              {formatAmount(stats.totalRevenue)}
+              {formatAmount(stats.totalPayouts)}
             </p>
-            <p className="text-sm text-teal-600">Revenue</p>
+            <p className="text-sm text-teal-600">Net Paid (completed)</p>
           </div>
         </div>
 
@@ -397,7 +428,7 @@ const TransactionsTab: React.FC = () => {
               <SelectItem value="processing">Processing</SelectItem>
             </SelectContent>
           </Select>
-          <Select value={typeFilter} onValueChange={setTypeFilter}>
+          <Select value={typeFilter} onValueChange={handleTypeFilterChange}>
             <SelectTrigger>
               <SelectValue placeholder="Filter by type" />
             </SelectTrigger>
@@ -407,7 +438,7 @@ const TransactionsTab: React.FC = () => {
               <SelectItem value="listing_fee">Listing Fees</SelectItem>
               <SelectItem value="refund">Refunds</SelectItem>
               <SelectItem value="commission">Commissions</SelectItem>
-              <SelectItem value="deposit">Deposits</SelectItem>
+              <SelectItem value="payout">Payouts</SelectItem>
             </SelectContent>
           </Select>
           <Select value={dateRange} onValueChange={setDateRange}>
