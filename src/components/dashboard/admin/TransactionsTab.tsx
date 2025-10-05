@@ -282,14 +282,16 @@ const TransactionsTab: React.FC = () => {
 
   const handleSubmitPayout = async (payoutId: number) => {
     try {
-      console.log(`[TransactionsTab] Submitting payout: ${payoutId}`);
+      console.log(
+        `[TransactionsTab] Processing payout and commission: ${payoutId}`
+      );
 
       // Add payout to submitting set
       setSubmittingPayouts((prev) => new Set([...prev, payoutId]));
 
-      // Call the backend API
+      // Call the new combined backend API
       const response = await fetch(
-        "http://localhost:8000/payments/admin/update_payout_status.php",
+        "http://localhost:8000/payments/admin/process_payout_and_commission.php",
         {
           method: "POST",
           headers: {
@@ -311,10 +313,15 @@ const TransactionsTab: React.FC = () => {
       }
 
       const result = await response.json();
-      console.log(`[TransactionsTab] Submit payout response:`, result);
+      console.log(
+        `[TransactionsTab] Process payout and commission response:`,
+        result
+      );
 
       if (!result.success) {
-        throw new Error(result.message || "Failed to submit payout");
+        throw new Error(
+          result.message || "Failed to process payout and commission"
+        );
       }
 
       // Update local state to show completed status
@@ -332,18 +339,27 @@ const TransactionsTab: React.FC = () => {
       );
 
       console.log(
-        `[TransactionsTab] Payout ${payoutId} submitted successfully`
+        `[TransactionsTab] Payout ${payoutId} and commission processed successfully`
       );
+
+      // Show success message with details
+      if (result.payout_amount && result.platform_fee) {
+        setError(""); // Clear any previous errors
+        // Could add a success toast/notification here if implemented
+        console.log(
+          `Payout Amount: Ksh ${result.payout_amount}, Platform Fee: Ksh ${result.platform_fee}`
+        );
+      }
 
       // Trigger a data refresh by forcing re-render
       // The local state update above should be sufficient for UI feedback
     } catch (error) {
       console.error(
-        `[TransactionsTab] Error submitting payout ${payoutId}:`,
+        `[TransactionsTab] Error processing payout and commission ${payoutId}:`,
         error
       );
       setError(
-        `Failed to submit payout: ${
+        `Failed to process payout and commission: ${
           error instanceof Error ? error.message : "Unknown error"
         }`
       );
@@ -876,7 +892,7 @@ const TransactionsTab: React.FC = () => {
                     </Badge>
                   )}
 
-                  {/* Submit Payment button for pending payouts */}
+                  {/* Process Payout & Commission button for pending payouts */}
                   {typeFilter === "payout" &&
                     transaction.status === "pending" && (
                       <Button
@@ -890,12 +906,12 @@ const TransactionsTab: React.FC = () => {
                         {submittingPayouts.has(transaction.payout_id) ? (
                           <>
                             <RefreshCw className="w-4 h-4 mr-1 animate-spin" />
-                            Submitting...
+                            Processing...
                           </>
                         ) : (
                           <>
                             <CheckCircle className="w-4 h-4 mr-1" />
-                            Submit Payment
+                            Process Payout
                           </>
                         )}
                       </Button>
