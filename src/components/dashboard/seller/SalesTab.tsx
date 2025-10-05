@@ -374,22 +374,114 @@ const SalesTab: React.FC = () => {
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            <div className="flex justify-between items-center p-4 bg-primary/10 rounded-lg">
-              <div>
-                <h4 className="font-medium">Next Payout</h4>
-                <p className="text-sm text-gray-600">
-                  Scheduled for Friday, September 15, 2025
-                </p>
-              </div>
-              <div className="text-right">
-                <div className="text-lg font-bold text-blue-600">
-                  Ksh 48,600
-                </div>
-                <div className="text-xs text-gray-500">1 pending sale</div>
-              </div>
-            </div>
+            {/* Calculate pending payouts */}
+            {(() => {
+              const pendingPayouts = sales.filter(
+                (sale) =>
+                  sale.payout_status === "pending" ||
+                  sale.payout_status === "processing" ||
+                  (!sale.payout_status && sale.status === "completed")
+              );
+              const totalPendingAmount = pendingPayouts.reduce(
+                (sum, sale) => sum + sale.payout,
+                0
+              );
+              const completedPayouts = sales.filter(
+                (sale) =>
+                  sale.payout_status === "completed" ||
+                  sale.payout_status === "paid"
+              );
 
-            <div className="text-sm text-gray-600 space-y-2">
+              return (
+                <>
+                  {/* Next Payout Section */}
+                  {pendingPayouts.length > 0 ? (
+                    <div className="flex justify-between items-center p-4 bg-primary/10 rounded-lg">
+                      <div>
+                        <h4 className="font-medium">Pending Payouts</h4>
+                        <p className="text-sm text-gray-600">
+                          {pendingPayouts.length} sale
+                          {pendingPayouts.length !== 1 ? "s" : ""} awaiting
+                          payout
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-lg font-bold text-blue-600">
+                          Ksh {totalPendingAmount.toLocaleString()}
+                        </div>
+                        <div className="text-xs text-gray-500">
+                          Total pending amount
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex justify-between items-center p-4 bg-green-50 rounded-lg">
+                      <div>
+                        <h4 className="font-medium">All Payouts Complete</h4>
+                        <p className="text-sm text-gray-600">
+                          No pending payouts at this time
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-lg font-bold text-green-600">
+                          Ksh 0
+                        </div>
+                        <div className="text-xs text-gray-500">
+                          Pending amount
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Recent Payouts List */}
+                  {(pendingPayouts.length > 0 ||
+                    completedPayouts.length > 0) && (
+                    <div className="space-y-3">
+                      <h5 className="font-medium text-sm">
+                        Recent Payout Status
+                      </h5>
+                      {[...pendingPayouts, ...completedPayouts]
+                        .slice(0, 5)
+                        .map((sale) => (
+                          <div
+                            key={sale.id}
+                            className="flex justify-between items-center p-3 border rounded-lg"
+                          >
+                            <div>
+                              <p className="font-medium text-sm">{sale.item}</p>
+                              <p className="text-xs text-gray-500">
+                                Sale Date: {formatDate(sale.date)}
+                                {sale.payout_date &&
+                                  ` • Paid: ${formatDate(sale.payout_date)}`}
+                              </p>
+                            </div>
+                            <div className="text-right">
+                              <div className="font-medium">
+                                Ksh {sale.payout.toLocaleString()}
+                              </div>
+                              <Badge
+                                className={
+                                  sale.payout_status === "completed" ||
+                                  sale.payout_status === "paid"
+                                    ? "bg-green-100 text-green-800"
+                                    : sale.payout_status === "processing"
+                                    ? "bg-blue-100 text-blue-800"
+                                    : "bg-yellow-100 text-yellow-800"
+                                }
+                              >
+                                {sale.payout_status || "Pending"}
+                              </Badge>
+                            </div>
+                          </div>
+                        ))}
+                    </div>
+                  )}
+                </>
+              );
+            })()}
+
+            {/* Payout Information */}
+            <div className="text-sm text-gray-600 space-y-2 pt-4 border-t">
               <p>• Payouts are processed twice weekly (Tuesdays and Fridays)</p>
               <p>• Minimum payout amount: Ksh 1,000</p>
               <p>• Bank transfers take 1-2 business days</p>
