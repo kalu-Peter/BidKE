@@ -309,43 +309,43 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({
                   <div className="flex space-x-2">
                     <Link
                       to="/dashboard/overview"
-                      className="px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-100"
+                      className="px-3 py-2 rounded-md text-sm font-medium text-primary/90 hover:bg-primary/5 hover:text-primary"
                     >
                       Overview
                     </Link>
                     <Link
                       to="/dashboard/users"
-                      className="px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-100"
+                      className="px-3 py-2 rounded-md text-sm font-medium text-primary/90 hover:bg-primary/5 hover:text-primary"
                     >
                       User Management
                     </Link>
                     <Link
                       to="/dashboard/listings-control"
-                      className="px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-100"
+                      className="px-3 py-2 rounded-md text-sm font-medium text-primary/90 hover:bg-primary/5 hover:text-primary"
                     >
                       Listings Control
                     </Link>
                     <Link
                       to="/dashboard/transactions"
-                      className="px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-100"
+                      className="px-3 py-2 rounded-md text-sm font-medium text-primary/90 hover:bg-primary/5 hover:text-primary"
                     >
                       Transactions
                     </Link>
                     <Link
                       to="/dashboard/reports"
-                      className="px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-100"
+                      className="px-3 py-2 rounded-md text-sm font-medium text-primary/90 hover:bg-primary/5 hover:text-primary"
                     >
                       Reports
                     </Link>
                     <Link
                       to="/dashboard/verifications"
-                      className="px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-100"
+                      className="px-3 py-2 rounded-md text-sm font-medium text-primary/90 hover:bg-primary/5 hover:text-primary"
                     >
                       Verifications
                     </Link>
                     <Link
                       to="/dashboard/admin-signup"
-                      className="px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-100"
+                      className="px-3 py-2 rounded-md text-sm font-medium text-primary/90 hover:bg-primary/5 hover:text-primary"
                     >
                       Add Admin
                     </Link>

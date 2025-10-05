@@ -101,7 +101,8 @@ const TransactionsTab: React.FC = () => {
       case "failed":
         return "bg-red-100 text-red-800";
       case "processing":
-        return "bg-blue-100 text-blue-800";
+        // Use primary solid badge so it reads well on both light cards and dark modal
+        return "bg-primary text-white";
       case "cancelled":
         return "bg-gray-100 text-gray-800";
       default:
@@ -116,11 +117,11 @@ const TransactionsTab: React.FC = () => {
       case "pending":
         return <Clock className="w-4 h-4 text-yellow-600" />;
       case "processing":
-        return <TrendingUp className="w-4 h-4 text-indigo-600" />;
+        return <TrendingUp className="w-4 h-4 text-primary" />;
       case "failed":
         return <AlertTriangle className="w-4 h-4 text-red-600" />;
       default:
-        return <DollarSign className="w-4 h-4 text-gray-600" />;
+        return <DollarSign className="w-4 h-4 text-primary/70" />;
     }
   };
 
@@ -480,11 +481,11 @@ const TransactionsTab: React.FC = () => {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="flex items-center space-x-2">
-          <DollarSign className="w-5 h-5" />
+        <CardTitle className="flex items-center space-x-2 text-primary">
+          <DollarSign className="w-5 h-5 text-primary" />
           <span>Payouts</span>
         </CardTitle>
-        <p className="text-sm text-gray-600">
+        <p className="text-sm text-primary/80">
           Manage seller payouts and payout status
         </p>
       </CardHeader>
@@ -493,7 +494,7 @@ const TransactionsTab: React.FC = () => {
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center space-x-2">
             <button
-              className="px-3 py-1 bg-gray-200 rounded disabled:opacity-50"
+              className="px-3 py-1 bg-primary text-white rounded hover:bg-primary/90 disabled:opacity-50"
               disabled={page <= 1}
               onClick={() => setPage((p) => Math.max(1, p - 1))}
             >
@@ -501,14 +502,14 @@ const TransactionsTab: React.FC = () => {
             </button>
 
             <button
-              className="px-3 py-1 bg-gray-200 rounded disabled:opacity-50"
+              className="px-3 py-1 bg-primary text-white rounded hover:bg-primary/90 disabled:opacity-50"
               disabled={page * limit >= (total || 0)}
               onClick={() => setPage((p) => p + 1)}
             >
               Next
             </button>
 
-            <span className="text-sm text-gray-600">Page</span>
+            <span className="text-sm text-primary/90">Page</span>
             <input
               type="number"
               min={1}
@@ -516,23 +517,23 @@ const TransactionsTab: React.FC = () => {
               onChange={(e) =>
                 setPage(Math.max(1, Number(e.target.value || 1)))
               }
-              className="w-16 px-2 py-1 border rounded"
+              className="w-16 px-2 py-1 border border-primary/30 rounded text-primary bg-white/80"
             />
 
-            <span className="text-sm text-gray-600">
+            <span className="text-sm text-primary/80">
               of {Math.max(1, Math.ceil((total || 0) / limit))}
             </span>
           </div>
 
           <div className="flex items-center space-x-2">
-            <label className="text-sm text-gray-600">Page size</label>
+            <label className="text-sm text-primary/90">Page size</label>
             <select
               value={limit}
               onChange={(e) => {
                 setLimit(Number(e.target.value));
                 setPage(1);
               }}
-              className="px-2 py-1 border rounded"
+              className="px-2 py-1 border border-primary/30 rounded text-primary bg-white/90"
             >
               <option value={10}>10</option>
               <option value={20}>20</option>
@@ -562,44 +563,46 @@ const TransactionsTab: React.FC = () => {
         {/* Loading Indicator */}
         {loadingPayouts && (
           <div className="flex items-center justify-center py-8">
-            <RefreshCw className="w-6 h-6 animate-spin text-blue-600 mr-2" />
-            <span className="text-gray-600">Loading transactions...</span>
+            <RefreshCw className="w-6 h-6 animate-spin text-primary mr-2" />
+            <span className="text-primary/80">Loading transactions...</span>
           </div>
         )}
 
         {/* Transaction Statistics */}
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-          <div className="bg-blue-50 p-4 rounded-lg text-center">
-            <p className="text-2xl font-bold text-blue-800">{stats.total}</p>
-            <p className="text-sm text-blue-600">Total Payouts</p>
+          <div className="bg-primary/5 p-4 rounded-lg text-center border border-primary/20">
+            <p className="text-2xl font-bold text-primary">{stats.total}</p>
+            <p className="text-sm text-primary/70">Total Payouts</p>
           </div>
-          <div className="bg-green-50 p-4 rounded-lg text-center">
+          <div className="bg-green-50 p-4 rounded-lg text-center border border-green-200">
             <p className="text-2xl font-bold text-green-800">
               {stats.completed}
             </p>
             <p className="text-sm text-green-600">Completed</p>
           </div>
-          <div className="bg-yellow-50 p-4 rounded-lg text-center">
+          <div className="bg-yellow-50 p-4 rounded-lg text-center border border-yellow-200">
             <p className="text-2xl font-bold text-yellow-800">
               {stats.pending}
             </p>
             <p className="text-sm text-yellow-600">Pending</p>
           </div>
-          <div className="bg-red-50 p-4 rounded-lg text-center">
+          <div className="bg-red-50 p-4 rounded-lg text-center border border-red-200">
             <p className="text-2xl font-bold text-red-800">{stats.failed}</p>
             <p className="text-sm text-red-600">Failed</p>
           </div>
-          <div className="bg-purple-50 p-4 rounded-lg text-center">
-            <p className="text-xl font-bold text-purple-800">
+          <div className="bg-secondary/10 p-4 rounded-lg text-center border border-secondary/20">
+            <p className="text-xl font-bold text-secondary">
               {formatAmount(stats.totalVolume)}
             </p>
-            <p className="text-sm text-purple-600">Gross Volume (completed)</p>
+            <p className="text-sm text-secondary/80">
+              Gross Volume (completed)
+            </p>
           </div>
-          <div className="bg-teal-50 p-4 rounded-lg text-center">
-            <p className="text-xl font-bold text-teal-800">
+          <div className="bg-primary/10 p-4 rounded-lg text-center border border-primary/30">
+            <p className="text-xl font-bold text-primary">
               {formatAmount(stats.totalPayouts)}
             </p>
-            <p className="text-sm text-teal-600">Net Paid (completed)</p>
+            <p className="text-sm text-primary/80">Net Paid (completed)</p>
           </div>
         </div>
 
@@ -609,10 +612,10 @@ const TransactionsTab: React.FC = () => {
             placeholder="Search transactions..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full"
+            className="w-full bg-white/90 text-primary placeholder:text-primary/60 border border-primary/20"
           />
           <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger>
+            <SelectTrigger className="border border-primary/30 bg-white/90 text-primary">
               <SelectValue placeholder="Filter by status" />
             </SelectTrigger>
             <SelectContent>
@@ -624,7 +627,7 @@ const TransactionsTab: React.FC = () => {
             </SelectContent>
           </Select>
           <Select value={typeFilter} onValueChange={handleTypeFilterChange}>
-            <SelectTrigger>
+            <SelectTrigger className="border border-primary/30 bg-white/90 text-primary">
               <SelectValue placeholder="Filter by type" />
             </SelectTrigger>
             <SelectContent>
@@ -636,7 +639,7 @@ const TransactionsTab: React.FC = () => {
             </SelectContent>
           </Select>
           <Select value={dateRange} onValueChange={setDateRange}>
-            <SelectTrigger>
+            <SelectTrigger className="border border-primary/30 bg-white/90 text-primary">
               <SelectValue placeholder="Filter by date" />
             </SelectTrigger>
             <SelectContent>
@@ -653,7 +656,7 @@ const TransactionsTab: React.FC = () => {
           {filteredTransactions.map((transaction) => (
             <div
               key={transaction.id}
-              className="border rounded-lg p-4 hover:shadow-md transition-shadow"
+              className="border border-primary/10 rounded-lg p-4 bg-white hover:shadow-lg hover:border-primary/30 hover:bg-primary/5 transition-all duration-200"
             >
               <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between">
                 {/* Simplified Transaction Info */}
@@ -663,7 +666,7 @@ const TransactionsTab: React.FC = () => {
                       {getTypeIcon(transaction.type)}
                       <div>
                         <div className="flex items-center space-x-3 mb-1">
-                          <h3 className="font-semibold text-lg">
+                          <h3 className="font-semibold text-lg text-primary">
                             {typeFilter === "refund" || transaction.refunded
                               ? `Refunded payment for auction #${
                                   transaction.auction_id || transaction.id
@@ -672,7 +675,7 @@ const TransactionsTab: React.FC = () => {
                                   transaction.auction_id || transaction.id
                                 }`}
                           </h3>
-                          <span className="font-bold text-lg text-green-600">
+                          <span className="font-bold text-lg text-secondary">
                             {formatAmount(
                               transaction.amount ||
                                 transaction.net_amount ||
@@ -693,7 +696,7 @@ const TransactionsTab: React.FC = () => {
                               " "
                             )}
                           </Badge>
-                          <span className="text-sm text-gray-600">
+                          <span className="text-sm text-primary/90 font-medium">
                             {transaction.paymentMethod ||
                               transaction.payment_method ||
                               "N/A"}
@@ -702,8 +705,10 @@ const TransactionsTab: React.FC = () => {
                       </div>
                     </div>
                     <div className="text-right">
-                      <p className="text-sm text-gray-500">Created:</p>
-                      <p className="text-sm font-medium">
+                      <p className="text-sm text-primary/80 font-medium">
+                        Created:
+                      </p>
+                      <p className="text-sm font-semibold text-primary">
                         {formatDate(transaction.created_at)}
                       </p>
                     </div>
@@ -726,7 +731,7 @@ const TransactionsTab: React.FC = () => {
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                        <MoreVertical className="h-4 w-4" />
+                        <MoreVertical className="h-4 w-4 text-primary" />
                         <span className="sr-only">Open menu</span>
                       </Button>
                     </DropdownMenuTrigger>
@@ -817,11 +822,11 @@ const TransactionsTab: React.FC = () => {
         {/* Empty State */}
         {filteredTransactions.length === 0 && (
           <div className="text-center py-12">
-            <CreditCard className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">
+            <CreditCard className="w-16 h-16 text-primary/30 mx-auto mb-4" />
+            <h3 className="text-lg font-semibold text-primary mb-2">
               No transactions found
             </h3>
-            <p className="text-gray-600 mb-4">
+            <p className="text-primary/80 mb-4">
               {searchTerm ||
               statusFilter !== "all" ||
               typeFilter !== "all" ||
@@ -845,10 +850,15 @@ const TransactionsTab: React.FC = () => {
 
         {/* Transaction Detail Modal */}
         {selectedTransaction && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-            <div className="bg-white rounded-lg p-6 w-full max-w-2xl max-h-screen overflow-y-auto">
-              <div className="flex items-center justify-between mb-6">
-                <h3 className="text-xl font-semibold">Transaction Details</h3>
+          <div className="fixed inset-0 bg-black bg-opacity-60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+            <div
+              className="rounded-xl shadow-2xl border border-white/10 p-6 w-full max-w-2xl max-h-screen overflow-y-auto"
+              style={{ backgroundColor: "#00072d" }}
+            >
+              <div className="flex items-center justify-between mb-6 pb-4 border-b border-white/20">
+                <h3 className="text-xl font-bold text-white">
+                  Transaction Details
+                </h3>
                 <Button
                   variant="ghost"
                   size="sm"
@@ -862,48 +872,53 @@ const TransactionsTab: React.FC = () => {
                 {/* Basic Info */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="text-sm font-medium text-gray-600">
+                    <label className="text-sm font-semibold text-white/90 uppercase tracking-wide">
                       Transaction ID
                     </label>
-                    <p className="font-mono text-lg">
+                    <p className="font-mono text-lg text-primary bg-white/10 border border-white/20 px-2 py-1 rounded">
                       {selectedTransaction.id ||
                         selectedTransaction.payment_id ||
                         selectedTransaction.payout_id}
                     </p>
                   </div>
                   <div>
-                    <label className="text-sm font-medium text-gray-600">
+                    <label className="text-sm font-semibold text-white/90 uppercase tracking-wide">
                       Auction ID
                     </label>
-                    <p className="font-mono text-lg">
+                    <p className="font-mono text-lg text-white bg-white/10 border border-white/20 px-2 py-1 rounded">
                       #{selectedTransaction.auction_id || "N/A"}
                     </p>
                   </div>
                   <div>
-                    <label className="text-sm font-medium text-gray-600">
+                    <label className="text-sm font-semibold text-white/90 uppercase tracking-wide">
                       Status
                     </label>
                     <div className="mt-1">
                       <Badge
-                        className={getStatusColor(selectedTransaction.status)}
+                        className={
+                          // On dark modal background, prefer white text on colored bg for better contrast
+                          selectedTransaction.status === "processing"
+                            ? "bg-primary text-white"
+                            : getStatusColor(selectedTransaction.status)
+                        }
                       >
                         {selectedTransaction.status.replace("_", " ")}
                       </Badge>
                     </div>
                   </div>
                   <div>
-                    <label className="text-sm font-medium text-gray-600">
+                    <label className="text-sm font-semibold text-white/90 uppercase tracking-wide">
                       Type
                     </label>
-                    <p className="font-medium">
+                    <p className="font-semibold text-white">
                       {selectedTransaction.type?.replace("_", " ") || "Payment"}
                     </p>
                   </div>
                   <div>
-                    <label className="text-sm font-medium text-gray-600">
+                    <label className="text-sm font-semibold text-white/90 uppercase tracking-wide">
                       Amount
                     </label>
-                    <p className="font-bold text-lg text-green-600">
+                    <p className="font-bold text-lg text-accent">
                       {formatAmount(
                         selectedTransaction.amount ||
                           selectedTransaction.net_amount ||
@@ -914,10 +929,10 @@ const TransactionsTab: React.FC = () => {
                     </p>
                   </div>
                   <div>
-                    <label className="text-sm font-medium text-gray-600">
+                    <label className="text-sm font-semibold text-white/90 uppercase tracking-wide">
                       Created Date
                     </label>
-                    <p className="font-medium">
+                    <p className="font-semibold text-white">
                       {formatDate(selectedTransaction.created_at)}
                     </p>
                   </div>
@@ -927,28 +942,30 @@ const TransactionsTab: React.FC = () => {
                 {(selectedTransaction.platform_fee ||
                   selectedTransaction.gross_amount) && (
                   <div className="border-t pt-4">
-                    <h4 className="font-semibold mb-3">Amount Breakdown</h4>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-3 bg-blue-50 rounded-lg">
+                    <h4 className="font-bold text-lg text-white mb-3">
+                      Amount Breakdown
+                    </h4>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-3 bg-white/10 border border-white/20 rounded-lg">
                       {selectedTransaction.gross_amount && (
                         <div>
-                          <p className="text-sm text-blue-600">Gross Amount</p>
-                          <p className="font-medium text-blue-800">
+                          <p className="text-sm text-white/80">Gross Amount</p>
+                          <p className="font-medium text-white">
                             {formatAmount(selectedTransaction.gross_amount)}
                           </p>
                         </div>
                       )}
                       {selectedTransaction.platform_fee && (
                         <div>
-                          <p className="text-sm text-blue-600">Platform Fee</p>
-                          <p className="font-medium text-blue-800">
+                          <p className="text-sm text-white/80">Platform Fee</p>
+                          <p className="font-medium text-white">
                             {formatAmount(selectedTransaction.platform_fee)}
                           </p>
                         </div>
                       )}
                       {selectedTransaction.net_amount && (
                         <div>
-                          <p className="text-sm text-blue-600">Net Amount</p>
-                          <p className="font-medium text-blue-800">
+                          <p className="text-sm text-white/80">Net Amount</p>
+                          <p className="font-medium text-white">
                             {formatAmount(selectedTransaction.net_amount)}
                           </p>
                         </div>
@@ -958,24 +975,26 @@ const TransactionsTab: React.FC = () => {
                 )}
 
                 {/* Payment Info */}
-                <div className="border-t pt-4">
-                  <h4 className="font-semibold mb-3">Payment Information</h4>
+                <div className="border-t border-white/20 pt-6">
+                  <h4 className="font-bold text-lg text-white mb-4">
+                    Payment Information
+                  </h4>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                      <label className="text-sm font-medium text-gray-600">
+                      <label className="text-sm font-medium text-white/80">
                         Payment Method
                       </label>
-                      <p className="font-medium">
+                      <p className="font-medium text-white">
                         {selectedTransaction.paymentMethod ||
                           selectedTransaction.payment_method ||
                           "N/A"}
                       </p>
                     </div>
                     <div>
-                      <label className="text-sm font-medium text-gray-600">
+                      <label className="text-sm font-medium text-white/80">
                         Reference
                       </label>
-                      <p className="font-mono">
+                      <p className="font-mono text-white">
                         {selectedTransaction.reference ||
                           selectedTransaction.transaction_ref ||
                           "N/A"}
@@ -983,19 +1002,19 @@ const TransactionsTab: React.FC = () => {
                     </div>
                     {selectedTransaction.payout_method && (
                       <div>
-                        <label className="text-sm font-medium text-gray-600">
+                        <label className="text-sm font-medium text-white/80">
                           Payout Method
                         </label>
-                        <p className="font-medium">
+                        <p className="font-medium text-white">
                           {selectedTransaction.payout_method}
                         </p>
                       </div>
                     )}
                     <div>
-                      <label className="text-sm font-medium text-gray-600">
+                      <label className="text-sm font-medium text-white/80">
                         Updated
                       </label>
-                      <p className="font-medium">
+                      <p className="font-medium text-white">
                         {formatDate(selectedTransaction.updated_at)}
                       </p>
                     </div>
@@ -1003,45 +1022,47 @@ const TransactionsTab: React.FC = () => {
                 </div>
 
                 {/* Parties */}
-                <div className="border-t pt-4">
-                  <h4 className="font-semibold mb-3">Transaction Parties</h4>
+                <div className="border-t border-white/20 pt-4">
+                  <h4 className="font-semibold mb-3 text-white">
+                    Transaction Parties
+                  </h4>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                      <label className="text-sm font-medium text-gray-600">
+                      <label className="text-sm font-medium text-white/80">
                         Buyer (Payer)
                       </label>
-                      <p className="font-medium">
+                      <p className="font-medium text-white">
                         {selectedTransaction.payer?.name ||
                           selectedTransaction.buyer_name ||
                           "N/A"}
                       </p>
-                      <p className="text-sm text-gray-500">
+                      <p className="text-sm text-white/70">
                         {selectedTransaction.payer?.email ||
                           selectedTransaction.buyer_email ||
                           "N/A"}
                       </p>
                       {selectedTransaction.user_id && (
-                        <p className="text-xs text-gray-400">
+                        <p className="text-xs text-white/50">
                           User ID: {selectedTransaction.user_id}
                         </p>
                       )}
                     </div>
                     <div>
-                      <label className="text-sm font-medium text-gray-600">
+                      <label className="text-sm font-medium text-white/80">
                         Seller (Recipient)
                       </label>
-                      <p className="font-medium">
+                      <p className="font-medium text-white">
                         {selectedTransaction.recipient?.name ||
                           selectedTransaction.seller_name ||
                           "N/A"}
                       </p>
-                      <p className="text-sm text-gray-500">
+                      <p className="text-sm text-white/70">
                         {selectedTransaction.recipient?.email ||
                           selectedTransaction.seller_email ||
                           "N/A"}
                       </p>
                       {selectedTransaction.seller_id && (
-                        <p className="text-xs text-gray-400">
+                        <p className="text-xs text-white/50">
                           Seller ID: {selectedTransaction.seller_id}
                         </p>
                       )}
@@ -1051,19 +1072,21 @@ const TransactionsTab: React.FC = () => {
 
                 {/* Auction Details */}
                 {selectedTransaction.auction_id && (
-                  <div className="border-t pt-4">
-                    <h4 className="font-semibold mb-3">Related Auction</h4>
-                    <div className="p-3 bg-gray-50 rounded-lg">
-                      <p className="font-medium text-gray-900 mb-2">
+                  <div className="border-t border-white/20 pt-4">
+                    <h4 className="font-semibold mb-3 text-white">
+                      Related Auction
+                    </h4>
+                    <div className="p-3 bg-white/10 border border-white/20 rounded-lg">
+                      <p className="font-medium text-white mb-2">
                         Auction #{selectedTransaction.auction_id}
                       </p>
                       {selectedTransaction.auction_title && (
-                        <p className="text-sm text-gray-700 mb-1">
+                        <p className="text-sm text-white/80 mb-1">
                           {selectedTransaction.auction_title}
                         </p>
                       )}
                       {selectedTransaction.winning_amount && (
-                        <p className="text-sm text-green-600">
+                        <p className="text-sm text-accent">
                           Winning bid:{" "}
                           {formatAmount(selectedTransaction.winning_amount)}
                         </p>
@@ -1074,14 +1097,16 @@ const TransactionsTab: React.FC = () => {
 
                 {/* Status History & Additional Info */}
                 <div className="border-t pt-4">
-                  <h4 className="font-semibold mb-3">Additional Information</h4>
+                  <h4 className="font-semibold mb-3 text-white">
+                    Additional Information
+                  </h4>
                   <div className="space-y-3">
                     {selectedTransaction.description && (
                       <div>
-                        <label className="text-sm font-medium text-gray-600">
+                        <label className="text-sm font-medium text-white/80">
                           Description
                         </label>
-                        <p className="text-sm text-gray-700">
+                        <p className="text-sm text-white/90">
                           {selectedTransaction.description}
                         </p>
                       </div>
@@ -1184,7 +1209,7 @@ const TransactionsTab: React.FC = () => {
                   </div>
                 </div>
 
-                <div className="border-t pt-4 text-xs text-gray-500">
+                <div className="border-t border-white/20 pt-4 text-xs text-white/60">
                   <p>Transaction processed through BidKE platform</p>
                 </div>
               </div>
@@ -1194,11 +1219,11 @@ const TransactionsTab: React.FC = () => {
 
         {/* Payment Processing Guidelines */}
         {/* Payment Processing Guidelines */}
-        <div className="mt-6 p-4 bg-blue-50 rounded-lg">
-          <h4 className="font-medium text-blue-900 mb-2">
+        <div className="mt-6 p-4 bg-primary/5 border border-primary/20 rounded-lg">
+          <h4 className="font-medium text-primary mb-2">
             Payment Processing Guidelines:
           </h4>
-          <ul className="text-sm text-blue-800 space-y-1">
+          <ul className="text-sm text-primary/80 space-y-1">
             <li>
               • Monitor failed transactions and initiate retries where
               appropriate
