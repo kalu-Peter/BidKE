@@ -2,7 +2,6 @@ import React from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import Header from "@/components/Header";
 import UserHeader from "@/components/UserHeader";
 import Footer from "@/components/Footer";
 
@@ -11,8 +10,27 @@ const Checkout: React.FC = () => {
   const navigate = useNavigate();
   const tx = searchParams.get("tx");
   const auctionId = searchParams.get("auction_id");
+
   const [loading, setLoading] = React.useState(false);
   const [message, setMessage] = React.useState<string | null>(null);
+  const [toast, setToast] = React.useState<string | null>(null);
+  const [countdown, setCountdown] = React.useState<number | null>(null);
+
+  // Auto-close countdown effect
+  React.useEffect(() => {
+    if (countdown === null) return;
+    if (countdown <= 0) {
+      try {
+        window.close();
+      } catch (_e) {}
+      return;
+    }
+    const t = setTimeout(
+      () => setCountdown((c) => (c !== null ? c - 1 : null)),
+      1000
+    );
+    return () => clearTimeout(t);
+  }, [countdown]);
 
   const completePayment = async () => {
     if (!tx) return setMessage("Missing transaction reference");
@@ -24,23 +42,23 @@ const Checkout: React.FC = () => {
         undefined
       );
       if (res && res.success) {
-        setMessage(
-          "Payment completed successfully. You may close this window."
-        );
+        setMessage("Payment completed successfully.");
         // Dispatch global event so WonAuctionsTab can update without reload
         try {
-          const auctionId = auctionIdParam ? Number(auctionIdParam) : undefined;
+          const auctionIdNum = auctionId ? Number(auctionId) : undefined;
           const ev = new CustomEvent("payments:processed", {
             detail: {
-              auction_id: auctionId,
+              auction_id: auctionIdNum,
               payment_id: (res.data as any)?.payment_id,
             },
           });
           window.dispatchEvent(ev);
         } catch (_e) {}
-        // show transient toast
+
+        // show transient toast and start auto-close countdown
         setToast("Payment successful");
         setTimeout(() => setToast(null), 4000);
+        setCountdown(5);
       } else {
         setMessage(
           "Webhook call failed: " + (res?.message || JSON.stringify(res))
@@ -52,10 +70,6 @@ const Checkout: React.FC = () => {
       setLoading(false);
     }
   };
-
-  const [toast, setToast] = React.useState<string | null>(null);
-  // capture auctionId param safely
-  const auctionIdParam = auctionId;
 
   return (
     <>
@@ -82,6 +96,11 @@ const Checkout: React.FC = () => {
               {toast && (
                 <div className="fixed top-6 right-6 bg-green-600 text-white px-4 py-2 rounded shadow-lg">
                   {toast}
+                </div>
+              )}
+              {countdown !== null && (
+                <div className="fixed top-16 right-6 bg-gray-800 text-white px-3 py-1 rounded shadow-lg">
+                  Closing in {countdown} second{countdown === 1 ? "" : "s"}...
                 </div>
               )}
               <div className="flex gap-2">
