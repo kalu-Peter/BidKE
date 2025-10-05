@@ -45,6 +45,9 @@ const TransactionsTab: React.FC = () => {
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(20);
   const [total, setTotal] = useState(0);
+  const [submittingPayouts, setSubmittingPayouts] = useState<Set<number>>(
+    new Set()
+  );
 
   const filteredTransactions = allPayouts.filter((p) => {
     const matchesSearch =
@@ -193,6 +196,83 @@ const TransactionsTab: React.FC = () => {
       setError(e?.message || "Network error");
     } finally {
       setLoadingPayouts(false);
+    }
+  };
+
+  const handleSubmitPayout = async (payoutId: number) => {
+    try {
+      console.log(`[TransactionsTab] Submitting payout: ${payoutId}`);
+
+      // Add payout to submitting set
+      setSubmittingPayouts((prev) => new Set([...prev, payoutId]));
+
+      // Call the backend API
+      const response = await fetch(
+        "http://localhost:8000/payments/admin/update_payout_status.php",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            payout_id: payoutId,
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error(
+          `[TransactionsTab] HTTP Error ${response.status}:`,
+          errorText
+        );
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      const result = await response.json();
+      console.log(`[TransactionsTab] Submit payout response:`, result);
+
+      if (!result.success) {
+        throw new Error(result.message || "Failed to submit payout");
+      }
+
+      // Update local state to show completed status
+      setAllPayouts((prev) =>
+        prev.map((p) =>
+          p.payout_id === payoutId ? { ...p, status: "completed" } : p
+        )
+      );
+
+      // Also update selected transaction if it matches
+      setSelectedTransaction((prev) =>
+        prev && prev.payout_id === payoutId
+          ? { ...prev, status: "completed" }
+          : prev
+      );
+
+      console.log(
+        `[TransactionsTab] Payout ${payoutId} submitted successfully`
+      );
+
+      // Trigger a data refresh by forcing re-render
+      // The local state update above should be sufficient for UI feedback
+    } catch (error) {
+      console.error(
+        `[TransactionsTab] Error submitting payout ${payoutId}:`,
+        error
+      );
+      setError(
+        `Failed to submit payout: ${
+          error instanceof Error ? error.message : "Unknown error"
+        }`
+      );
+    } finally {
+      // Remove from submitting set
+      setSubmittingPayouts((prev) => {
+        const newSet = new Set(prev);
+        newSet.delete(payoutId);
+        return newSet;
+      });
     }
   };
 
@@ -686,6 +766,31 @@ const TransactionsTab: React.FC = () => {
                       >
                         <RefreshCw className="w-4 h-4 mr-1" />
                         Refund
+                      </Button>
+                    )}
+
+                  {/* Submit Payment button for pending payouts */}
+                  {typeFilter === "payout" &&
+                    transaction.status === "pending" && (
+                      <Button
+                        size="sm"
+                        onClick={() =>
+                          handleSubmitPayout(transaction.payout_id)
+                        }
+                        disabled={submittingPayouts.has(transaction.payout_id)}
+                        className="bg-green-600 hover:bg-green-700 text-white"
+                      >
+                        {submittingPayouts.has(transaction.payout_id) ? (
+                          <>
+                            <RefreshCw className="w-4 h-4 mr-1 animate-spin" />
+                            Submitting...
+                          </>
+                        ) : (
+                          <>
+                            <CheckCircle className="w-4 h-4 mr-1" />
+                            Submit Payment
+                          </>
+                        )}
                       </Button>
                     )}
 
