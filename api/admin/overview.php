@@ -109,7 +109,7 @@ try {
         }
     }
 
-    // Revenue summaries: today, this week, this month (assumes auctions.final_price or payments table)
+    // Revenue summaries: today, this week, this month (calculated from platform_fee in commissions table)
     $revenue = [
         'today' => 0.0,
         'week' => 0.0,
@@ -117,48 +117,84 @@ try {
         'total' => 0.0
     ];
     try {
-        // Prefer payments table if present
-        $paymentsExist = false;
-        $tblStmt = $db->prepare("SELECT to_regclass('public.payments') as t");
+        // Prefer commissions table for accurate revenue calculation (platform_fee only)
+        $commissionsExist = false;
+        $tblStmt = $db->prepare("SELECT to_regclass('public.commissions') as t");
         $tblStmt->execute();
         $tblRow = $tblStmt->fetch(PDO::FETCH_ASSOC);
-        if ($tblRow && $tblRow['t']) $paymentsExist = true;
+        if ($tblRow && $tblRow['t']) $commissionsExist = true;
 
-        if ($paymentsExist) {
-            $todaySql = "SELECT COALESCE(SUM(amount),0) as s FROM payments WHERE created_at >= date_trunc('day', now())";
-            $weekSql = "SELECT COALESCE(SUM(amount),0) as s FROM payments WHERE created_at >= date_trunc('week', now())";
-            $monthSql = "SELECT COALESCE(SUM(amount),0) as s FROM payments WHERE created_at >= date_trunc('month', now())";
-            $totalSql = "SELECT COALESCE(SUM(amount),0) as s FROM payments";
+        if ($commissionsExist) {
+            // Calculate revenue from platform_fee in commissions table (completed commissions only)
+            $todaySql = "SELECT COALESCE(SUM(platform_fee),0) as s FROM commissions WHERE status = 'completed' AND created_at >= date_trunc('day', now())";
+            $weekSql = "SELECT COALESCE(SUM(platform_fee),0) as s FROM commissions WHERE status = 'completed' AND created_at >= date_trunc('week', now())";
+            $monthSql = "SELECT COALESCE(SUM(platform_fee),0) as s FROM commissions WHERE status = 'completed' AND created_at >= date_trunc('month', now())";
+            $totalSql = "SELECT COALESCE(SUM(platform_fee),0) as s FROM commissions WHERE status = 'completed'";
+
             $stmt = $db->prepare($todaySql);
             $stmt->execute();
             $revenue['today'] = (float)$stmt->fetchColumn();
+
             $stmt = $db->prepare($weekSql);
             $stmt->execute();
             $revenue['week'] = (float)$stmt->fetchColumn();
+
             $stmt = $db->prepare($monthSql);
             $stmt->execute();
             $revenue['month'] = (float)$stmt->fetchColumn();
+
             $stmt = $db->prepare($totalSql);
             $stmt->execute();
             $revenue['total'] = (float)$stmt->fetchColumn();
         } else {
-            // Fallback: try auctions.final_price or bids
-            $todaySql = "SELECT COALESCE(SUM(final_price),0) FROM auctions WHERE status = 'ended' AND updated_at >= date_trunc('day', now())";
-            $weekSql = "SELECT COALESCE(SUM(final_price),0) FROM auctions WHERE status = 'ended' AND updated_at >= date_trunc('week', now())";
-            $monthSql = "SELECT COALESCE(SUM(final_price),0) FROM auctions WHERE status = 'ended' AND updated_at >= date_trunc('month', now())";
-            $totalSql = "SELECT COALESCE(SUM(final_price),0) FROM auctions WHERE status = 'ended'";
-            $stmt = $db->prepare($todaySql);
-            $stmt->execute();
-            $revenue['today'] = (float)$stmt->fetchColumn();
-            $stmt = $db->prepare($weekSql);
-            $stmt->execute();
-            $revenue['week'] = (float)$stmt->fetchColumn();
-            $stmt = $db->prepare($monthSql);
-            $stmt->execute();
-            $revenue['month'] = (float)$stmt->fetchColumn();
-            $stmt = $db->prepare($totalSql);
-            $stmt->execute();
-            $revenue['total'] = (float)$stmt->fetchColumn();
+            // Fallback: try payments table if commissions doesn't exist
+            $paymentsExist = false;
+            $tblStmt = $db->prepare("SELECT to_regclass('public.payments') as t");
+            $tblStmt->execute();
+            $tblRow = $tblStmt->fetch(PDO::FETCH_ASSOC);
+            if ($tblRow && $tblRow['t']) $paymentsExist = true;
+
+            if ($paymentsExist) {
+                // Use payments table as fallback (full payment amounts)
+                $todaySql = "SELECT COALESCE(SUM(amount),0) as s FROM payments WHERE created_at >= date_trunc('day', now())";
+                $weekSql = "SELECT COALESCE(SUM(amount),0) as s FROM payments WHERE created_at >= date_trunc('week', now())";
+                $monthSql = "SELECT COALESCE(SUM(amount),0) as s FROM payments WHERE created_at >= date_trunc('month', now())";
+                $totalSql = "SELECT COALESCE(SUM(amount),0) as s FROM payments";
+
+                $stmt = $db->prepare($todaySql);
+                $stmt->execute();
+                $revenue['today'] = (float)$stmt->fetchColumn();
+
+                $stmt = $db->prepare($weekSql);
+                $stmt->execute();
+                $revenue['week'] = (float)$stmt->fetchColumn();
+
+                $stmt = $db->prepare($monthSql);
+                $stmt->execute();
+                $revenue['month'] = (float)$stmt->fetchColumn();
+
+                $stmt = $db->prepare($totalSql);
+                $stmt->execute();
+                $revenue['total'] = (float)$stmt->fetchColumn();
+            } else {
+                // Final fallback: try auctions.final_price
+                $todaySql = "SELECT COALESCE(SUM(final_price),0) FROM auctions WHERE status = 'ended' AND updated_at >= date_trunc('day', now())";
+                $weekSql = "SELECT COALESCE(SUM(final_price),0) FROM auctions WHERE status = 'ended' AND updated_at >= date_trunc('week', now())";
+                $monthSql = "SELECT COALESCE(SUM(final_price),0) FROM auctions WHERE status = 'ended' AND updated_at >= date_trunc('month', now())";
+                $totalSql = "SELECT COALESCE(SUM(final_price),0) FROM auctions WHERE status = 'ended'";
+                $stmt = $db->prepare($todaySql);
+                $stmt->execute();
+                $revenue['today'] = (float)$stmt->fetchColumn();
+                $stmt = $db->prepare($weekSql);
+                $stmt->execute();
+                $revenue['week'] = (float)$stmt->fetchColumn();
+                $stmt = $db->prepare($monthSql);
+                $stmt->execute();
+                $revenue['month'] = (float)$stmt->fetchColumn();
+                $stmt = $db->prepare($totalSql);
+                $stmt->execute();
+                $revenue['total'] = (float)$stmt->fetchColumn();
+            }
         }
     } catch (Exception $e) {
         error_log('admin/overview.php: revenue query skipped: ' . $e->getMessage());

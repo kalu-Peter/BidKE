@@ -1,12 +1,15 @@
 <?php
-require_once __DIR__ . '/../api/config/connect.php';
+require_once 'api/config/connect.php';
 
-try {
-    $db = Database::getInstance();
-    $conn = $db->getConnection();
-    $stmt = $conn->query('SELECT id, username, email FROM users LIMIT 5');
-    $users = $stmt->fetchAll(PDO::FETCH_ASSOC);
-    echo json_encode($users, JSON_PRETTY_PRINT) . PHP_EOL;
-} catch (Exception $e) {
-    echo "ERROR: " . $e->getMessage() . PHP_EOL;
+$db = Database::getInstance()->getConnection();
+
+echo "=== USERS TABLE STRUCTURE ===\n";
+
+// Check users table structure
+$stmt = $db->query("SELECT column_name, data_type, is_nullable FROM information_schema.columns WHERE table_name = 'users' ORDER BY ordinal_position");
+$columns = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+echo "Users table structure:\n";
+foreach ($columns as $column) {
+    echo "- {$column['column_name']} ({$column['data_type']}) " . ($column['is_nullable'] === 'YES' ? 'NULL' : 'NOT NULL') . "\n";
 }
