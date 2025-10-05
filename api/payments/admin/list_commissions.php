@@ -22,16 +22,18 @@ try {
     // Get commissions data
     $query = "
         SELECT 
-            commission_id,
-            payment_id,
-            auction_id,
-            seller_id,
-            platform_fee as amount,
-            percentage,
-            status,
-            created_at
-        FROM commissions
-        ORDER BY created_at DESC
+            c.commission_id,
+            c.payment_id,
+            c.auction_id,
+            c.seller_id,
+            c.platform_fee as amount,
+            c.percentage,
+            c.status,
+            c.created_at,
+            a.title as auction_title
+        FROM commissions c
+        LEFT JOIN auctions a ON a.id = c.auction_id
+        ORDER BY c.created_at DESC
         LIMIT :limit OFFSET :offset
     ";
 
@@ -57,8 +59,9 @@ try {
             'auction_id' => $commission['auction_id'],
             'seller_id' => $commission['seller_id'],
             'description' => 'Platform commission (' . ($commission['percentage'] * 100) . '%) for auction #' . $commission['auction_id'],
+            'auction_title' => $commission['auction_title'] ?: 'Auction #' . $commission['auction_id'],
             'auction' => [
-                'title' => 'Auction #' . $commission['auction_id'],
+                'title' => $commission['auction_title'] ?: 'Auction #' . $commission['auction_id'],
                 'winning_amount' => null
             ],
             'payer' => [

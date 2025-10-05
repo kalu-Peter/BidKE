@@ -28,36 +28,38 @@ try {
     }
 
     // Get total count with filter
-    $countAdditionalWhere = $whereClause ? " AND amount > 0" : "WHERE amount > 0";
-    $countQuery = "SELECT COUNT(*) as total FROM payments " . $whereClause . $countAdditionalWhere;
+    $countAdditionalWhere = $whereClause ? " AND p.amount > 0" : "WHERE p.amount > 0";
+    $countQuery = "SELECT COUNT(*) as total FROM payments p " . str_replace('payments.', 'p.', $whereClause) . $countAdditionalWhere;
     $countStmt = $db->prepare($countQuery);
     $countStmt->execute();
     $totalResult = $countStmt->fetch(PDO::FETCH_ASSOC);
     $total = $totalResult['total'];
 
     // Get payments data with filter
-    $additionalWhere = $whereClause ? " AND amount > 0" : "WHERE amount > 0";
+    $additionalWhere = $whereClause ? " AND p.amount > 0" : "WHERE p.amount > 0";
     $query = "
         SELECT 
-            payment_id,
-            user_id,
-            auction_id,
-            amount,
-            status,
-            payment_method,
-            transaction_ref,
-            created_at,
-            updated_at,
+            p.payment_id,
+            p.user_id,
+            p.auction_id,
+            p.amount,
+            p.status,
+            p.payment_method,
+            p.transaction_ref,
+            p.created_at,
+            p.updated_at,
+            a.title as auction_title,
             CASE WHEN EXISTS (
                 SELECT 1 FROM payments r 
-                WHERE r.auction_id = payments.auction_id 
-                AND r.user_id = payments.user_id 
+                WHERE r.auction_id = p.auction_id 
+                AND r.user_id = p.user_id 
                 AND r.amount < 0 
                 AND r.status = 'completed'
             ) THEN 1 ELSE 0 END as refunded
-        FROM payments
-        " . $whereClause . $additionalWhere . "
-        ORDER BY created_at DESC
+        FROM payments p
+        LEFT JOIN auctions a ON p.auction_id = a.id
+        " . str_replace('payments.', 'p.', $whereClause) . $additionalWhere . "
+        ORDER BY p.created_at DESC
         LIMIT :limit OFFSET :offset
     ";
 
@@ -85,8 +87,9 @@ try {
             'user_id' => $payment['user_id'],
             'refunded' => $isRefunded,
             'description' => ($isRefunded ? 'Refunded payment' : 'Payment') . ' for auction #' . $payment['auction_id'],
+            'auction_title' => $payment['auction_title'] ?: 'Auction #' . $payment['auction_id'],
             'auction' => [
-                'title' => 'Auction #' . $payment['auction_id'],
+                'title' => $payment['auction_title'] ?: 'Auction #' . $payment['auction_id'],
                 'winning_amount' => $payment['amount']
             ],
             'payer' => [

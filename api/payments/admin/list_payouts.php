@@ -16,7 +16,7 @@ try {
     $cstmt->execute();
     $total = (int)($cstmt->fetch(PDO::FETCH_ASSOC)['cnt'] ?? 0);
 
-    $stmt = $db->prepare('SELECT p.payout_id, p.seller_id, p.auction_id, p.gross_amount, p.platform_fee, p.net_amount, p.status, p.payout_method, p.transaction_ref, p.created_at, u.username as seller_username FROM payouts p LEFT JOIN users u ON u.id = p.seller_id ORDER BY p.created_at DESC LIMIT :limit OFFSET :offset');
+    $stmt = $db->prepare('SELECT p.payout_id, p.seller_id, p.auction_id, p.gross_amount, p.platform_fee, p.net_amount, p.status, p.payout_method, p.transaction_ref, p.created_at, u.username as seller_username, a.title as auction_title FROM payouts p LEFT JOIN users u ON u.id = p.seller_id LEFT JOIN auctions a ON a.id = p.auction_id ORDER BY p.created_at DESC LIMIT :limit OFFSET :offset');
     $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
     $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
     $stmt->execute();
@@ -36,8 +36,9 @@ try {
             'auction_id' => $payout['auction_id'],
             'seller_id' => $payout['seller_id'],
             'description' => 'Payout for auction #' . $payout['auction_id'],
+            'auction_title' => $payout['auction_title'] ?: 'Auction #' . $payout['auction_id'],
             'auction' => [
-                'title' => 'Auction #' . $payout['auction_id'],
+                'title' => $payout['auction_title'] ?: 'Auction #' . $payout['auction_id'],
                 'winning_amount' => $payout['gross_amount']
             ],
             'payer' => [

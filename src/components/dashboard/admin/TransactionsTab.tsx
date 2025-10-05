@@ -668,11 +668,17 @@ const TransactionsTab: React.FC = () => {
                         <div className="flex items-center space-x-3 mb-1">
                           <h3 className="font-semibold text-lg text-primary">
                             {typeFilter === "refund" || transaction.refunded
-                              ? `Refunded payment for auction #${
-                                  transaction.auction_id || transaction.id
+                              ? `Refunded: ${
+                                  transaction.auction_title ||
+                                  `Auction #${
+                                    transaction.auction_id || transaction.id
+                                  }`
                                 }`
-                              : `Payment for auction #${
-                                  transaction.auction_id || transaction.id
+                              : `${
+                                  transaction.auction_title ||
+                                  `Auction #${
+                                    transaction.auction_id || transaction.id
+                                  }`
                                 }`}
                           </h3>
                           <span className="font-bold text-lg text-secondary">
