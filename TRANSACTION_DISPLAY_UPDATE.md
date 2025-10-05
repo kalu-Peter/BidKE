@@ -10,9 +10,8 @@ I have successfully updated the TransactionsTab component to display only the es
 2. **Amount**: Prominently displayed transaction amount (KSH format)
 3. **Status Badge**: Colored status indicator (completed, pending, etc.)
 4. **Payment Method**: The method used for payment
-5. **View Details Button**: Opens comprehensive modal
-6. **Other Action Buttons**: Process Payout, Refund, etc. (as applicable)
-7. **Created Date**: Formatted as "Created: [date]"
+5. **Created Date**: Formatted as "Created: [date]"
+6. **Action Menu**: Vertical dots menu containing all action buttons
 
 ### Detailed Information Moved to Modal:
 
@@ -28,17 +27,29 @@ I have successfully updated the TransactionsTab component to display only the es
 ### Key Features:
 
 - **Clean Interface**: Main list is now much cleaner and easier to scan
+- **Compact Design**: Action buttons are organized in a space-saving dropdown menu
 - **Comprehensive Details**: All detailed information is available in the modal
 - **Responsive Design**: Works well on both desktop and mobile
 - **Contextual Actions**: Action buttons appear based on transaction status and type
 - **Enhanced Modal**: Detailed modal provides comprehensive transaction information
+- **Intuitive Navigation**: Vertical dots menu provides easy access to all actions
 
 ### Example Display Format:
 
 ```
 Payment for auction #19                    KSh 42,000.00
-[completed] [Credit Card]                          Created: 10/3/2025, 10:21:02 PM
-[View Details] [Process Payout] [Other Buttons...]
+[completed] [Credit Card]                  Created: 10/3/2025, 10:21:02 PM  [⋮]
 ```
+
+### Action Menu Contains:
+
+- **View Details**: Opens comprehensive transaction modal
+- **Retry Transaction**: For failed transactions
+- **Process Refund**: For completed auction payments
+- **Process Payout**: For pending payouts
+- **Download Receipt**: Export transaction receipt
+- **Export Transaction**: Export transaction data
+
+All actions are contextually displayed based on transaction status and type.
 
 The implementation maintains all existing functionality while providing a much cleaner and more focused user interface for transaction management.

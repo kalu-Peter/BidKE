@@ -11,6 +11,13 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
   CreditCard,
   Search,
   DollarSign,
@@ -24,6 +31,7 @@ import {
   Download,
   Filter,
   RefreshCw,
+  MoreVertical,
 } from "lucide-react";
 
 const TransactionsTab: React.FC = () => {
@@ -694,56 +702,9 @@ const TransactionsTab: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Action Buttons */}
-                <div className="flex flex-wrap gap-2 lg:flex-col lg:w-40">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setSelectedTransaction(transaction)}
-                  >
-                    <ExternalLink className="w-4 h-4 mr-1" />
-                    View Details
-                  </Button>
-
-                  {transaction.status === "failed" && (
-                    <Button
-                      size="sm"
-                      onClick={() => handleRetryTransaction(transaction.id)}
-                    >
-                      <RefreshCw className="w-4 h-4 mr-1" />
-                      Retry
-                    </Button>
-                  )}
-
-                  {transaction.status === "completed" &&
-                    transaction.type === "auction_payment" &&
-                    !transaction.refunded && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleRefundTransaction(transaction.id)}
-                        disabled={processingRefunds.has(transaction.id)}
-                        className={
-                          processingRefunds.has(transaction.id)
-                            ? "opacity-50"
-                            : ""
-                        }
-                      >
-                        {processingRefunds.has(transaction.id) ? (
-                          <>
-                            <RefreshCw className="w-4 h-4 mr-1 animate-spin" />
-                            Processing...
-                          </>
-                        ) : (
-                          <>
-                            <RefreshCw className="w-4 h-4 mr-1" />
-                            Refund
-                          </>
-                        )}
-                      </Button>
-                    )}
-
-                  {/* Show refunded status */}
+                {/* Action Menu */}
+                <div className="flex items-center gap-2">
+                  {/* Show refunded status badge */}
                   {transaction.refunded && (
                     <Badge
                       variant="secondary"
@@ -753,35 +714,92 @@ const TransactionsTab: React.FC = () => {
                     </Badge>
                   )}
 
-                  {/* Process Payout & Commission button for pending payouts */}
-                  {typeFilter === "payout" &&
-                    transaction.status === "pending" && (
-                      <Button
-                        size="sm"
-                        onClick={() =>
-                          handleSubmitPayout(transaction.payout_id)
-                        }
-                        disabled={submittingPayouts.has(transaction.payout_id)}
-                        className="bg-green-600 hover:bg-green-700 text-white"
-                      >
-                        {submittingPayouts.has(transaction.payout_id) ? (
-                          <>
-                            <RefreshCw className="w-4 h-4 mr-1 animate-spin" />
-                            Processing...
-                          </>
-                        ) : (
-                          <>
-                            <CheckCircle className="w-4 h-4 mr-1" />
-                            Process Payout
-                          </>
-                        )}
+                  {/* Dropdown Menu for Actions */}
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                        <MoreVertical className="h-4 w-4" />
+                        <span className="sr-only">Open menu</span>
                       </Button>
-                    )}
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-48">
+                      <DropdownMenuItem
+                        onClick={() => setSelectedTransaction(transaction)}
+                      >
+                        <ExternalLink className="w-4 h-4 mr-2" />
+                        View Details
+                      </DropdownMenuItem>
 
-                  <Button variant="ghost" size="sm">
-                    <Download className="w-4 h-4 mr-1" />
-                    Export
-                  </Button>
+                      <DropdownMenuSeparator />
+
+                      {/* Conditional Action Items */}
+                      {transaction.status === "failed" && (
+                        <DropdownMenuItem
+                          onClick={() => handleRetryTransaction(transaction.id)}
+                        >
+                          <RefreshCw className="w-4 h-4 mr-2" />
+                          Retry Transaction
+                        </DropdownMenuItem>
+                      )}
+
+                      {transaction.status === "completed" &&
+                        transaction.type === "auction_payment" &&
+                        !transaction.refunded && (
+                          <DropdownMenuItem
+                            onClick={() =>
+                              handleRefundTransaction(transaction.id)
+                            }
+                            disabled={processingRefunds.has(transaction.id)}
+                          >
+                            <RefreshCw
+                              className={`w-4 h-4 mr-2 ${
+                                processingRefunds.has(transaction.id)
+                                  ? "animate-spin"
+                                  : ""
+                              }`}
+                            />
+                            {processingRefunds.has(transaction.id)
+                              ? "Processing Refund..."
+                              : "Process Refund"}
+                          </DropdownMenuItem>
+                        )}
+
+                      {typeFilter === "payout" &&
+                        transaction.status === "pending" && (
+                          <DropdownMenuItem
+                            onClick={() =>
+                              handleSubmitPayout(transaction.payout_id)
+                            }
+                            disabled={submittingPayouts.has(
+                              transaction.payout_id
+                            )}
+                          >
+                            <CheckCircle
+                              className={`w-4 h-4 mr-2 ${
+                                submittingPayouts.has(transaction.payout_id)
+                                  ? "animate-spin"
+                                  : ""
+                              }`}
+                            />
+                            {submittingPayouts.has(transaction.payout_id)
+                              ? "Processing Payout..."
+                              : "Process Payout"}
+                          </DropdownMenuItem>
+                        )}
+
+                      <DropdownMenuSeparator />
+
+                      <DropdownMenuItem>
+                        <Download className="w-4 h-4 mr-2" />
+                        Download Receipt
+                      </DropdownMenuItem>
+
+                      <DropdownMenuItem>
+                        <ExternalLink className="w-4 h-4 mr-2" />
+                        Export Transaction
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </div>
               </div>
             </div>
