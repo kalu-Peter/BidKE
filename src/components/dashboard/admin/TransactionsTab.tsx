@@ -645,191 +645,52 @@ const TransactionsTab: React.FC = () => {
               className="border rounded-lg p-4 hover:shadow-md transition-shadow"
             >
               <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between">
-                {/* Transaction Basic Info */}
+                {/* Simplified Transaction Info */}
                 <div className="flex-1">
-                  <div className="flex items-center space-x-3 mb-2">
-                    {getTypeIcon(transaction.type)}
-                    <div>
-                      <h3 className="font-semibold text-lg">
-                        {transaction.id}
-                      </h3>
-                      <p className="text-sm text-gray-600">
-                        {transaction.description}
-                      </p>
-                    </div>
-                    <Badge
-                      className={getStatusColor(
-                        transaction.status || "unknown"
-                      )}
-                    >
-                      {(transaction.status || "unknown").replace("_", " ")}
-                    </Badge>
-                  </div>
-
-                  {/* Amount and Details Grid */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
-                    <div>
-                      <p className="text-sm text-gray-500">Amount</p>
-                      <p className="font-bold text-lg text-green-600">
-                        {formatAmount(
-                          transaction.amount || 0,
-                          transaction.currency || "KSH"
-                        )}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-gray-500">From</p>
-                      <p className="font-medium text-gray-900">
-                        {transaction.payer?.name || "N/A"}
-                      </p>
-                      <p className="text-sm text-gray-500">
-                        {transaction.payer?.email || "N/A"}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-gray-500">To</p>
-                      <p className="font-medium text-gray-900">
-                        {transaction.recipient?.name || "N/A"}
-                      </p>
-                      <p className="text-sm text-gray-500">
-                        {transaction.recipient?.email || "N/A"}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-gray-500">Method</p>
-                      <p className="font-medium text-gray-700">
-                        {transaction.paymentMethod || "N/A"}
-                      </p>
-                      <p className="text-sm text-gray-500">
-                        {transaction.reference || "N/A"}
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* Related Item */}
-                  {(transaction.auction || transaction.listing) && (
-                    <div className="mb-4 p-3 bg-gray-50 rounded-lg">
-                      <p className="text-sm text-gray-600 mb-1">
-                        Related {transaction.auction ? "Auction" : "Listing"}:
-                      </p>
-                      <p className="font-medium text-gray-900">
-                        {transaction.auction?.title ||
-                          transaction.listing?.title}
-                      </p>
-                      {transaction.auction?.winning_amount && (
-                        <p className="text-sm text-green-600">
-                          Winning bid:{" "}
-                          {formatAmount(transaction.auction.winning_amount)}
-                        </p>
-                      )}
-                    </div>
-                  )}
-
-                  {/* Status-specific Information */}
-                  {transaction.status === "failed" &&
-                    transaction.failureReason && (
-                      <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
-                        <div className="flex items-center space-x-2 mb-1">
-                          <AlertTriangle className="w-4 h-4 text-red-600" />
-                          <span className="font-medium text-red-800">
-                            Failure Reason:
-                          </span>
-                        </div>
-                        <p className="text-sm text-red-700">
-                          {transaction.failureReason}
-                        </p>
-                        {transaction.nextRetry && (
-                          <p className="text-sm text-red-600 mt-1">
-                            Next retry: {formatDate(transaction.nextRetry)}
-                          </p>
-                        )}
-                      </div>
-                    )}
-
-                  {transaction.status === "pending" &&
-                    transaction.estimatedCompletion && (
-                      <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-                        <div className="flex items-center space-x-2 mb-1">
-                          <Clock className="w-4 h-4 text-yellow-600" />
-                          <span className="font-medium text-yellow-800">
-                            Estimated Completion:
-                          </span>
-                        </div>
-                        <p className="text-sm text-yellow-700">
-                          {formatDate(transaction.estimatedCompletion)}
-                        </p>
-                      </div>
-                    )}
-
-                  {/* Fee Breakdown */}
-                  {(transaction.processingFee || transaction.platformFee) && (
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4 p-3 bg-blue-50 rounded-lg">
-                      {transaction.processingFee && (
-                        <div>
-                          <p className="text-sm text-blue-600">
-                            Processing Fee
-                          </p>
-                          <p className="font-medium text-blue-800">
-                            {formatAmount(transaction.processingFee)}
-                          </p>
-                        </div>
-                      )}
-                      {transaction.platformFee && (
-                        <div>
-                          <p className="text-sm text-blue-600">Platform Fee</p>
-                          <p className="font-medium text-blue-800">
-                            {formatAmount(transaction.platformFee)}
-                          </p>
-                        </div>
-                      )}
-                      {(transaction.sellerPayout ||
-                        transaction.refundAmount ||
-                        transaction.escrowAmount) && (
-                        <div>
-                          <p className="text-sm text-blue-600">
-                            {transaction.sellerPayout
-                              ? "Seller Payout"
-                              : transaction.refundAmount
-                              ? "Refund Amount"
-                              : "Escrow Amount"}
-                          </p>
-                          <p className="font-medium text-blue-800">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center space-x-3">
+                      {getTypeIcon(transaction.type)}
+                      <div>
+                        <div className="flex items-center space-x-3 mb-1">
+                          <h3 className="font-semibold text-lg">
+                            Payment for auction #
+                            {transaction.auction_id || transaction.id}
+                          </h3>
+                          <span className="font-bold text-lg text-green-600">
                             {formatAmount(
-                              transaction.sellerPayout ||
-                                transaction.refundAmount ||
-                                transaction.escrowAmount ||
-                                0
+                              transaction.amount ||
+                                transaction.net_amount ||
+                                transaction.gross_amount ||
+                                0,
+                              transaction.currency || "KSH"
                             )}
-                          </p>
+                          </span>
                         </div>
-                      )}
-                    </div>
-                  )}
-
-                  {/* Timestamps */}
-                  <div className="flex flex-wrap gap-4 text-sm text-gray-500 mb-4">
-                    <div className="flex items-center space-x-1">
-                      <Calendar className="w-4 h-4" />
-                      <span>
-                        Created: {formatDate(transaction.transactionDate)}
-                      </span>
-                    </div>
-                    {transaction.completedDate && (
-                      <div className="flex items-center space-x-1">
-                        <CheckCircle className="w-4 h-4" />
-                        <span>
-                          Completed: {formatDate(transaction.completedDate)}
-                        </span>
+                        <div className="flex items-center space-x-4">
+                          <Badge
+                            className={getStatusColor(
+                              transaction.status || "unknown"
+                            )}
+                          >
+                            {(transaction.status || "unknown").replace(
+                              "_",
+                              " "
+                            )}
+                          </Badge>
+                          <span className="text-sm text-gray-600">
+                            {transaction.paymentMethod ||
+                              transaction.payment_method ||
+                              "N/A"}
+                          </span>
+                        </div>
                       </div>
-                    )}
-                    {transaction.failedDate && (
-                      <div className="flex items-center space-x-1">
-                        <AlertTriangle className="w-4 h-4" />
-                        <span>
-                          Failed: {formatDate(transaction.failedDate)}
-                        </span>
-                      </div>
-                    )}
+                    </div>
+                    <div className="text-right">
+                      <p className="text-sm text-gray-500">Created:</p>
+                      <p className="text-sm font-medium">
+                        {formatDate(transaction.created_at)}
+                      </p>
+                    </div>
                   </div>
                 </div>
 
@@ -838,7 +699,7 @@ const TransactionsTab: React.FC = () => {
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => handleViewDetails(transaction.id)}
+                    onClick={() => setSelectedTransaction(transaction)}
                   >
                     <ExternalLink className="w-4 h-4 mr-1" />
                     View Details
@@ -979,7 +840,17 @@ const TransactionsTab: React.FC = () => {
                       Transaction ID
                     </label>
                     <p className="font-mono text-lg">
-                      {selectedTransaction.id}
+                      {selectedTransaction.id ||
+                        selectedTransaction.payment_id ||
+                        selectedTransaction.payout_id}
+                    </p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-gray-600">
+                      Auction ID
+                    </label>
+                    <p className="font-mono text-lg">
+                      #{selectedTransaction.auction_id || "N/A"}
                     </p>
                   </div>
                   <div>
@@ -999,7 +870,7 @@ const TransactionsTab: React.FC = () => {
                       Type
                     </label>
                     <p className="font-medium">
-                      {selectedTransaction.type.replace("_", " ")}
+                      {selectedTransaction.type?.replace("_", " ") || "Payment"}
                     </p>
                   </div>
                   <div>
@@ -1008,12 +879,57 @@ const TransactionsTab: React.FC = () => {
                     </label>
                     <p className="font-bold text-lg text-green-600">
                       {formatAmount(
-                        selectedTransaction.amount,
-                        selectedTransaction.currency
+                        selectedTransaction.amount ||
+                          selectedTransaction.net_amount ||
+                          selectedTransaction.gross_amount ||
+                          0,
+                        selectedTransaction.currency || "KSH"
                       )}
                     </p>
                   </div>
+                  <div>
+                    <label className="text-sm font-medium text-gray-600">
+                      Created Date
+                    </label>
+                    <p className="font-medium">
+                      {formatDate(selectedTransaction.created_at)}
+                    </p>
+                  </div>
                 </div>
+
+                {/* Amount Breakdown */}
+                {(selectedTransaction.platform_fee ||
+                  selectedTransaction.gross_amount) && (
+                  <div className="border-t pt-4">
+                    <h4 className="font-semibold mb-3">Amount Breakdown</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-3 bg-blue-50 rounded-lg">
+                      {selectedTransaction.gross_amount && (
+                        <div>
+                          <p className="text-sm text-blue-600">Gross Amount</p>
+                          <p className="font-medium text-blue-800">
+                            {formatAmount(selectedTransaction.gross_amount)}
+                          </p>
+                        </div>
+                      )}
+                      {selectedTransaction.platform_fee && (
+                        <div>
+                          <p className="text-sm text-blue-600">Platform Fee</p>
+                          <p className="font-medium text-blue-800">
+                            {formatAmount(selectedTransaction.platform_fee)}
+                          </p>
+                        </div>
+                      )}
+                      {selectedTransaction.net_amount && (
+                        <div>
+                          <p className="text-sm text-blue-600">Net Amount</p>
+                          <p className="font-medium text-blue-800">
+                            {formatAmount(selectedTransaction.net_amount)}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
 
                 {/* Payment Info */}
                 <div className="border-t pt-4">
@@ -1024,7 +940,9 @@ const TransactionsTab: React.FC = () => {
                         Payment Method
                       </label>
                       <p className="font-medium">
-                        {selectedTransaction.paymentMethod}
+                        {selectedTransaction.paymentMethod ||
+                          selectedTransaction.payment_method ||
+                          "N/A"}
                       </p>
                     </div>
                     <div>
@@ -1032,7 +950,27 @@ const TransactionsTab: React.FC = () => {
                         Reference
                       </label>
                       <p className="font-mono">
-                        {selectedTransaction.reference}
+                        {selectedTransaction.reference ||
+                          selectedTransaction.transaction_ref ||
+                          "N/A"}
+                      </p>
+                    </div>
+                    {selectedTransaction.payout_method && (
+                      <div>
+                        <label className="text-sm font-medium text-gray-600">
+                          Payout Method
+                        </label>
+                        <p className="font-medium">
+                          {selectedTransaction.payout_method}
+                        </p>
+                      </div>
+                    )}
+                    <div>
+                      <label className="text-sm font-medium text-gray-600">
+                        Updated
+                      </label>
+                      <p className="font-medium">
+                        {formatDate(selectedTransaction.updated_at)}
                       </p>
                     </div>
                   </div>
@@ -1044,78 +982,191 @@ const TransactionsTab: React.FC = () => {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <label className="text-sm font-medium text-gray-600">
-                        From
+                        Buyer (Payer)
                       </label>
                       <p className="font-medium">
-                        {selectedTransaction.payer.name}
+                        {selectedTransaction.payer?.name ||
+                          selectedTransaction.buyer_name ||
+                          "N/A"}
                       </p>
                       <p className="text-sm text-gray-500">
-                        {selectedTransaction.payer.email}
+                        {selectedTransaction.payer?.email ||
+                          selectedTransaction.buyer_email ||
+                          "N/A"}
                       </p>
+                      {selectedTransaction.user_id && (
+                        <p className="text-xs text-gray-400">
+                          User ID: {selectedTransaction.user_id}
+                        </p>
+                      )}
                     </div>
                     <div>
                       <label className="text-sm font-medium text-gray-600">
-                        To
+                        Seller (Recipient)
                       </label>
                       <p className="font-medium">
-                        {selectedTransaction.recipient.name}
+                        {selectedTransaction.recipient?.name ||
+                          selectedTransaction.seller_name ||
+                          "N/A"}
                       </p>
                       <p className="text-sm text-gray-500">
-                        {selectedTransaction.recipient.email}
+                        {selectedTransaction.recipient?.email ||
+                          selectedTransaction.seller_email ||
+                          "N/A"}
                       </p>
+                      {selectedTransaction.seller_id && (
+                        <p className="text-xs text-gray-400">
+                          Seller ID: {selectedTransaction.seller_id}
+                        </p>
+                      )}
                     </div>
                   </div>
                 </div>
 
-                {/* Timestamps */}
-                <div className="border-t pt-4">
-                  <h4 className="font-semibold mb-3">Timeline</h4>
-                  <div className="space-y-2">
-                    <div className="flex justify-between">
-                      <span className="text-sm text-gray-600">Created:</span>
-                      <span className="text-sm">
-                        {formatDate(selectedTransaction.transactionDate)}
-                      </span>
+                {/* Auction Details */}
+                {selectedTransaction.auction_id && (
+                  <div className="border-t pt-4">
+                    <h4 className="font-semibold mb-3">Related Auction</h4>
+                    <div className="p-3 bg-gray-50 rounded-lg">
+                      <p className="font-medium text-gray-900 mb-2">
+                        Auction #{selectedTransaction.auction_id}
+                      </p>
+                      {selectedTransaction.auction_title && (
+                        <p className="text-sm text-gray-700 mb-1">
+                          {selectedTransaction.auction_title}
+                        </p>
+                      )}
+                      {selectedTransaction.winning_amount && (
+                        <p className="text-sm text-green-600">
+                          Winning bid:{" "}
+                          {formatAmount(selectedTransaction.winning_amount)}
+                        </p>
+                      )}
                     </div>
-                    {selectedTransaction.completedDate && (
-                      <div className="flex justify-between">
-                        <span className="text-sm text-gray-600">
-                          Completed:
-                        </span>
-                        <span className="text-sm">
-                          {formatDate(selectedTransaction.completedDate)}
-                        </span>
+                  </div>
+                )}
+
+                {/* Status History & Additional Info */}
+                <div className="border-t pt-4">
+                  <h4 className="font-semibold mb-3">Additional Information</h4>
+                  <div className="space-y-3">
+                    {selectedTransaction.description && (
+                      <div>
+                        <label className="text-sm font-medium text-gray-600">
+                          Description
+                        </label>
+                        <p className="text-sm text-gray-700">
+                          {selectedTransaction.description}
+                        </p>
                       </div>
                     )}
-                    {selectedTransaction.failedDate && (
-                      <div className="flex justify-between">
-                        <span className="text-sm text-gray-600">Failed:</span>
-                        <span className="text-sm">
-                          {formatDate(selectedTransaction.failedDate)}
-                        </span>
+
+                    {/* Status-specific information */}
+                    {selectedTransaction.status === "failed" &&
+                      selectedTransaction.failureReason && (
+                        <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
+                          <div className="flex items-center space-x-2 mb-1">
+                            <AlertTriangle className="w-4 h-4 text-red-600" />
+                            <span className="font-medium text-red-800">
+                              Failure Reason:
+                            </span>
+                          </div>
+                          <p className="text-sm text-red-700">
+                            {selectedTransaction.failureReason}
+                          </p>
+                        </div>
+                      )}
+
+                    {selectedTransaction.status === "pending" &&
+                      selectedTransaction.estimatedCompletion && (
+                        <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                          <div className="flex items-center space-x-2 mb-1">
+                            <Clock className="w-4 h-4 text-yellow-600" />
+                            <span className="font-medium text-yellow-800">
+                              Estimated Completion:
+                            </span>
+                          </div>
+                          <p className="text-sm text-yellow-700">
+                            {formatDate(
+                              selectedTransaction.estimatedCompletion
+                            )}
+                          </p>
+                        </div>
+                      )}
+
+                    {selectedTransaction.refunded && (
+                      <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
+                        <div className="flex items-center space-x-2">
+                          <AlertTriangle className="w-4 h-4 text-red-600" />
+                          <span className="font-medium text-red-800">
+                            This transaction has been refunded
+                          </span>
+                        </div>
                       </div>
                     )}
                   </div>
                 </div>
 
                 {/* Action Buttons */}
-                <div className="border-t pt-4 flex space-x-2">
-                  <Button variant="outline" size="sm">
-                    <Download className="w-4 h-4 mr-1" />
-                    Export Receipt
-                  </Button>
-                  {selectedTransaction.status === "failed" && (
-                    <Button size="sm">
-                      <RefreshCw className="w-4 h-4 mr-1" />
-                      Retry Transaction
+                <div className="border-t pt-4">
+                  <div className="flex flex-wrap gap-2">
+                    {selectedTransaction.status === "failed" && (
+                      <Button
+                        size="sm"
+                        onClick={() =>
+                          handleRetryTransaction(selectedTransaction.id)
+                        }
+                      >
+                        <RefreshCw className="w-4 h-4 mr-1" />
+                        Retry Transaction
+                      </Button>
+                    )}
+
+                    {selectedTransaction.status === "completed" &&
+                      selectedTransaction.type === "auction_payment" &&
+                      !selectedTransaction.refunded && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() =>
+                            handleRefundTransaction(selectedTransaction.id)
+                          }
+                        >
+                          <RefreshCw className="w-4 h-4 mr-1" />
+                          Process Refund
+                        </Button>
+                      )}
+
+                    {typeFilter === "payout" &&
+                      selectedTransaction.status === "pending" && (
+                        <Button
+                          size="sm"
+                          onClick={() =>
+                            handleSubmitPayout(selectedTransaction.payout_id)
+                          }
+                          className="bg-green-600 hover:bg-green-700 text-white"
+                        >
+                          <CheckCircle className="w-4 h-4 mr-1" />
+                          Process Payout
+                        </Button>
+                      )}
+
+                    <Button variant="outline" size="sm">
+                      <Download className="w-4 h-4 mr-1" />
+                      Download Receipt
                     </Button>
-                  )}
+                  </div>
+                </div>
+
+                <div className="border-t pt-4 text-xs text-gray-500">
+                  <p>Transaction processed through BidKE platform</p>
                 </div>
               </div>
             </div>
           </div>
         )}
 
+        {/* Payment Processing Guidelines */}
         {/* Payment Processing Guidelines */}
         <div className="mt-6 p-4 bg-blue-50 rounded-lg">
           <h4 className="font-medium text-blue-900 mb-2">
