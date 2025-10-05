@@ -48,6 +48,9 @@ const TransactionsTab: React.FC = () => {
   const [submittingPayouts, setSubmittingPayouts] = useState<Set<number>>(
     new Set()
   );
+  const [processingRefunds, setProcessingRefunds] = useState<Set<number>>(
+    new Set()
+  );
 
   const filteredTransactions = allPayouts.filter((p) => {
     const matchesSearch =
@@ -159,9 +162,87 @@ const TransactionsTab: React.FC = () => {
   };
 
   const handleRefundTransaction = async (transactionId: number) => {
-    // Refund workflow not implemented yet; show a helpful message
-    setError("Refund action is not implemented in this dev UI.");
-    // Optionally you could call a refund endpoint here and update state
+    try {
+      console.log(
+        `[TransactionsTab] Processing refund for payment: ${transactionId}`
+      );
+
+      // Add transaction to processing refunds set
+      setProcessingRefunds((prev) => new Set([...prev, transactionId]));
+      setError(null);
+
+      // Call the backend API
+      const response = await fetch(
+        "http://localhost:8000/payments/admin/process_refund.php",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            payment_id: transactionId,
+            refund_reason: "Admin initiated refund",
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error(
+          `[TransactionsTab] HTTP Error ${response.status}:`,
+          errorText
+        );
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      const result = await response.json();
+      console.log(`[TransactionsTab] Refund response:`, result);
+
+      if (!result.success) {
+        throw new Error(result.message || "Failed to process refund");
+      }
+
+      // Update local state to reflect the refund was processed
+      // Note: We don't change the original transaction status but could add a refunded flag
+      setAllPayouts((prev) =>
+        prev.map((p) =>
+          p.id === transactionId || p.payment_id === transactionId
+            ? { ...p, refunded: true, refund_id: result.refund_id }
+            : p
+        )
+      );
+
+      // Update selected transaction if it matches
+      setSelectedTransaction((prev) =>
+        prev && (prev.id === transactionId || prev.payment_id === transactionId)
+          ? { ...prev, refunded: true, refund_id: result.refund_id }
+          : prev
+      );
+
+      console.log(
+        `[TransactionsTab] Refund ${transactionId} processed successfully`
+      );
+
+      // Show success message
+      setError(null);
+    } catch (error) {
+      console.error(
+        `[TransactionsTab] Error processing refund ${transactionId}:`,
+        error
+      );
+      setError(
+        `Failed to process refund: ${
+          error instanceof Error ? error.message : "Unknown error"
+        }`
+      );
+    } finally {
+      // Remove from processing set
+      setProcessingRefunds((prev) => {
+        const newSet = new Set(prev);
+        newSet.delete(transactionId);
+        return newSet;
+      });
+    }
   };
 
   const handleMarkPaid = async (payoutId: number) => {
@@ -758,16 +839,42 @@ const TransactionsTab: React.FC = () => {
                   )}
 
                   {transaction.status === "completed" &&
-                    transaction.type === "auction_payment" && (
+                    transaction.type === "auction_payment" &&
+                    !transaction.refunded && (
                       <Button
                         variant="outline"
                         size="sm"
                         onClick={() => handleRefundTransaction(transaction.id)}
+                        disabled={processingRefunds.has(transaction.id)}
+                        className={
+                          processingRefunds.has(transaction.id)
+                            ? "opacity-50"
+                            : ""
+                        }
                       >
-                        <RefreshCw className="w-4 h-4 mr-1" />
-                        Refund
+                        {processingRefunds.has(transaction.id) ? (
+                          <>
+                            <RefreshCw className="w-4 h-4 mr-1 animate-spin" />
+                            Processing...
+                          </>
+                        ) : (
+                          <>
+                            <RefreshCw className="w-4 h-4 mr-1" />
+                            Refund
+                          </>
+                        )}
                       </Button>
                     )}
+
+                  {/* Show refunded status */}
+                  {transaction.refunded && (
+                    <Badge
+                      variant="secondary"
+                      className="bg-red-100 text-red-800"
+                    >
+                      Refunded
+                    </Badge>
+                  )}
 
                   {/* Submit Payment button for pending payouts */}
                   {typeFilter === "payout" &&
