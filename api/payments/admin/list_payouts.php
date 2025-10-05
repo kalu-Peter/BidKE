@@ -22,7 +22,42 @@ try {
     $stmt->execute();
     $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-    echo json_encode(['success' => true, 'data' => $rows, 'total' => $total, 'page' => $page, 'limit' => $limit]);
+    // Format the data for frontend consistency
+    $formattedPayouts = array_map(function ($payout) {
+        return [
+            'id' => $payout['payout_id'],
+            'payout_id' => $payout['payout_id'],
+            'type' => 'payout',
+            'status' => $payout['status'],
+            'amount' => $payout['net_amount'], // Use net_amount as the main amount
+            'currency' => 'KSH',
+            'transaction_ref' => $payout['transaction_ref'],
+            'created_at' => $payout['created_at'],
+            'auction_id' => $payout['auction_id'],
+            'seller_id' => $payout['seller_id'],
+            'description' => 'Payout for auction #' . $payout['auction_id'],
+            'auction' => [
+                'title' => 'Auction #' . $payout['auction_id'],
+                'winning_amount' => $payout['gross_amount']
+            ],
+            'payer' => [
+                'name' => 'BidKE Platform',
+                'email' => 'payouts@bidke.com'
+            ],
+            'recipient' => [
+                'name' => $payout['seller_username'] ?: 'Seller #' . $payout['seller_id'],
+                'email' => ''
+            ],
+            'paymentMethod' => $payout['payout_method'] ?: 'Bank Transfer',
+            'reference' => $payout['transaction_ref'],
+            'transactionDate' => $payout['created_at'],
+            'gross_amount' => $payout['gross_amount'],
+            'platform_fee' => $payout['platform_fee'],
+            'net_amount' => $payout['net_amount']
+        ];
+    }, $rows);
+
+    echo json_encode(['success' => true, 'data' => $formattedPayouts, 'total' => $total, 'page' => $page, 'limit' => $limit]);
     exit();
 } catch (Exception $e) {
     error_log('admin/list_payouts error: ' . $e->getMessage());

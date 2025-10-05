@@ -48,9 +48,15 @@ const TransactionsTab: React.FC = () => {
 
   const filteredTransactions = allPayouts.filter((p) => {
     const matchesSearch =
-      String(p.payout_id).includes(searchTerm) ||
-      p.seller.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      String(p.auction_id).includes(searchTerm);
+      String(
+        p.id || p.payout_id || p.payment_id || p.commission_id || ""
+      ).includes(searchTerm) ||
+      (p.recipient?.name || p.seller?.name || "")
+        .toLowerCase()
+        .includes(searchTerm.toLowerCase()) ||
+      (p.payer?.name || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+      String(p.auction_id || "").includes(searchTerm) ||
+      (p.description || "").toLowerCase().includes(searchTerm.toLowerCase());
 
     const matchesStatus = statusFilter === "all" || p.status === statusFilter;
 
@@ -276,10 +282,10 @@ const TransactionsTab: React.FC = () => {
     failed: allPayouts.filter((t) => t.status === "failed").length,
     totalVolume: allPayouts
       .filter((t) => t.status === "completed")
-      .reduce((sum, t) => sum + Number(t.gross_amount), 0),
+      .reduce((sum, t) => sum + Number(t.gross_amount || t.amount || 0), 0),
     totalPayouts: allPayouts
       .filter((t) => t.status === "completed")
-      .reduce((sum, t) => sum + Number(t.net_amount), 0),
+      .reduce((sum, t) => sum + Number(t.net_amount || t.amount || 0), 0),
   };
 
   return (
@@ -474,8 +480,12 @@ const TransactionsTab: React.FC = () => {
                         {transaction.description}
                       </p>
                     </div>
-                    <Badge className={getStatusColor(transaction.status)}>
-                      {transaction.status.replace("_", " ")}
+                    <Badge
+                      className={getStatusColor(
+                        transaction.status || "unknown"
+                      )}
+                    >
+                      {(transaction.status || "unknown").replace("_", " ")}
                     </Badge>
                   </div>
 
@@ -484,34 +494,37 @@ const TransactionsTab: React.FC = () => {
                     <div>
                       <p className="text-sm text-gray-500">Amount</p>
                       <p className="font-bold text-lg text-green-600">
-                        {formatAmount(transaction.amount, transaction.currency)}
+                        {formatAmount(
+                          transaction.amount || 0,
+                          transaction.currency || "KSH"
+                        )}
                       </p>
                     </div>
                     <div>
                       <p className="text-sm text-gray-500">From</p>
                       <p className="font-medium text-gray-900">
-                        {transaction.payer.name}
+                        {transaction.payer?.name || "N/A"}
                       </p>
                       <p className="text-sm text-gray-500">
-                        {transaction.payer.email}
+                        {transaction.payer?.email || "N/A"}
                       </p>
                     </div>
                     <div>
                       <p className="text-sm text-gray-500">To</p>
                       <p className="font-medium text-gray-900">
-                        {transaction.recipient.name}
+                        {transaction.recipient?.name || "N/A"}
                       </p>
                       <p className="text-sm text-gray-500">
-                        {transaction.recipient.email}
+                        {transaction.recipient?.email || "N/A"}
                       </p>
                     </div>
                     <div>
                       <p className="text-sm text-gray-500">Method</p>
                       <p className="font-medium text-gray-700">
-                        {transaction.paymentMethod}
+                        {transaction.paymentMethod || "N/A"}
                       </p>
                       <p className="text-sm text-gray-500">
-                        {transaction.reference}
+                        {transaction.reference || "N/A"}
                       </p>
                     </div>
                   </div>
