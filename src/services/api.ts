@@ -362,6 +362,18 @@ class ApiService {
     });
   }
 
+  // Dev: mark payment completed in development (calls api/payments/dev_confirm.php)
+  // Only intended for local development when DEV_MODE is enabled on the backend.
+  async devConfirmPayment(transactionRef?: string, paymentId?: number): Promise<ApiResponse> {
+    const body: any = {};
+    if (transactionRef) body.transaction_ref = transactionRef;
+    if (paymentId) body.payment_id = paymentId;
+    return this.makeRequest('/payments/dev_confirm.php', {
+      method: 'POST',
+      body: JSON.stringify(body)
+    });
+  }
+
   // Admin: delete a winner record by id
   async adminDeleteWinner(id: number): Promise<ApiResponse> {
     return this.makeRequest('/admin/won_auctions.php', {

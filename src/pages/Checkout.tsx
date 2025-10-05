@@ -18,23 +18,32 @@ const Checkout: React.FC = () => {
     if (!tx) return setMessage("Missing transaction reference");
     setLoading(true);
     try {
-      const res = await fetch("/payments/webhook.php", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          transaction_ref: tx,
-          status: "success",
-          amount: null,
-        }),
-      });
-      const data = await res.json();
-      if (data && data.success) {
+      const { apiService } = await import("@/services/api");
+      const res = await apiService.devConfirmPayment(
+        tx || undefined,
+        undefined
+      );
+      if (res && res.success) {
         setMessage(
           "Payment completed successfully. You may close this window."
         );
+        // Dispatch global event so WonAuctionsTab can update without reload
+        try {
+          const auctionId = auctionIdParam ? Number(auctionIdParam) : undefined;
+          const ev = new CustomEvent("payments:processed", {
+            detail: {
+              auction_id: auctionId,
+              payment_id: (res.data as any)?.payment_id,
+            },
+          });
+          window.dispatchEvent(ev);
+        } catch (_e) {}
+        // show transient toast
+        setToast("Payment successful");
+        setTimeout(() => setToast(null), 4000);
       } else {
         setMessage(
-          "Webhook call failed: " + (data?.message || JSON.stringify(data))
+          "Webhook call failed: " + (res?.message || JSON.stringify(res))
         );
       }
     } catch (err: any) {
@@ -43,6 +52,10 @@ const Checkout: React.FC = () => {
       setLoading(false);
     }
   };
+
+  const [toast, setToast] = React.useState<string | null>(null);
+  // capture auctionId param safely
+  const auctionIdParam = auctionId;
 
   return (
     <>
@@ -66,6 +79,11 @@ const Checkout: React.FC = () => {
                 gateway confirmation.
               </p>
               {message && <div className="mb-4">{message}</div>}
+              {toast && (
+                <div className="fixed top-6 right-6 bg-green-600 text-white px-4 py-2 rounded shadow-lg">
+                  {toast}
+                </div>
+              )}
               <div className="flex gap-2">
                 <Button onClick={() => navigate(-1)} variant="outline">
                   Back

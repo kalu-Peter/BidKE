@@ -8,6 +8,10 @@
 // Include database connection
 require_once 'connect.php';
 
+// Development mode flag (set to true for local dev only)
+// WARNING: Do not enable in production.
+define('DEV_MODE', true);
+
 // API Base URL (adjust as needed)
 define('API_BASE_URL', 'http://localhost/bidke/api/');
 
