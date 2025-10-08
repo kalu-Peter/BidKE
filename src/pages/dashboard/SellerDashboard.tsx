@@ -9,7 +9,6 @@ import { FileText, BarChart3, DollarSign } from "lucide-react";
 // Import individual tab components
 import PostItemTab from "@/components/dashboard/seller/PostItemTab";
 import ListingsTab from "@/components/dashboard/seller/ListingsTab";
-import DraftsTab from "@/components/dashboard/seller/DraftsTab";
 import SalesTab from "@/components/dashboard/seller/SalesTab";
 import MyBidsTab from "@/components/dashboard/seller/MyBidsTab";
 import WatchlistTab from "@/components/dashboard/seller/WatchlistTab";
@@ -26,7 +25,6 @@ const SellerDashboard = () => {
     const path = location.pathname;
     if (path.includes("/dashboard/post-item")) return "post-item";
     if (path.includes("/dashboard/listings")) return "listings";
-    if (path.includes("/dashboard/drafts")) return "drafts";
     if (path.includes("/dashboard/sales")) return "sales";
     if (path.includes("/dashboard/payouts")) return "sales"; // Payouts is part of sales tab
     // Company profile moved to dedicated seller profile page
@@ -53,9 +51,6 @@ const SellerDashboard = () => {
         break;
       case "listings":
         newPath = "/dashboard/listings";
-        break;
-      case "drafts":
-        newPath = "/dashboard/drafts";
         break;
       case "sales":
         newPath = "/dashboard/sales";
@@ -96,10 +91,9 @@ const SellerDashboard = () => {
       <div className="space-y-8">
         {/* Main Tabs */}
         <Tabs value={activeTab} onValueChange={handleTabChange}>
-          <TabsList className="grid w-full grid-cols-8">
+          <TabsList className="grid w-full grid-cols-7">
             <TabsTrigger value="post-item">Post Item</TabsTrigger>
             <TabsTrigger value="listings">My Listings</TabsTrigger>
-            <TabsTrigger value="drafts">Drafts</TabsTrigger>
             <TabsTrigger value="sales">Sales</TabsTrigger>
             <TabsTrigger value="browse">Auctions</TabsTrigger>
             <TabsTrigger value="my-bids">My Bids</TabsTrigger>
@@ -113,10 +107,6 @@ const SellerDashboard = () => {
 
           <TabsContent value="listings">
             <ListingsTab />
-          </TabsContent>
-
-          <TabsContent value="drafts">
-            <DraftsTab />
           </TabsContent>
 
           <TabsContent value="sales">

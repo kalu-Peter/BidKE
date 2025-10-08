@@ -78,12 +78,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({
       path: "/dashboard/listings",
       section: "selling",
     },
-    {
-      icon: FileText,
-      label: "Drafts & Pending",
-      path: "/dashboard/drafts",
-      section: "selling",
-    },
+
     {
       icon: BarChart3,
       label: "Sales Reports",

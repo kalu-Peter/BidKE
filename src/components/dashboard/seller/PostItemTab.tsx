@@ -295,9 +295,9 @@ const PostItemTab: React.FC = () => {
           electronicsCondition: "",
           images: [],
         });
-        // If saved as draft, navigate to drafts tab so the seller sees their draft
+        // If saved as draft, navigate to listings tab with draft filter
         if (normalizedStatus === "draft") {
-          navigate("/dashboard/drafts");
+          navigate("/dashboard/listings?status=draft");
         }
       } else {
         setErrors({

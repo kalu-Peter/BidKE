@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -20,12 +21,15 @@ import { toast } from "@/hooks/use-toast";
 
 const ListingsTab: React.FC = () => {
   const { user } = useAuth();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [listings, setListings] = useState<Auction[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
-  const [statusFilter, setStatusFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState(
+    searchParams.get("status") || "all"
+  );
 
   // Fetch seller's listings
   useEffect(() => {
@@ -70,6 +74,14 @@ const ListingsTab: React.FC = () => {
   const handleStatusFilter = (status: string) => {
     setStatusFilter(status);
     setCurrentPage(1);
+
+    // Update URL parameters
+    if (status === "all") {
+      searchParams.delete("status");
+    } else {
+      searchParams.set("status", status);
+    }
+    setSearchParams(searchParams);
   };
 
   const getStatusBadge = (status: string) => {
