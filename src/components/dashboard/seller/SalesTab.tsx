@@ -37,6 +37,16 @@ interface SalesSummary {
   items_sold: number;
 }
 
+interface SalesApiResponse {
+  success: boolean;
+  data: Sale[];
+  total: number;
+  page: number;
+  limit: number;
+  summary: SalesSummary;
+  message?: string;
+}
+
 const SalesTab: React.FC = () => {
   const [sales, setSales] = useState<Sale[]>([]);
   const [summary, setSummary] = useState<SalesSummary>({
@@ -68,9 +78,11 @@ const SalesTab: React.FC = () => {
         throw new Error(result.message || "Failed to fetch sales data");
       }
 
-      setSales(result.data || []);
-      setSummary(result.summary || summary);
-      setTotal(result.total || 0);
+      // Type assertion for proper access to API response properties
+      const salesResult = result as unknown as SalesApiResponse;
+      setSales(salesResult.data || []);
+      setSummary(salesResult.summary || summary);
+      setTotal(salesResult.total || 0);
     } catch (error) {
       console.error("[SalesTab] Error fetching sales:", error);
       setError(
@@ -128,11 +140,11 @@ const SalesTab: React.FC = () => {
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-500">Total Sales</p>
+                <p className="text-sm text-gray-500">Total Revenue</p>
                 <p className="text-2xl font-bold">
                   {loading
                     ? "..."
-                    : `Ksh ${summary.total_sales.toLocaleString()}`}
+                    : `Ksh ${summary.total_revenue.toLocaleString()}`}
                 </p>
                 <p className="text-xs text-green-600">Total sales revenue</p>
               </div>
@@ -169,11 +181,11 @@ const SalesTab: React.FC = () => {
                     : `Ksh ${summary.total_payouts.toLocaleString()}`}
                 </p>
                 <p className="text-xs text-blue-600">
-                  {summary.total_sales > 0
+                  {summary.total_revenue > 0
                     ? `${Math.round(
-                        (summary.total_payouts / summary.total_sales) * 100
-                      )}% of total sales`
-                    : "0% of total sales"}
+                        (summary.total_payouts / summary.total_revenue) * 100
+                      )}% of total revenue`
+                    : "0% of total revenue"}
                 </p>
               </div>
               <DollarSign className="w-8 h-8 text-purple-600" />
