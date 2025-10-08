@@ -13,6 +13,7 @@ import {
   XCircle,
   Plus,
   Upload,
+  Image as ImageIcon,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { apiService } from "@/services/api";
@@ -34,6 +35,9 @@ const ListingsTab: React.FC = () => {
   const [selectedListing, setSelectedListing] = useState<Auction | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
+  const [expandedImagePreview, setExpandedImagePreview] = useState<
+    number | null
+  >(null);
 
   // Fetch seller's listings
   useEffect(() => {
@@ -145,6 +149,55 @@ const ListingsTab: React.FC = () => {
     }
   };
 
+  // Helper function to get all images for a listing
+  const getAllImages = (listing: Auction) => {
+    const images = [];
+
+    // Add primary images
+    if (listing.image_path) {
+      const imageUrl = listing.image_path.startsWith("http")
+        ? listing.image_path
+        : `http://localhost:8000${
+            listing.image_path.startsWith("/") ? "" : "/"
+          }${listing.image_path}`;
+      images.push(imageUrl);
+    }
+
+    if (listing.image_url && !images.includes(listing.image_url)) {
+      const imageUrl = listing.image_url.startsWith("http")
+        ? listing.image_url
+        : `http://localhost:8000${
+            listing.image_url.startsWith("/") ? "" : "/"
+          }${listing.image_url}`;
+      images.push(imageUrl);
+    }
+
+    // Add images from images array
+    if (Array.isArray(listing.images)) {
+      listing.images.forEach((img: any) => {
+        let imageUrl = "";
+        if (typeof img === "string") {
+          imageUrl = img.startsWith("http")
+            ? img
+            : `http://localhost:8000${img.startsWith("/") ? "" : "/"}${img}`;
+        } else if (typeof img === "object" && img !== null) {
+          const url =
+            img.image_url || img.file_path || img.image_path || img.url;
+          if (url) {
+            imageUrl = url.startsWith("http")
+              ? url
+              : `http://localhost:8000${url.startsWith("/") ? "" : "/"}${url}`;
+          }
+        }
+        if (imageUrl && !images.includes(imageUrl)) {
+          images.push(imageUrl);
+        }
+      });
+    }
+
+    return images.length > 0 ? images : ["/placeholder.svg"];
+  };
+
   const handleViewListing = (id: number) => {
     const listing = listings.find((l) => l.id === id);
     if (listing) {
@@ -198,20 +251,63 @@ const ListingsTab: React.FC = () => {
   };
 
   const handleDeleteListing = (id: number) => {
-    // TODO: Implement delete functionality with confirmation
-    toast({
-      title: "Delete Auction",
-      description: "Delete functionality will be implemented soon.",
-      variant: "destructive",
-    });
+    const listing = listings.find((l) => l.id === id);
+    if (!listing) return;
+
+    // Confirm deletion
+    if (
+      window.confirm(
+        `Are you sure you want to delete "${listing.title}"? This action cannot be undone.`
+      )
+    ) {
+      deleteAuction(id);
+    }
+  };
+
+  const deleteAuction = async (id: number) => {
+    try {
+      const response = await fetch(
+        `http://localhost:8000/api/auctions/delete.php/${id}`,
+        {
+          method: "DELETE",
+          credentials: "include",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      const result = await response.json();
+
+      if (result.success) {
+        toast({
+          title: "Success",
+          description: "Auction deleted successfully",
+        });
+
+        // Remove from local state
+        setListings((prev) => prev.filter((listing) => listing.id !== id));
+      } else {
+        throw new Error(result.error || "Failed to delete auction");
+      }
+    } catch (error) {
+      console.error("Error deleting auction:", error);
+      toast({
+        title: "Error",
+        description:
+          error instanceof Error ? error.message : "Failed to delete auction",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleAddImages = (id: number) => {
-    // TODO: Implement image upload functionality
-    toast({
-      title: "Add Images",
-      description: "Image upload functionality will be implemented soon.",
-    });
+    const listing = listings.find((l) => l.id === id);
+    if (listing) {
+      setSelectedListing(listing);
+      setIsEditMode(true);
+      setIsModalOpen(true);
+    }
   };
 
   if (loading) {
@@ -287,38 +383,8 @@ const ListingsTab: React.FC = () => {
       <CardContent>
         <div className="grid gap-6">
           {listings.map((listing) => {
-            // images may be undefined, an array of strings or objects
-            let primaryImage: any = null;
-            if (Array.isArray(listing.images) && listing.images.length > 0) {
-              primaryImage = listing.images[0];
-            }
-            let imageSrc = "/placeholder.svg";
-            if (primaryImage) {
-              if (typeof primaryImage === "string") {
-                if (
-                  primaryImage.startsWith("http://") ||
-                  primaryImage.startsWith("https://")
-                ) {
-                  imageSrc = primaryImage;
-                } else if (primaryImage.startsWith("/")) {
-                  imageSrc = `http://localhost:8000${primaryImage}`;
-                } else {
-                  imageSrc = `http://localhost:8000/${primaryImage}`;
-                }
-              } else if (typeof primaryImage === "object") {
-                const p =
-                  primaryImage.image_url ||
-                  primaryImage.file_path ||
-                  primaryImage.image_path;
-                if (p) {
-                  if (p.startsWith("http://") || p.startsWith("https://"))
-                    imageSrc = p;
-                  else if (p.startsWith("/"))
-                    imageSrc = `http://localhost:8000${p}`;
-                  else imageSrc = `http://localhost:8000/${p}`;
-                }
-              }
-            }
+            const allImages = getAllImages(listing);
+            const primaryImage = allImages[0];
             const currentPrice = (listing.current_bid ?? 0) as number;
             const bidsCount = listing.bid_count ?? 0;
             const timeRemaining = listing.time_remaining ?? 0;
@@ -329,146 +395,276 @@ const ListingsTab: React.FC = () => {
             return (
               <div
                 key={listing.id}
-                className="flex items-center space-x-4 p-4 border rounded-lg hover:shadow-md transition-shadow"
+                className="border rounded-lg hover:shadow-md transition-shadow"
               >
-                <img
-                  src={imageSrc}
-                  alt={listing.title}
-                  className="w-20 h-20 object-cover rounded"
-                  onError={(e) => {
-                    const target = e.target as HTMLImageElement;
-                    target.src = "/placeholder.svg";
-                  }}
-                />
-                <div className="flex-1">
-                  <div className="flex items-center space-x-2 mb-1">
-                    <h3 className="font-semibold text-lg">{listing.title}</h3>
-                    <Badge variant="outline">
-                      {listing.category_name || listing.category}
+                <div className="flex items-center space-x-4 p-4">
+                  <div className="relative group">
+                    <img
+                      src={primaryImage}
+                      alt={listing.title}
+                      className="w-20 h-20 object-cover rounded cursor-pointer hover:opacity-75 transition-opacity"
+                      onError={(e) => {
+                        const target = e.target as HTMLImageElement;
+                        target.src = "/placeholder.svg";
+                      }}
+                      onClick={() => handleViewListing(listing.id)}
+                    />
+
+                    {/* Show image count if there are multiple images */}
+                    {allImages.length > 1 &&
+                      allImages[0] !== "/placeholder.svg" && (
+                        <Badge
+                          className="absolute -top-2 -right-2 bg-primary text-primary-foreground text-xs"
+                          variant="default"
+                        >
+                          +{allImages.length - 1}
+                        </Badge>
+                      )}
+
+                    {/* Show no image indicator if there are no images */}
+                    {allImages.length === 1 &&
+                      allImages[0] === "/placeholder.svg" && (
+                        <div className="absolute inset-0 bg-gray-100 rounded flex items-center justify-center">
+                          <Upload className="w-6 h-6 text-gray-400" />
+                        </div>
+                      )}
+
+                    {/* Hover overlay for quick actions */}
+                    <div className="absolute inset-0 bg-black bg-opacity-50 opacity-0 group-hover:opacity-100 transition-opacity rounded flex items-center justify-center">
+                      <div className="flex space-x-1">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-white hover:bg-white hover:bg-opacity-20 p-1 h-6 w-6"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleViewListing(listing.id);
+                          }}
+                        >
+                          <Eye className="w-3 h-3" />
+                        </Button>
+                        {(listing.status === "draft" ||
+                          listing.status === "pending") && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-white hover:bg-white hover:bg-opacity-20 p-1 h-6 w-6"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleEditListing(listing.id);
+                            }}
+                          >
+                            <Edit className="w-3 h-3" />
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex-1">
+                    <div className="flex items-center space-x-2 mb-1">
+                      <h3 className="font-semibold text-lg">{listing.title}</h3>
+                      <Badge variant="outline">
+                        {listing.category_name || listing.category}
+                      </Badge>
+                    </div>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm text-muted-foreground">
+                      <span>
+                        Starting: Ksh{" "}
+                        {Number(listing.starting_price || 0).toLocaleString()}
+                      </span>
+                      {listing.status === "sold" && listing.winning_amount ? (
+                        <span className="font-medium text-purple-600">
+                          Sold for: Ksh{" "}
+                          {Number(listing.winning_amount).toLocaleString()}
+                        </span>
+                      ) : (
+                        <span>
+                          Current:{" "}
+                          {currentPrice > 0
+                            ? `Ksh ${currentPrice.toLocaleString()}`
+                            : "No bids yet"}
+                        </span>
+                      )}
+                      <span>Bids: {bidsCount}</span>
+                      <span>
+                        {listing.status === "live" ||
+                        listing.status === "active"
+                          ? `Time: ${formatTimeLeft(timeRemaining)}`
+                          : listing.status === "pending"
+                          ? "Awaiting approval"
+                          : listing.status === "sold"
+                          ? "Transaction complete"
+                          : listing.status === "ended"
+                          ? "Auction ended"
+                          : listing.status === "draft"
+                          ? "Not submitted"
+                          : "Status: " + listing.status}
+                      </span>
+                    </div>
+                    <div className="flex items-center space-x-2 mt-2">
+                      <span className="text-xs text-gray-500">
+                        Created: {createdAt}
+                      </span>
+                      {listing.featured && (
+                        <Badge variant="secondary" className="text-xs">
+                          Featured
+                        </Badge>
+                      )}
+
+                      {/* Image count indicator */}
+                      <div className="flex items-center space-x-1 text-xs text-gray-500">
+                        <ImageIcon className="w-3 h-3" />
+                        <span>
+                          {allImages.length > 0 &&
+                          allImages[0] !== "/placeholder.svg"
+                            ? allImages.length
+                            : 0}{" "}
+                          image{allImages.length !== 1 ? "s" : ""}
+                        </span>
+                        {allImages.length > 1 &&
+                          allImages[0] !== "/placeholder.svg" && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="text-xs p-0 h-auto text-blue-600 hover:text-blue-700"
+                              onClick={() =>
+                                setExpandedImagePreview(
+                                  expandedImagePreview === listing.id
+                                    ? null
+                                    : listing.id
+                                )
+                              }
+                            >
+                              {expandedImagePreview === listing.id
+                                ? "Hide"
+                                : "Show"}{" "}
+                              gallery
+                            </Button>
+                          )}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Badge className={getStatusBadge(listing.status).color}>
+                      <div className="flex items-center space-x-1">
+                        {getStatusBadge(listing.status).icon}
+                        <span>{getStatusBadge(listing.status).label}</span>
+                      </div>
                     </Badge>
                   </div>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm text-muted-foreground">
-                    <span>
-                      Starting: Ksh{" "}
-                      {Number(listing.starting_price || 0).toLocaleString()}
-                    </span>
-                    {listing.status === "sold" && listing.winning_amount ? (
-                      <span className="font-medium text-purple-600">
-                        Sold for: Ksh{" "}
-                        {Number(listing.winning_amount).toLocaleString()}
-                      </span>
-                    ) : (
-                      <span>
-                        Current:{" "}
-                        {currentPrice > 0
-                          ? `Ksh ${currentPrice.toLocaleString()}`
-                          : "No bids yet"}
-                      </span>
+                  <div className="flex space-x-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleViewListing(listing.id)}
+                      title="View listing"
+                    >
+                      <Eye className="w-4 h-4" />
+                    </Button>
+
+                    {/* Edit button - only for draft and pending auctions */}
+                    {(listing.status === "draft" ||
+                      listing.status === "pending") && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleEditListing(listing.id)}
+                        title="Edit listing"
+                      >
+                        <Edit className="w-4 h-4" />
+                      </Button>
                     )}
-                    <span>Bids: {bidsCount}</span>
-                    <span>
-                      {listing.status === "live" || listing.status === "active"
-                        ? `Time: ${formatTimeLeft(timeRemaining)}`
-                        : listing.status === "pending"
-                        ? "Awaiting approval"
-                        : listing.status === "sold"
-                        ? "Transaction complete"
-                        : listing.status === "ended"
-                        ? "Auction ended"
-                        : listing.status === "draft"
-                        ? "Not submitted"
-                        : "Status: " + listing.status}
-                    </span>
-                  </div>
-                  <div className="flex items-center space-x-2 mt-2">
-                    <span className="text-xs text-gray-500">
-                      Created: {createdAt}
-                    </span>
-                    {listing.featured && (
-                      <Badge variant="secondary" className="text-xs">
-                        Featured
-                      </Badge>
+
+                    {/* Manage images - only for active auctions and drafts */}
+                    {(listing.status === "draft" ||
+                      listing.status === "live" ||
+                      listing.status === "active") && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleAddImages(listing.id)}
+                        title="Manage images"
+                        className="flex items-center gap-1"
+                      >
+                        <ImageIcon className="w-4 h-4" />
+                        <span className="text-xs">
+                          {allImages.length > 0 &&
+                          allImages[0] !== "/placeholder.svg"
+                            ? allImages.length
+                            : 0}
+                        </span>
+                      </Button>
+                    )}
+
+                    {/* Delete - only for drafts and pending auctions */}
+                    {(listing.status === "draft" ||
+                      listing.status === "pending") && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleDeleteListing(listing.id)}
+                        title="Delete listing"
+                        className="text-red-600 hover:text-red-700"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    )}
+
+                    {/* Special actions for sold items */}
+                    {listing.status === "sold" && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() =>
+                          toast({
+                            title: "Transaction Details",
+                            description:
+                              "View payment and shipping details (coming soon)",
+                          })
+                        }
+                        title="View transaction details"
+                        className="text-green-600 hover:text-green-700"
+                      >
+                        <CheckCircle className="w-4 h-4" />
+                      </Button>
                     )}
                   </div>
                 </div>
-                <div className="flex items-center space-x-2">
-                  <Badge className={getStatusBadge(listing.status).color}>
-                    <div className="flex items-center space-x-1">
-                      {getStatusBadge(listing.status).icon}
-                      <span>{getStatusBadge(listing.status).label}</span>
+
+                {/* Expanded Image Gallery */}
+                {expandedImagePreview === listing.id &&
+                  allImages.length > 1 &&
+                  allImages[0] !== "/placeholder.svg" && (
+                    <div className="px-4 pb-4">
+                      <div className="border-t pt-4">
+                        <h4 className="text-sm font-medium mb-3 text-gray-700">
+                          All Images ({allImages.length})
+                        </h4>
+                        <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 gap-2">
+                          {allImages.map((image, index) => (
+                            <div
+                              key={index}
+                              className="relative aspect-square bg-gray-100 rounded overflow-hidden group cursor-pointer"
+                              onClick={() => handleViewListing(listing.id)}
+                            >
+                              <img
+                                src={image}
+                                alt={`${listing.title} - Image ${index + 1}`}
+                                className="w-full h-full object-cover hover:scale-105 transition-transform"
+                                onError={(e) => {
+                                  const target = e.target as HTMLImageElement;
+                                  target.src = "/placeholder.svg";
+                                }}
+                              />
+                              <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-opacity flex items-center justify-center">
+                                <Eye className="w-4 h-4 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
                     </div>
-                  </Badge>
-                </div>
-                <div className="flex space-x-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleViewListing(listing.id)}
-                    title="View listing"
-                  >
-                    <Eye className="w-4 h-4" />
-                  </Button>
-
-                  {/* Edit button - only for draft and pending auctions */}
-                  {(listing.status === "draft" ||
-                    listing.status === "pending") && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleEditListing(listing.id)}
-                      title="Edit listing"
-                    >
-                      <Edit className="w-4 h-4" />
-                    </Button>
                   )}
-
-                  {/* Add images - only for active auctions and drafts */}
-                  {(listing.status === "draft" ||
-                    listing.status === "live" ||
-                    listing.status === "active") && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleAddImages(listing.id)}
-                      title="Add images"
-                    >
-                      <Upload className="w-4 h-4" />
-                    </Button>
-                  )}
-
-                  {/* Delete - only for drafts and pending auctions */}
-                  {(listing.status === "draft" ||
-                    listing.status === "pending") && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleDeleteListing(listing.id)}
-                      title="Delete listing"
-                      className="text-red-600 hover:text-red-700"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
-                  )}
-
-                  {/* Special actions for sold items */}
-                  {listing.status === "sold" && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() =>
-                        toast({
-                          title: "Transaction Details",
-                          description:
-                            "View payment and shipping details (coming soon)",
-                        })
-                      }
-                      title="View transaction details"
-                      className="text-green-600 hover:text-green-700"
-                    >
-                      <CheckCircle className="w-4 h-4" />
-                    </Button>
-                  )}
-                </div>
               </div>
             );
           })}
