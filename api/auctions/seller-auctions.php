@@ -98,8 +98,8 @@ try {
                    (
                        SELECT ai.image_url
                        FROM auction_images ai
-                       WHERE ai.auction_id = a.id
-                       ORDER BY ai.id DESC
+                       WHERE ai.auction_id = a.id AND ai.is_active = TRUE
+                       ORDER BY ai.is_primary DESC, ai.sort_order ASC
                        LIMIT 1
                    ) as image_url,
                    (
@@ -130,7 +130,7 @@ try {
     $stmt->execute($params);
     $auctions = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-    // Update status field with calculated_status for consistent frontend handling
+    // Update status field with calculated_status for consistent frontend handling and load images
     foreach ($auctions as &$auction) {
         if (isset($auction['calculated_status'])) {
             $auction['status'] = $auction['calculated_status'];
@@ -140,6 +140,45 @@ try {
         $auction['current_bid'] = $auction['current_bid'] ? (float)$auction['current_bid'] : null;
         $auction['time_remaining'] = (int)($auction['time_remaining'] ?? 0);
         $auction['auction_ended'] = (bool)($auction['auction_ended'] ?? false);
+
+        // Load all images for this auction
+        $auction['images'] = [];
+        $auction['primary_image'] = null;
+
+        $imageStmt = $pdo->prepare("
+            SELECT image_url, is_primary 
+            FROM auction_images 
+            WHERE auction_id = :auction_id AND is_active = TRUE 
+            ORDER BY is_primary DESC, sort_order ASC
+        ");
+        $imageStmt->execute([':auction_id' => $auction['id']]);
+        $images = $imageStmt->fetchAll(PDO::FETCH_ASSOC);
+
+        foreach ($images as $img) {
+            $path = $img['image_url'] ?? '';
+            if (!$path) continue;
+
+            // Normalize URL
+            if (preg_match('#^https?://#i', $path)) {
+                $url = $path;
+            } elseif (strpos($path, '/') === 0) {
+                $url = 'http://localhost:8000' . $path;
+            } else {
+                $url = 'http://localhost:8000/' . $path;
+            }
+
+            $auction['images'][] = $url;
+
+            // Set primary image
+            if (!empty($img['is_primary']) && $auction['primary_image'] === null) {
+                $auction['primary_image'] = $url;
+            }
+        }
+
+        // Fallback: if no primary set but we have images, use first one
+        if (empty($auction['primary_image']) && !empty($auction['images'])) {
+            $auction['primary_image'] = $auction['images'][0];
+        }
     }
 
     // Calculate pagination info

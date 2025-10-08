@@ -149,27 +149,14 @@ const ListingsTab: React.FC = () => {
     }
   };
 
-  // Helper function to get all images for a listing
+  // Helper function to get all images for a listing with primary image first
   const getAllImages = (listing: Auction) => {
     const images = [];
+    let primaryImage = null;
 
-    // Add primary images
-    if (listing.image_path) {
-      const imageUrl = listing.image_path.startsWith("http")
-        ? listing.image_path
-        : `http://localhost:8000${
-            listing.image_path.startsWith("/") ? "" : "/"
-          }${listing.image_path}`;
-      images.push(imageUrl);
-    }
-
-    if (listing.image_url && !images.includes(listing.image_url)) {
-      const imageUrl = listing.image_url.startsWith("http")
-        ? listing.image_url
-        : `http://localhost:8000${
-            listing.image_url.startsWith("/") ? "" : "/"
-          }${listing.image_url}`;
-      images.push(imageUrl);
+    // Check for primary image from API response
+    if (listing.primary_image) {
+      primaryImage = listing.primary_image;
     }
 
     // Add images from images array
@@ -193,6 +180,40 @@ const ListingsTab: React.FC = () => {
           images.push(imageUrl);
         }
       });
+    }
+
+    // Fallback: try image_path and image_url if no images array
+    if (images.length === 0) {
+      if (listing.image_path) {
+        const imageUrl = listing.image_path.startsWith("http")
+          ? listing.image_path
+          : `http://localhost:8000${
+              listing.image_path.startsWith("/") ? "" : "/"
+            }${listing.image_path}`;
+        images.push(imageUrl);
+      }
+
+      if (listing.image_url && !images.includes(listing.image_url)) {
+        const imageUrl = listing.image_url.startsWith("http")
+          ? listing.image_url
+          : `http://localhost:8000${
+              listing.image_url.startsWith("/") ? "" : "/"
+            }${listing.image_url}`;
+        images.push(imageUrl);
+      }
+    }
+
+    // If we have a primary image, make sure it's first in the array
+    if (primaryImage && images.length > 0) {
+      const primaryIndex = images.indexOf(primaryImage);
+      if (primaryIndex > 0) {
+        // Move primary to front
+        images.splice(primaryIndex, 1);
+        images.unshift(primaryImage);
+      } else if (primaryIndex === -1 && primaryImage !== "/placeholder.svg") {
+        // Add primary to front if not in array
+        images.unshift(primaryImage);
+      }
     }
 
     return images.length > 0 ? images : ["/placeholder.svg"];
