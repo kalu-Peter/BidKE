@@ -64,6 +64,7 @@ const VerificationsTab: React.FC = () => {
   const [editingUser, setEditingUser] = useState<UserVerification | null>(null);
   const [updateData, setUpdateData] = useState<UpdateData>({});
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [updating, setUpdating] = useState(false);
 
   const fetchUsers = async () => {
     setLoading(true);
@@ -109,40 +110,144 @@ const VerificationsTab: React.FC = () => {
     fetchUsers();
   }, [search, userStatusFilter, verificationStatusFilter]);
 
+  const hasChanges = () => {
+    if (!editingUser) return false;
+
+    return (
+      updateData.user_status !== editingUser.user_status ||
+      updateData.is_verified !== editingUser.user_verified ||
+      updateData.verification_status !==
+        (editingUser.verification_status || "") ||
+      updateData.seller_status !== (editingUser.seller_status || "")
+    );
+  };
+
   const handleEdit = (user: UserVerification) => {
     setEditingUser(user);
     setUpdateData({
       user_status: user.user_status,
       is_verified: user.user_verified,
-      verification_status: user.verification_status || "",
+      verification_status: user.verification_status || "pending",
       verified_by: user.verified_by || undefined,
-      seller_status: user.seller_status || "",
+      seller_status: user.seller_status || "active",
     });
     setIsDialogOpen(true);
+    setError(null); // Clear any previous errors
+  };
+
+  const validateUpdateData = () => {
+    if (!updateData.user_status) {
+      setError("User status is required");
+      return false;
+    }
+
+    if (
+      updateData.is_verified === undefined ||
+      updateData.is_verified === null
+    ) {
+      setError("User verification status is required");
+      return false;
+    }
+
+    // Validate seller_status if it's being updated
+    if (updateData.seller_status !== undefined && !updateData.seller_status) {
+      setError("Seller status cannot be empty");
+      return false;
+    }
+
+    // Validate verification_status if it's being updated
+    if (
+      updateData.verification_status !== undefined &&
+      !updateData.verification_status
+    ) {
+      setError("Verification status cannot be empty");
+      return false;
+    }
+
+    return true;
   };
 
   const handleUpdate = async () => {
     if (!editingUser) return;
 
-    setLoading(true);
+    // Validate required fields
+    if (!validateUpdateData()) {
+      return;
+    }
+
+    setUpdating(true);
+    setError(null);
+
     try {
-      const result = await apiService.updateUserVerificationStatus(
-        editingUser.user_id,
-        updateData
+      // Get current admin user from token for verified_by field
+      const token = localStorage.getItem("bidlode_session_token");
+      let currentUserId = null;
+
+      if (token) {
+        try {
+          const payload = JSON.parse(atob(token.split(".")[1]));
+          currentUserId = payload.user_id;
+        } catch (e) {
+          console.warn("Could not parse admin user ID from token");
+        }
+      }
+
+      // Prepare update data with verified_by if verification status is being set to verified
+      const rawUpdateData = {
+        ...updateData,
+        ...(updateData.verification_status === "verified" &&
+          currentUserId && {
+            verified_by: currentUserId,
+          }),
+      };
+
+      // Filter out empty strings and undefined values to prevent constraint violations
+      const finalUpdateData = Object.fromEntries(
+        Object.entries(rawUpdateData).filter(([key, value]) => {
+          return value !== "" && value !== undefined && value !== null;
+        })
       );
 
+      console.log(
+        "Updating user verification:",
+        editingUser.username,
+        finalUpdateData
+      );
+
+      const result = await apiService.updateUserVerificationStatus(
+        editingUser.user_id,
+        finalUpdateData
+      );
+
+      console.log("API Response:", result);
+
       if (result.success) {
+        // Show success message (you could add a toast notification here)
+        console.log("User verification status updated successfully");
+
         setIsDialogOpen(false);
         setEditingUser(null);
         setUpdateData({});
+
+        // Refresh the users list to show updated data
         await fetchUsers();
       } else {
-        setError(result.message || "Failed to update user");
+        const errorMsg =
+          result.message ||
+          result.error ||
+          "Failed to update user verification status";
+        console.error("Update failed:", result);
+        setError(errorMsg);
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to update user");
+      console.error("Update error:", err);
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Failed to update user verification status"
+      );
     } finally {
-      setLoading(false);
+      setUpdating(false);
     }
   };
 
@@ -393,8 +498,12 @@ const VerificationsTab: React.FC = () => {
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="pending">Pending</SelectItem>
+                        <SelectItem value="under_review">
+                          Under Review
+                        </SelectItem>
                         <SelectItem value="verified">Verified</SelectItem>
                         <SelectItem value="rejected">Rejected</SelectItem>
+                        <SelectItem value="expired">Expired</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -413,26 +522,75 @@ const VerificationsTab: React.FC = () => {
                         <SelectValue placeholder="Select seller status" />
                       </SelectTrigger>
                       <SelectContent>
+                        <SelectItem value="pending">Pending</SelectItem>
                         <SelectItem value="active">Active</SelectItem>
-                        <SelectItem value="inactive">Inactive</SelectItem>
                         <SelectItem value="suspended">Suspended</SelectItem>
+                        <SelectItem value="restricted">Restricted</SelectItem>
+                        <SelectItem value="banned">Banned</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
                 </div>
               </div>
 
+              {hasChanges() && (
+                <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                  <h4 className="text-sm font-medium text-blue-900 mb-2">
+                    Changes to be made:
+                  </h4>
+                  <ul className="text-sm text-blue-800 space-y-1">
+                    {editingUser &&
+                      updateData.user_status !== editingUser.user_status && (
+                        <li>
+                          • User status: {editingUser.user_status} →{" "}
+                          {updateData.user_status}
+                        </li>
+                      )}
+                    {editingUser &&
+                      updateData.is_verified !== editingUser.user_verified && (
+                        <li>
+                          • User verified:{" "}
+                          {editingUser.user_verified ? "Yes" : "No"} →{" "}
+                          {updateData.is_verified ? "Yes" : "No"}
+                        </li>
+                      )}
+                    {editingUser &&
+                      updateData.verification_status !==
+                        (editingUser.verification_status || "") && (
+                        <li>
+                          • Verification status:{" "}
+                          {editingUser.verification_status || "None"} →{" "}
+                          {updateData.verification_status}
+                        </li>
+                      )}
+                    {editingUser &&
+                      updateData.seller_status !==
+                        (editingUser.seller_status || "") && (
+                        <li>
+                          • Seller status: {editingUser.seller_status || "None"}{" "}
+                          → {updateData.seller_status}
+                        </li>
+                      )}
+                  </ul>
+                </div>
+              )}
+
               <div className="flex justify-end gap-2">
                 <Button
                   variant="outline"
                   onClick={() => setIsDialogOpen(false)}
+                  disabled={updating}
                 >
                   <X className="w-4 h-4 mr-2" />
                   Cancel
                 </Button>
-                <Button onClick={handleUpdate} disabled={loading}>
+                <Button
+                  onClick={handleUpdate}
+                  disabled={updating || !hasChanges()}
+                  className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400"
+                >
                   <Save className="w-4 h-4 mr-2" />
-                  Save Changes
+                  {updating ? "Updating..." : "Save Changes"}
                 </Button>
               </div>
             </div>

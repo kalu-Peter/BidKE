@@ -126,17 +126,31 @@ try {
 
     if ($method === 'PUT') {
         // Update user verification status
-        $payload = json_decode(file_get_contents('php://input'), true) ?: [];
+        $rawInput = file_get_contents('php://input');
+        error_log('PUT request raw input: ' . $rawInput);
+
+        $payload = json_decode($rawInput, true) ?: [];
+        error_log('PUT request parsed payload: ' . print_r($payload, true));
+
         $user_id = isset($payload['user_id']) ? (int)$payload['user_id'] : null;
-        $user_status = $payload['user_status'] ?? null;
+        $user_status = !empty($payload['user_status']) ? $payload['user_status'] : null;
         $is_verified = isset($payload['is_verified']) ? (bool)$payload['is_verified'] : null;
-        $verification_status = $payload['verification_status'] ?? null;
+        $verification_status = !empty($payload['verification_status']) ? $payload['verification_status'] : null;
         $verified_by = isset($payload['verified_by']) ? (int)$payload['verified_by'] : null;
-        $seller_status = $payload['seller_status'] ?? null;
-        $rejection_reason = $payload['rejection_reason'] ?? null;
+        $seller_status = !empty($payload['seller_status']) ? $payload['seller_status'] : null;
+        $rejection_reason = !empty($payload['rejection_reason']) ? $payload['rejection_reason'] : null;
 
         if (!$user_id) {
             Auth::error('User ID is required', 400);
+        }
+
+        // Validate enum values
+        if ($verification_status && !in_array($verification_status, ['pending', 'under_review', 'verified', 'rejected', 'expired'])) {
+            Auth::error('Invalid verification status', 400);
+        }
+
+        if ($seller_status && !in_array($seller_status, ['pending', 'active', 'suspended', 'restricted', 'banned'])) {
+            Auth::error('Invalid seller status', 400);
         }
 
         try {
@@ -240,7 +254,8 @@ try {
         } catch (Exception $e) {
             $db->rollBack();
             error_log('admin/user-verification-management.php error: ' . $e->getMessage());
-            Auth::error('Failed to update user verification status', 500);
+            error_log('admin/user-verification-management.php stack trace: ' . $e->getTraceAsString());
+            Auth::error('Failed to update user verification status: ' . $e->getMessage(), 500);
         }
         exit;
     }
