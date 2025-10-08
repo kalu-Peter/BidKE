@@ -10,6 +10,7 @@ import {
   Package,
   Calculator,
 } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
 import { apiService } from "@/services/api";
 
 interface Sale {
@@ -48,6 +49,7 @@ interface SalesApiResponse {
 }
 
 const SalesTab: React.FC = () => {
+  const { user, isLoading: authLoading } = useAuth();
   const [sales, setSales] = useState<Sale[]>([]);
   const [summary, setSummary] = useState<SalesSummary>({
     total_sales: 0,
@@ -62,16 +64,19 @@ const SalesTab: React.FC = () => {
   const [total, setTotal] = useState(0);
   const limit = 10;
 
-  // In production, get seller_id from auth context
-  const sellerId = 9; // Using actual seller ID from test data (Gaming PC seller)
-
   const fetchSales = async () => {
+    if (!user?.id) {
+      setError("User not authenticated");
+      setLoading(false);
+      return;
+    }
+
     try {
       setLoading(true);
       setError(null);
 
-      // Use the API service to fetch sales data
-      const result = await apiService.getSellerSales(sellerId, page, limit);
+      // Use the API service to fetch sales data for the authenticated user
+      const result = await apiService.getSellerSales(user.id, page, limit);
       console.log("[SalesTab] API Response:", result);
 
       if (!result.success) {
@@ -95,7 +100,7 @@ const SalesTab: React.FC = () => {
 
   useEffect(() => {
     fetchSales();
-  }, [page]);
+  }, [user?.id, page]);
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -131,6 +136,39 @@ const SalesTab: React.FC = () => {
       isDefault: false,
     },
   ];
+
+  // Loading state while authenticating
+  if (authLoading) {
+    return (
+      <Card>
+        <CardContent className="flex items-center justify-center py-8">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+            <p className="text-gray-600">Loading your sales data...</p>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // Error state for unauthenticated user
+  if (!user) {
+    return (
+      <Card>
+        <CardContent className="flex items-center justify-center py-8">
+          <div className="text-center">
+            <AlertTriangle className="w-12 h-12 text-red-500 mx-auto mb-4" />
+            <p className="text-red-600 mb-4">
+              Please log in to view your sales
+            </p>
+            <Button onClick={() => (window.location.href = "/login")}>
+              Go to Login
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -311,9 +349,15 @@ const SalesTab: React.FC = () => {
               <h3 className="text-lg font-semibold text-foreground mb-2">
                 No sales yet
               </h3>
-              <p className="text-muted-foreground">
-                Your completed sales will appear here
+              <p className="text-muted-foreground mb-4">
+                Your completed sales will appear here once you sell items
               </p>
+              <Button
+                onClick={() => (window.location.href = "/dashboard/post-item")}
+              >
+                <Package className="w-4 h-4 mr-2" />
+                Post New Item
+              </Button>
             </div>
           )}
         </CardContent>
