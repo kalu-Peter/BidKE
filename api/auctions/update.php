@@ -25,20 +25,97 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 require_once '../config/connect.php';
 require_once '../models/Auth.php';
 
-if ($_SERVER['REQUEST_METHOD'] !== 'PUT') {
+// Helper function for handling image uploads
+function handleImageUpload($uploadedFiles, $index, $auctionId, $db)
+{
+    try {
+        // Get file info based on whether it's an array or single file
+        if ($index !== null) {
+            $fileName = $uploadedFiles['name'][$index];
+            $fileTmp = $uploadedFiles['tmp_name'][$index];
+            $fileSize = $uploadedFiles['size'][$index];
+            $fileType = $uploadedFiles['type'][$index];
+            $fileError = $uploadedFiles['error'][$index];
+        } else {
+            $fileName = $uploadedFiles['name'];
+            $fileTmp = $uploadedFiles['tmp_name'];
+            $fileSize = $uploadedFiles['size'];
+            $fileType = $uploadedFiles['type'];
+            $fileError = $uploadedFiles['error'];
+        }
+
+        // Validate file
+        $allowedTypes = ['image/jpeg', 'image/png', 'image/jpg', 'image/webp'];
+        $maxSize = 8 * 1024 * 1024; // 8MB
+
+        if (!in_array($fileType, $allowedTypes)) {
+            return ['success' => false, 'message' => 'Invalid file type'];
+        }
+
+        if ($fileSize > $maxSize) {
+            return ['success' => false, 'message' => 'File too large'];
+        }
+
+        // Generate unique filename
+        $extension = pathinfo($fileName, PATHINFO_EXTENSION);
+        $newFileName = uniqid() . '_' . time() . '.' . $extension;
+        $uploadPath = 'uploads/' . $newFileName;
+        $fullPath = __DIR__ . '/../../uploads/' . $newFileName;
+
+        // Create uploads directory if it doesn't exist
+        $uploadsDir = dirname($fullPath);
+        if (!is_dir($uploadsDir)) {
+            mkdir($uploadsDir, 0755, true);
+        }
+
+        // Move uploaded file
+        if (!move_uploaded_file($fileTmp, $fullPath)) {
+            return ['success' => false, 'message' => 'Failed to save file'];
+        }
+
+        // Insert into database
+        $fileSql = "INSERT INTO auction_files (auction_id, file_type, original_name, file_name, file_path, file_size, mime_type) VALUES (:auction_id, 'image', :original_name, :file_name, :file_path, :file_size, :mime_type)";
+        $fileStmt = $db->prepare($fileSql);
+        $fileStmt->execute([
+            ':auction_id' => $auctionId,
+            ':original_name' => $fileName,
+            ':file_name' => $newFileName,
+            ':file_path' => $uploadPath,
+            ':file_size' => $fileSize,
+            ':mime_type' => $fileType
+        ]);
+
+        return ['success' => true, 'file_path' => $uploadPath];
+    } catch (Exception $e) {
+        return ['success' => false, 'message' => $e->getMessage()];
+    }
+}
+
+// Support both PUT (JSON) and POST (FormData with files)
+if (!in_array($_SERVER['REQUEST_METHOD'], ['PUT', 'POST'])) {
     http_response_code(405);
     echo json_encode(['success' => false, 'message' => 'Method not allowed']);
     exit();
 }
 
-$input = json_decode(file_get_contents('php://input'), true);
-if (!$input) {
-    http_response_code(400);
-    echo json_encode(['success' => false, 'message' => 'Invalid JSON payload']);
-    exit();
+$input = [];
+$auctionId = null;
+
+if ($_SERVER['REQUEST_METHOD'] === 'PUT') {
+    // Handle JSON input for regular updates
+    $input = json_decode(file_get_contents('php://input'), true);
+    if (!$input) {
+        http_response_code(400);
+        echo json_encode(['success' => false, 'message' => 'Invalid JSON payload']);
+        exit();
+    }
+    $auctionId = $input['auction_id'] ?? null;
+} else {
+    // Handle FormData for file uploads
+    $input = $_POST;
+    $auctionId = $input['auction_id'] ?? null;
 }
 
-$auctionId = $input['auction_id'] ?? null;
 if (!$auctionId) {
     http_response_code(400);
     echo json_encode(['success' => false, 'message' => 'Missing auction_id']);
@@ -156,35 +233,95 @@ try {
         }
     }
 
-    if (empty($fields)) {
+    // Allow updates with no fields if we're only handling images
+    if (empty($fields) && $_SERVER['REQUEST_METHOD'] !== 'POST') {
         http_response_code(400);
         echo json_encode(['success' => false, 'message' => 'No updatable fields provided']);
         exit();
     }
 
-    $params['id'] = $auctionId;
-    $updateSql = "UPDATE auctions SET " . implode(', ', $fields) . ", updated_at = :updated_at WHERE id = :id";
-    $params['updated_at'] = date('Y-m-d H:i:s');
+    // Only update database if there are fields to update
+    if (!empty($fields)) {
+        $params['id'] = $auctionId;
+        $updateSql = "UPDATE auctions SET " . implode(', ', $fields) . ", updated_at = :updated_at WHERE id = :id";
+        $params['updated_at'] = date('Y-m-d H:i:s');
 
-    $stmt = $db->prepare($updateSql);
-    if (!$stmt->execute($params)) {
-        $err = $stmt->errorInfo();
-        $db->rollBack();
-        error_log('Auction update failed: ' . json_encode($err));
-        // Append DB error to project log for easier debugging
-        $logDir = __DIR__ . '/../logs';
-        if (!is_dir($logDir)) {
-            @mkdir($logDir, 0755, true);
+        $stmt = $db->prepare($updateSql);
+        if (!$stmt->execute($params)) {
+            $err = $stmt->errorInfo();
+            $db->rollBack();
+            error_log('Auction update failed: ' . json_encode($err));
+            // Append DB error to project log for easier debugging
+            $logDir = __DIR__ . '/../logs';
+            if (!is_dir($logDir)) {
+                @mkdir($logDir, 0755, true);
+            }
+            $logFile = $logDir . '/update_debug.log';
+            $entry = date('[Y-m-d H:i:s] ') . "DB ERROR: " . json_encode($err) . "\n";
+            @file_put_contents($logFile, $entry, FILE_APPEND | LOCK_EX);
+            http_response_code(500);
+            echo json_encode(['success' => false, 'message' => 'Failed to update auction', 'details' => $err]);
+            exit();
         }
-        $logFile = $logDir . '/update_debug.log';
-        $entry = date('[Y-m-d H:i:s] ') . "DB ERROR: " . json_encode($err) . "\n";
-        @file_put_contents($logFile, $entry, FILE_APPEND | LOCK_EX);
-        http_response_code(500);
-        echo json_encode(['success' => false, 'message' => 'Failed to update auction', 'details' => $err]);
-        exit();
     }
 
-    // If images provided, insert into auction_files
+    // Handle image operations for POST requests (FormData)
+    if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+        // Handle image removal
+        if (isset($input['remove_images']) && is_array($input['remove_images'])) {
+            foreach ($input['remove_images'] as $imageToRemove) {
+                // Remove from database
+                $removeStmt = $db->prepare("DELETE FROM auction_files WHERE auction_id = :auction_id AND (file_path = :file_path OR file_name = :file_name)");
+                $removeStmt->execute([
+                    ':auction_id' => $auctionId,
+                    ':file_path' => $imageToRemove,
+                    ':file_name' => basename($imageToRemove)
+                ]);
+
+                // Remove physical file if it exists
+                $filePath = '';
+                if (strpos($imageToRemove, 'http://localhost:8000/') === 0) {
+                    $filePath = __DIR__ . '/../../' . str_replace('http://localhost:8000/', '', $imageToRemove);
+                } else if (strpos($imageToRemove, '/') === 0) {
+                    $filePath = __DIR__ . '/../../' . ltrim($imageToRemove, '/');
+                } else {
+                    $filePath = __DIR__ . '/../../uploads/' . basename($imageToRemove);
+                }
+
+                if (file_exists($filePath)) {
+                    unlink($filePath);
+                }
+            }
+        }
+
+        // Handle new image uploads
+        if (isset($_FILES['new_images'])) {
+            $uploadedFiles = $_FILES['new_images'];
+
+            // Handle multiple files
+            if (is_array($uploadedFiles['name'])) {
+                $fileCount = count($uploadedFiles['name']);
+                for ($i = 0; $i < $fileCount; $i++) {
+                    if ($uploadedFiles['error'][$i] === UPLOAD_ERR_OK) {
+                        $result = handleImageUpload($uploadedFiles, $i, $auctionId, $db);
+                        if (!$result['success']) {
+                            error_log('Image upload failed: ' . $result['message']);
+                        }
+                    }
+                }
+            } else {
+                // Single file
+                if ($uploadedFiles['error'] === UPLOAD_ERR_OK) {
+                    $result = handleImageUpload($uploadedFiles, null, $auctionId, $db);
+                    if (!$result['success']) {
+                        error_log('Image upload failed: ' . $result['message']);
+                    }
+                }
+            }
+        }
+    }
+
+    // If images provided in JSON format (legacy), insert into auction_files
     if (!empty($input['images']) && is_array($input['images'])) {
         foreach ($input['images'] as $img) {
             $fileSql = "INSERT INTO auction_files (auction_id, file_type, original_name, file_name, file_path, file_size, mime_type) VALUES (:auction_id, 'image', :original_name, :file_name, :file_path, :file_size, :mime_type)";

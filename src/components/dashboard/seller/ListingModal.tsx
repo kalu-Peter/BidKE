@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
 import {
   Dialog,
   DialogContent,
@@ -23,14 +25,22 @@ import {
   XCircle,
   FileText,
   Image as ImageIcon,
+  Edit,
+  Save,
+  Upload,
+  Trash2,
+  Plus,
 } from "lucide-react";
 import { Auction } from "../../../services/api";
 import { apiService } from "@/services/api";
+import { toast } from "@/hooks/use-toast";
 
 interface ListingModalProps {
   auction: Auction | null;
   open: boolean;
   onClose: () => void;
+  editMode?: boolean;
+  onSave?: () => void;
 }
 
 interface AuctionDetails extends Auction {
@@ -54,19 +64,38 @@ const ListingModal: React.FC<ListingModalProps> = ({
   auction,
   open,
   onClose,
+  editMode = false,
+  onSave,
 }) => {
   const [detailedAuction, setDetailedAuction] = useState<AuctionDetails | null>(
     null
   );
   const [loading, setLoading] = useState(false);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
+  const [isEditing, setIsEditing] = useState(editMode);
+
+  // Edit form state
+  const [editDescription, setEditDescription] = useState("");
+  const [newImages, setNewImages] = useState<File[]>([]);
+  const [imagesToRemove, setImagesToRemove] = useState<string[]>([]);
+  const [isSaving, setIsSaving] = useState(false);
 
   // Fetch detailed auction information when modal opens
   useEffect(() => {
     if (open && auction) {
       fetchAuctionDetails();
+      setIsEditing(editMode);
     }
-  }, [open, auction]);
+  }, [open, auction, editMode]);
+
+  // Initialize edit form when auction data is loaded
+  useEffect(() => {
+    if (detailedAuction && isEditing) {
+      setEditDescription(detailedAuction.description || "");
+      setNewImages([]);
+      setImagesToRemove([]);
+    }
+  }, [detailedAuction, isEditing]);
 
   const fetchAuctionDetails = async () => {
     if (!auction) return;
@@ -151,14 +180,114 @@ const ListingModal: React.FC<ListingModalProps> = ({
     return new Date(dateString).toLocaleString();
   };
 
-  // Prepare images array
+  // Handle image upload
+  const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files;
+    if (files) {
+      const fileArray = Array.from(files);
+      setNewImages((prev) => [...prev, ...fileArray]);
+    }
+  };
+
+  // Handle image removal
+  const handleRemoveExistingImage = (imageUrl: string) => {
+    setImagesToRemove((prev) => [...prev, imageUrl]);
+  };
+
+  // Handle new image removal (before upload)
+  const handleRemoveNewImage = (index: number) => {
+    setNewImages((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  // Toggle edit mode
+  const toggleEditMode = () => {
+    if (isEditing) {
+      // Reset form when canceling edit
+      setEditDescription(detailedAuction?.description || "");
+      setNewImages([]);
+      setImagesToRemove([]);
+    }
+    setIsEditing(!isEditing);
+  };
+
+  // Save changes
+  const handleSaveChanges = async () => {
+    if (!detailedAuction) return;
+
+    setIsSaving(true);
+    try {
+      // Create FormData for the update request
+      const formData = new FormData();
+      formData.append("auction_id", detailedAuction.id.toString());
+      formData.append("description", editDescription);
+
+      // Add new images
+      newImages.forEach((file, index) => {
+        formData.append(`new_images[]`, file);
+      });
+
+      // Add images to remove
+      imagesToRemove.forEach((imageUrl, index) => {
+        formData.append(`remove_images[]`, imageUrl);
+      });
+
+      // Make API call to update auction
+      const response = await fetch(
+        "http://localhost:8000/api/auctions/update.php",
+        {
+          method: "POST",
+          body: formData,
+          credentials: "include",
+        }
+      );
+
+      const result = await response.json();
+
+      if (result.success) {
+        toast({
+          title: "Success",
+          description: "Auction updated successfully",
+        });
+
+        // Refresh auction details
+        await fetchAuctionDetails();
+
+        // Exit edit mode
+        setIsEditing(false);
+        setNewImages([]);
+        setImagesToRemove([]);
+
+        // Call onSave callback if provided
+        if (onSave) {
+          onSave();
+        }
+      } else {
+        throw new Error(result.error || "Failed to update auction");
+      }
+    } catch (error) {
+      console.error("Error updating auction:", error);
+      toast({
+        title: "Error",
+        description:
+          error instanceof Error ? error.message : "Failed to update auction",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  // Prepare images array (filtered for removed images)
   const images = React.useMemo(() => {
     if (!detailedAuction) return [];
 
     const imageList = [];
 
     // Add image_path if available
-    if (detailedAuction.image_path) {
+    if (
+      detailedAuction.image_path &&
+      !imagesToRemove.includes(detailedAuction.image_path)
+    ) {
       const imageUrl = detailedAuction.image_path.startsWith("http")
         ? detailedAuction.image_path
         : `http://localhost:8000${
@@ -168,7 +297,10 @@ const ListingModal: React.FC<ListingModalProps> = ({
     }
 
     // Add image_url if available
-    if (detailedAuction.image_url) {
+    if (
+      detailedAuction.image_url &&
+      !imagesToRemove.includes(detailedAuction.image_url)
+    ) {
       const imageUrl = detailedAuction.image_url.startsWith("http")
         ? detailedAuction.image_url
         : `http://localhost:8000${
@@ -179,31 +311,52 @@ const ListingModal: React.FC<ListingModalProps> = ({
       }
     }
 
-    // Add images from images array
+    // Add images from images array (filter out removed ones)
     if (detailedAuction.images && Array.isArray(detailedAuction.images)) {
       detailedAuction.images.forEach((img: any) => {
         let imageUrl = "";
+        let originalPath = "";
+
         if (typeof img === "string") {
+          originalPath = img;
           imageUrl = img.startsWith("http")
             ? img
             : `http://localhost:8000${img.startsWith("/") ? "" : "/"}${img}`;
         } else if (typeof img === "object" && img !== null) {
           const url =
             img.image_url || img.image_path || img.file_path || img.url;
+          originalPath = url || "";
           if (url) {
             imageUrl = url.startsWith("http")
               ? url
               : `http://localhost:8000${url.startsWith("/") ? "" : "/"}${url}`;
           }
         }
-        if (imageUrl && !imageList.includes(imageUrl)) {
+
+        // Only add if not in removed list and not already in imageList
+        if (
+          imageUrl &&
+          !imagesToRemove.includes(originalPath) &&
+          !imagesToRemove.includes(imageUrl) &&
+          !imageList.includes(imageUrl)
+        ) {
           imageList.push(imageUrl);
         }
       });
     }
 
     return imageList.length > 0 ? imageList : ["/placeholder.svg"];
-  }, [detailedAuction]);
+  }, [detailedAuction, imagesToRemove]);
+
+  // Preview URLs for new images
+  const newImagePreviews = React.useMemo(() => {
+    return newImages.map((file) => URL.createObjectURL(file));
+  }, [newImages]);
+
+  // Combined images for display (existing + new)
+  const allImages = React.useMemo(() => {
+    return [...images, ...newImagePreviews];
+  }, [images, newImagePreviews]);
 
   if (!auction || !detailedAuction) return null;
 
@@ -215,13 +368,43 @@ const ListingModal: React.FC<ListingModalProps> = ({
             <span className="flex items-center gap-2">
               <Gavel className="w-5 h-5" />
               {detailedAuction.title}
+              {isEditing && (
+                <Badge variant="secondary" className="ml-2">
+                  <Edit className="w-3 h-3 mr-1" />
+                  Editing
+                </Badge>
+              )}
             </span>
-            <Badge className={getStatusBadge(detailedAuction.status).color}>
-              <div className="flex items-center space-x-1">
-                {getStatusBadge(detailedAuction.status).icon}
-                <span>{getStatusBadge(detailedAuction.status).label}</span>
-              </div>
-            </Badge>
+            <div className="flex items-center gap-2">
+              {/* Edit toggle button - only show for draft/pending auctions */}
+              {(detailedAuction.status === "draft" ||
+                detailedAuction.status === "pending") && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={toggleEditMode}
+                  disabled={isSaving}
+                >
+                  {isEditing ? (
+                    <>
+                      <X className="w-4 h-4 mr-1" />
+                      Cancel
+                    </>
+                  ) : (
+                    <>
+                      <Edit className="w-4 h-4 mr-1" />
+                      Edit
+                    </>
+                  )}
+                </Button>
+              )}
+              <Badge className={getStatusBadge(detailedAuction.status).color}>
+                <div className="flex items-center space-x-1">
+                  {getStatusBadge(detailedAuction.status).icon}
+                  <span>{getStatusBadge(detailedAuction.status).label}</span>
+                </div>
+              </Badge>
+            </div>
           </DialogTitle>
         </DialogHeader>
 
@@ -229,9 +412,9 @@ const ListingModal: React.FC<ListingModalProps> = ({
           <div className="space-y-6">
             {/* Images Section */}
             <div className="space-y-4">
-              <div className="aspect-video bg-gray-100 rounded-lg overflow-hidden">
+              <div className="relative aspect-video bg-gray-100 rounded-lg overflow-hidden">
                 <img
-                  src={images[selectedImageIndex]}
+                  src={allImages[selectedImageIndex] || "/placeholder.svg"}
                   alt={detailedAuction.title}
                   className="w-full h-full object-cover"
                   onError={(e) => {
@@ -239,33 +422,85 @@ const ListingModal: React.FC<ListingModalProps> = ({
                     target.src = "/placeholder.svg";
                   }}
                 />
+                {/* Image remove button in edit mode */}
+                {isEditing &&
+                  allImages.length > 0 &&
+                  allImages[selectedImageIndex] !== "/placeholder.svg" && (
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      className="absolute top-2 right-2"
+                      onClick={() => {
+                        const currentImage = allImages[selectedImageIndex];
+                        // Check if it's a new image (blob URL) or existing image
+                        if (currentImage.startsWith("blob:")) {
+                          // Remove from new images
+                          const newImageIndex =
+                            selectedImageIndex - images.length;
+                          if (newImageIndex >= 0) {
+                            handleRemoveNewImage(newImageIndex);
+                          }
+                        } else {
+                          // Remove existing image
+                          handleRemoveExistingImage(currentImage);
+                        }
+                        // Adjust selected index if necessary
+                        if (selectedImageIndex >= allImages.length - 1) {
+                          setSelectedImageIndex(
+                            Math.max(0, selectedImageIndex - 1)
+                          );
+                        }
+                      }}
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  )}
               </div>
 
-              {images.length > 1 && (
-                <div className="flex gap-2 overflow-x-auto">
-                  {images.map((image, index) => (
-                    <button
-                      key={index}
-                      onClick={() => setSelectedImageIndex(index)}
-                      className={`flex-shrink-0 w-16 h-16 rounded border-2 overflow-hidden ${
-                        selectedImageIndex === index
-                          ? "border-primary"
-                          : "border-gray-200"
-                      }`}
-                    >
-                      <img
-                        src={image}
-                        alt={`${detailedAuction.title} ${index + 1}`}
-                        className="w-full h-full object-cover"
-                        onError={(e) => {
-                          const target = e.target as HTMLImageElement;
-                          target.src = "/placeholder.svg";
-                        }}
-                      />
-                    </button>
-                  ))}
-                </div>
-              )}
+              <div className="flex gap-2 overflow-x-auto">
+                {/* Existing and new image thumbnails */}
+                {allImages.map((image, index) => (
+                  <button
+                    key={index}
+                    onClick={() => setSelectedImageIndex(index)}
+                    className={`flex-shrink-0 w-16 h-16 rounded border-2 overflow-hidden relative ${
+                      selectedImageIndex === index
+                        ? "border-primary"
+                        : "border-gray-200"
+                    }`}
+                  >
+                    <img
+                      src={image}
+                      alt={`${detailedAuction.title} ${index + 1}`}
+                      className="w-full h-full object-cover"
+                      onError={(e) => {
+                        const target = e.target as HTMLImageElement;
+                        target.src = "/placeholder.svg";
+                      }}
+                    />
+                    {/* New image indicator */}
+                    {isEditing && image.startsWith("blob:") && (
+                      <Badge className="absolute -top-1 -right-1 text-xs bg-green-500">
+                        New
+                      </Badge>
+                    )}
+                  </button>
+                ))}
+
+                {/* Add image button in edit mode */}
+                {isEditing && (
+                  <label className="flex-shrink-0 w-16 h-16 rounded border-2 border-dashed border-gray-300 flex items-center justify-center cursor-pointer hover:border-primary transition-colors">
+                    <Plus className="w-6 h-6 text-gray-400" />
+                    <Input
+                      type="file"
+                      multiple
+                      accept="image/*"
+                      onChange={handleImageUpload}
+                      className="hidden"
+                    />
+                  </label>
+                )}
+              </div>
             </div>
 
             <Separator />
@@ -278,10 +513,30 @@ const ListingModal: React.FC<ListingModalProps> = ({
                   <h3 className="font-semibold text-lg mb-2 flex items-center gap-2">
                     <FileText className="w-4 h-4" />
                     Description
+                    {isEditing && (
+                      <Badge variant="outline" className="text-xs">
+                        Editable
+                      </Badge>
+                    )}
                   </h3>
-                  <p className="text-gray-700 whitespace-pre-wrap">
-                    {detailedAuction.description || "No description provided"}
-                  </p>
+                  {isEditing ? (
+                    <Textarea
+                      value={editDescription}
+                      onChange={(e) => setEditDescription(e.target.value)}
+                      placeholder="Enter auction description..."
+                      className="min-h-[100px] w-full"
+                      maxLength={1000}
+                    />
+                  ) : (
+                    <p className="text-gray-700 whitespace-pre-wrap">
+                      {detailedAuction.description || "No description provided"}
+                    </p>
+                  )}
+                  {isEditing && (
+                    <div className="text-xs text-gray-500 mt-1">
+                      {editDescription.length}/1000 characters
+                    </div>
+                  )}
                 </div>
 
                 <div>
@@ -439,19 +694,55 @@ const ListingModal: React.FC<ListingModalProps> = ({
             <Separator />
 
             {/* Action Buttons */}
-            <div className="flex justify-end space-x-2">
-              <Button variant="outline" onClick={onClose}>
-                Close
-              </Button>
-              <Button
-                onClick={() =>
-                  window.open(`/auction/${detailedAuction.id}`, "_blank")
-                }
-                className="flex items-center gap-2"
-              >
-                <Eye className="w-4 h-4" />
-                View Public Page
-              </Button>
+            <div className="flex justify-between items-center">
+              <div className="flex space-x-2">
+                {isEditing && (
+                  <>
+                    <Button
+                      variant="outline"
+                      onClick={toggleEditMode}
+                      disabled={isSaving}
+                    >
+                      <X className="w-4 h-4 mr-1" />
+                      Cancel
+                    </Button>
+                    <Button
+                      onClick={handleSaveChanges}
+                      disabled={isSaving}
+                      className="flex items-center gap-2"
+                    >
+                      {isSaving ? (
+                        <>
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
+                          Saving...
+                        </>
+                      ) : (
+                        <>
+                          <Save className="w-4 h-4" />
+                          Save Changes
+                        </>
+                      )}
+                    </Button>
+                  </>
+                )}
+              </div>
+
+              <div className="flex space-x-2">
+                <Button variant="outline" onClick={onClose} disabled={isSaving}>
+                  Close
+                </Button>
+                {!isEditing && (
+                  <Button
+                    onClick={() =>
+                      window.open(`/auction/${detailedAuction.id}`, "_blank")
+                    }
+                    className="flex items-center gap-2"
+                  >
+                    <Eye className="w-4 h-4" />
+                    View Public Page
+                  </Button>
+                )}
+              </div>
             </div>
           </div>
         </ScrollArea>

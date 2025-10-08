@@ -33,6 +33,7 @@ const ListingsTab: React.FC = () => {
   );
   const [selectedListing, setSelectedListing] = useState<Auction | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isEditMode, setIsEditMode] = useState(false);
 
   // Fetch seller's listings
   useEffect(() => {
@@ -148,6 +149,16 @@ const ListingsTab: React.FC = () => {
     const listing = listings.find((l) => l.id === id);
     if (listing) {
       setSelectedListing(listing);
+      setIsEditMode(false);
+      setIsModalOpen(true);
+    }
+  };
+
+  const handleEditListing = (id: number) => {
+    const listing = listings.find((l) => l.id === id);
+    if (listing) {
+      setSelectedListing(listing);
+      setIsEditMode(true);
       setIsModalOpen(true);
     }
   };
@@ -155,14 +166,35 @@ const ListingsTab: React.FC = () => {
   const handleCloseModal = () => {
     setIsModalOpen(false);
     setSelectedListing(null);
+    setIsEditMode(false);
   };
 
-  const handleEditListing = (id: number) => {
-    // TODO: Implement edit functionality
-    toast({
-      title: "Edit Auction",
-      description: "Edit functionality will be implemented soon.",
-    });
+  const handleSaveListing = () => {
+    // Refresh listings after save
+    const fetchListings = async () => {
+      if (!user?.id) return;
+
+      try {
+        setLoading(true);
+        const response = await apiService.getSellerAuctions({
+          sellerId: user.id,
+          status: statusFilter,
+          page: currentPage,
+          limit: 10,
+        });
+
+        if (response.success && response.data) {
+          setListings(response.data.auctions || []);
+          setTotalPages(response.data.pagination?.pages || 1);
+        }
+      } catch (err) {
+        console.error("Error refreshing listings:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchListings();
   };
 
   const handleDeleteListing = (id: number) => {
@@ -505,6 +537,8 @@ const ListingsTab: React.FC = () => {
         auction={selectedListing}
         open={isModalOpen}
         onClose={handleCloseModal}
+        editMode={isEditMode}
+        onSave={handleSaveListing}
       />
     </Card>
   );
