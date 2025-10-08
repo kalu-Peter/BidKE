@@ -79,9 +79,9 @@ const ListingsTab: React.FC = () => {
         color: "bg-green-100 text-green-800",
         icon: <CheckCircle className="w-3 h-3" />,
       },
-      approved: {
-        label: "Approved",
-        color: "bg-blue-100 text-blue-800",
+      active: {
+        label: "Live",
+        color: "bg-green-100 text-green-800",
         icon: <CheckCircle className="w-3 h-3" />,
       },
       pending: {
@@ -90,14 +90,24 @@ const ListingsTab: React.FC = () => {
         icon: <Clock className="w-3 h-3" />,
       },
       ended: {
-        label: "Ended",
-        color: "bg-muted/20 text-muted-foreground",
+        label: "Ended - No Sale",
+        color: "bg-gray-100 text-gray-800",
         icon: <XCircle className="w-3 h-3" />,
       },
       sold: {
         label: "Sold",
         color: "bg-purple-100 text-purple-800",
         icon: <CheckCircle className="w-3 h-3" />,
+      },
+      draft: {
+        label: "Draft",
+        color: "bg-blue-100 text-blue-800",
+        icon: <FileText className="w-3 h-3" />,
+      },
+      cancelled: {
+        label: "Cancelled",
+        color: "bg-red-100 text-red-800",
+        icon: <XCircle className="w-3 h-3" />,
       },
     };
     return configs[status as keyof typeof configs] || configs.ended;
@@ -196,10 +206,11 @@ const ListingsTab: React.FC = () => {
             const statuses = [
               "all",
               "live",
-              "approved",
               "pending",
-              "ended",
               "sold",
+              "ended",
+              "draft",
+              "cancelled",
             ];
             return statuses.map((status) => {
               return (
@@ -286,14 +297,33 @@ const ListingsTab: React.FC = () => {
                       Starting: Ksh{" "}
                       {Number(listing.starting_price || 0).toLocaleString()}
                     </span>
-                    <span>
-                      Current:{" "}
-                      {currentPrice > 0
-                        ? `Ksh ${currentPrice.toLocaleString()}`
-                        : "No bids yet"}
-                    </span>
+                    {listing.status === "sold" && listing.winning_amount ? (
+                      <span className="font-medium text-purple-600">
+                        Sold for: Ksh{" "}
+                        {Number(listing.winning_amount).toLocaleString()}
+                      </span>
+                    ) : (
+                      <span>
+                        Current:{" "}
+                        {currentPrice > 0
+                          ? `Ksh ${currentPrice.toLocaleString()}`
+                          : "No bids yet"}
+                      </span>
+                    )}
                     <span>Bids: {bidsCount}</span>
-                    <span>Time: {formatTimeLeft(timeRemaining)}</span>
+                    <span>
+                      {listing.status === "live" || listing.status === "active"
+                        ? `Time: ${formatTimeLeft(timeRemaining)}`
+                        : listing.status === "pending"
+                        ? "Awaiting approval"
+                        : listing.status === "sold"
+                        ? "Transaction complete"
+                        : listing.status === "ended"
+                        ? "Auction ended"
+                        : listing.status === "draft"
+                        ? "Not submitted"
+                        : "Status: " + listing.status}
+                    </span>
                   </div>
                   <div className="flex items-center space-x-2 mt-2">
                     <span className="text-xs text-gray-500">
@@ -323,31 +353,37 @@ const ListingsTab: React.FC = () => {
                   >
                     <Eye className="w-4 h-4" />
                   </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleEditListing(listing.id)}
-                    title="Edit listing"
-                    disabled={
-                      listing.status === "sold" ||
-                      (listing.auction_ended ?? false)
-                    }
-                  >
-                    <Edit className="w-4 h-4" />
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleAddImages(listing.id)}
-                    title="Add images"
-                    disabled={
-                      listing.status === "sold" ||
-                      (listing.auction_ended ?? false)
-                    }
-                  >
-                    <Upload className="w-4 h-4" />
-                  </Button>
-                  {listing.status === "pending" && (
+
+                  {/* Edit button - only for draft and pending auctions */}
+                  {(listing.status === "draft" ||
+                    listing.status === "pending") && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleEditListing(listing.id)}
+                      title="Edit listing"
+                    >
+                      <Edit className="w-4 h-4" />
+                    </Button>
+                  )}
+
+                  {/* Add images - only for active auctions and drafts */}
+                  {(listing.status === "draft" ||
+                    listing.status === "live" ||
+                    listing.status === "active") && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleAddImages(listing.id)}
+                      title="Add images"
+                    >
+                      <Upload className="w-4 h-4" />
+                    </Button>
+                  )}
+
+                  {/* Delete - only for drafts and pending auctions */}
+                  {(listing.status === "draft" ||
+                    listing.status === "pending") && (
                     <Button
                       variant="outline"
                       size="sm"
@@ -356,6 +392,25 @@ const ListingsTab: React.FC = () => {
                       className="text-red-600 hover:text-red-700"
                     >
                       <Trash2 className="w-4 h-4" />
+                    </Button>
+                  )}
+
+                  {/* Special actions for sold items */}
+                  {listing.status === "sold" && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() =>
+                        toast({
+                          title: "Transaction Details",
+                          description:
+                            "View payment and shipping details (coming soon)",
+                        })
+                      }
+                      title="View transaction details"
+                      className="text-green-600 hover:text-green-700"
+                    >
+                      <CheckCircle className="w-4 h-4" />
                     </Button>
                   )}
                 </div>
@@ -368,12 +423,22 @@ const ListingsTab: React.FC = () => {
           <div className="text-center py-12">
             <FileText className="w-16 h-16 text-gray-300 mx-auto mb-4" />
             <h3 className="text-lg font-semibold text-foreground mb-2">
-              No listings found
+              No{" "}
+              {statusFilter === "all" ? "listings" : statusFilter + " auctions"}{" "}
+              found
             </h3>
             <p className="text-muted-foreground mb-4">
-              {statusFilter === "all"
-                ? "You haven't posted any auctions yet"
-                : `No ${statusFilter} auctions found`}
+              {statusFilter === "all" && "You haven't posted any auctions yet"}
+              {statusFilter === "live" &&
+                "You don't have any active auctions currently running"}
+              {statusFilter === "pending" &&
+                "No auctions awaiting admin approval"}
+              {statusFilter === "sold" && "You haven't sold any items yet"}
+              {statusFilter === "ended" &&
+                "No auctions have ended without a sale"}
+              {statusFilter === "draft" &&
+                "No draft auctions found - complete drafts are automatically hidden"}
+              {statusFilter === "cancelled" && "No cancelled auctions found"}
             </p>
             <Button
               onClick={() => (window.location.href = "/dashboard/post-item")}

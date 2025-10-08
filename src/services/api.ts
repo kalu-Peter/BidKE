@@ -65,10 +65,14 @@ interface Auction {
   start_date: string;
   end_date: string;
   created_at?: string;
+  updated_at?: string;
+  start_time?: string; // For auction scheduling
+  end_time?: string; // For auction scheduling
   status: 'draft' | 'active' | 'ended' | 'cancelled' | 'live' | 'approved' | 'pending' | 'sold';
   seller_id: number;
   seller_name: string;
   image_url: string | null;
+  image_path?: string; // From auction_files
   images?: Array<{ image_url: string; image_path?: string }>; // For seller listings
   bid_count: number;
   watcher_count: number;
@@ -77,6 +81,9 @@ interface Auction {
   is_reserve_met: boolean;
   time_remaining: number;
   auction_ended?: boolean;
+  // Properties for sold auctions
+  winning_amount?: number;
+  winner_id?: number;
 }
 
 interface Category {
