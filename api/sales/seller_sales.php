@@ -1,8 +1,9 @@
 <?php
 // CORS Headers
-header('Access-Control-Allow-Origin: http://localhost:8081');
+header('Access-Control-Allow-Origin: http://localhost:8080');
 header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
 header('Access-Control-Allow-Headers: Content-Type, Authorization');
+header('Access-Control-Allow-Credentials: true');
 header('Content-Type: application/json');
 
 // Handle preflight OPTIONS request
@@ -34,13 +35,13 @@ try {
     $limit = isset($_GET['limit']) ? max(1, min(100, intval($_GET['limit']))) : 20;
     $offset = ($page - 1) * $limit;
 
-    // Get seller's completed auctions with payment, payout and commission data
+    // Get seller's completed auctions with payment, payout and commission data using auction_winners
     $query = "
-        SELECT 
+        SELECT DISTINCT
             a.id as auction_id,
             a.title as item_title,
-            a.current_price as sold_price,
-            a.end_time,
+            aw.winning_amount as sold_price,
+            aw.created_at as sale_date,
             a.status,
             u.username as buyer_name,
             u.email as buyer_email,
@@ -51,17 +52,15 @@ try {
             po.platform_fee as commission_amount,
             po.status as payout_status,
             po.created_at as payout_date,
-            c.platform_fee as commission_fee,
-            c.percentage as commission_percentage
-        FROM auctions a
-        LEFT JOIN users u ON a.current_bidder_id = u.id
+            (SELECT platform_fee FROM commissions WHERE auction_id = a.id AND status = 'completed' LIMIT 1) as commission_fee,
+            (SELECT percentage FROM commissions WHERE auction_id = a.id AND status = 'completed' LIMIT 1) as commission_percentage
+        FROM auction_winners aw
+        JOIN auctions a ON aw.auction_id = a.id
+        LEFT JOIN users u ON aw.winner_id = u.id
         LEFT JOIN payments p ON a.id = p.auction_id AND p.status = 'completed'
         LEFT JOIN payouts po ON a.id = po.auction_id
-        LEFT JOIN commissions c ON a.id = c.auction_id
         WHERE a.seller_id = :seller_id 
-        AND a.status = 'completed'
-        AND a.current_bidder_id IS NOT NULL
-        ORDER BY a.end_time DESC
+        ORDER BY aw.created_at DESC
         LIMIT :limit OFFSET :offset
     ";
 
@@ -76,10 +75,9 @@ try {
     // Get total count for pagination
     $countQuery = "
         SELECT COUNT(*) as total 
-        FROM auctions a 
+        FROM auction_winners aw
+        JOIN auctions a ON aw.auction_id = a.id
         WHERE a.seller_id = :seller_id 
-        AND a.status = 'completed'
-        AND a.current_bidder_id IS NOT NULL
     ";
     $countStmt = $db->prepare($countQuery);
     $countStmt->bindParam(':seller_id', $seller_id, PDO::PARAM_INT);
@@ -97,7 +95,7 @@ try {
             'soldPrice' => floatval($sale['sold_price']),
             'commission' => floatval($sale['commission_fee'] ?: $sale['platform_fee'] ?: 0),
             'payout' => floatval($sale['payout_amount'] ?: ($sale['sold_price'] * 0.9)), // 90% if no payout record
-            'date' => $sale['end_time'],
+            'date' => $sale['sale_date'],
             'payment_date' => $sale['payment_date'],
             'payout_date' => $sale['payout_date'],
             'status' => $sale['payout_status'] ?: ($sale['payment_status'] === 'completed' ? 'pending' : 'processing'),
@@ -111,14 +109,13 @@ try {
     $summaryQuery = "
         SELECT 
             COUNT(*) as total_sales,
-            COALESCE(SUM(a.current_price), 0) as total_revenue,
+            COALESCE(SUM(aw.winning_amount), 0) as total_revenue,
             COALESCE(SUM(po.net_amount), 0) as total_payouts,
             COALESCE(SUM(po.platform_fee), 0) as total_commission
-        FROM auctions a
+        FROM auction_winners aw
+        JOIN auctions a ON aw.auction_id = a.id
         LEFT JOIN payouts po ON a.id = po.auction_id
         WHERE a.seller_id = :seller_id 
-        AND a.status = 'completed'
-        AND a.current_bidder_id IS NOT NULL
     ";
 
     $summaryStmt = $db->prepare($summaryQuery);

@@ -10,6 +10,7 @@ import {
   Package,
   Calculator,
 } from "lucide-react";
+import { apiService } from "@/services/api";
 
 interface Sale {
   id: number;
@@ -52,22 +53,15 @@ const SalesTab: React.FC = () => {
   const limit = 10;
 
   // In production, get seller_id from auth context
-  const sellerId = 1; // Temporary hardcoded value
+  const sellerId = 9; // Using actual seller ID from test data (Gaming PC seller)
 
   const fetchSales = async () => {
     try {
       setLoading(true);
       setError(null);
 
-      const response = await fetch(
-        `http://localhost:8000/sales/seller_sales.php?seller_id=${sellerId}&page=${page}&limit=${limit}`
-      );
-
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-      }
-
-      const result = await response.json();
+      // Use the API service to fetch sales data
+      const result = await apiService.getSellerSales(sellerId, page, limit);
       console.log("[SalesTab] API Response:", result);
 
       if (!result.success) {
