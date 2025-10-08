@@ -266,14 +266,22 @@ const ListingsTab: React.FC = () => {
 
   const deleteAuction = async (id: number) => {
     try {
+      // Get session token for authorization
+      const sessionToken = localStorage.getItem("bidlode_session_token");
+      const headers: Record<string, string> = {
+        "Content-Type": "application/json",
+      };
+
+      if (sessionToken) {
+        headers["Authorization"] = `Bearer ${sessionToken}`;
+      }
+
       const response = await fetch(
-        `http://localhost:8000/api/auctions/delete.php/${id}`,
+        `http://localhost:8000/auctions/delete.php/${id}`,
         {
           method: "DELETE",
           credentials: "include",
-          headers: {
-            "Content-Type": "application/json",
-          },
+          headers,
         }
       );
 

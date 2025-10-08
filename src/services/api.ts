@@ -882,6 +882,13 @@ class ApiService {
   }
 
   /**
+   * Get detailed auction information including images
+   */
+  async getAuctionDetails(auctionId: number): Promise<ApiResponse> {
+    return this.makeRequest(`/auction-details.php?id=${auctionId}`);
+  }
+
+  /**
    * Get seller's sales data
    */
   async getSellerSales(sellerId: number, page: number = 1, limit: number = 10): Promise<ApiResponse> {

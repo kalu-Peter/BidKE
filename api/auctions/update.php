@@ -4,29 +4,24 @@
 error_reporting(E_ALL);
 ini_set('display_errors', 0);
 
+require_once '../utils/cors.php';
+
 header("Content-Type: application/json");
 
-// Ensure CORS headers are present for this endpoint even if connect.php isn't processed
-if (isset($_SERVER['HTTP_ORIGIN'])) {
-    header('Access-Control-Allow-Origin: ' . $_SERVER['HTTP_ORIGIN']);
-    header('Vary: Origin');
-} else {
-    header('Access-Control-Allow-Origin: http://localhost:8080');
-}
-header('Access-Control-Allow-Credentials: true');
-header('Access-Control-Allow-Methods: GET, POST, PUT, PATCH, DELETE, OPTIONS');
-header('Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With');
+// Set CORS headers
+setCORSHeaders();
+handlePreflight();
 
-if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
-    http_response_code(204);
-    exit();
-}
+// Debug logging for CORS
+error_log("CORS Debug - Origin: " . ($_SERVER['HTTP_ORIGIN'] ?? 'none'));
+error_log("CORS Debug - Method: " . $_SERVER['REQUEST_METHOD']);
+error_log("CORS Debug - Headers sent: " . json_encode(headers_list()));
 
 require_once '../config/connect.php';
 require_once '../models/Auth.php';
 
 // Helper function for handling image uploads
-function handleImageUpload($uploadedFiles, $index, $auctionId, $db)
+function handleImageUpload($uploadedFiles, $index, $auctionId, $db, $uploadedBy)
 {
     try {
         // Get file info based on whether it's an array or single file
@@ -59,8 +54,8 @@ function handleImageUpload($uploadedFiles, $index, $auctionId, $db)
         // Generate unique filename
         $extension = pathinfo($fileName, PATHINFO_EXTENSION);
         $newFileName = uniqid() . '_' . time() . '.' . $extension;
-        $uploadPath = 'uploads/' . $newFileName;
-        $fullPath = __DIR__ . '/../../uploads/' . $newFileName;
+        $uploadPath = '/uploads/' . $newFileName;
+        $fullPath = __DIR__ . '/../uploads/' . $newFileName;
 
         // Create uploads directory if it doesn't exist
         $uploadsDir = dirname($fullPath);
@@ -70,22 +65,48 @@ function handleImageUpload($uploadedFiles, $index, $auctionId, $db)
 
         // Move uploaded file
         if (!move_uploaded_file($fileTmp, $fullPath)) {
+            error_log("Failed to move uploaded file from '$fileTmp' to '$fullPath'");
+            error_log("Upload directory exists: " . (is_dir($uploadsDir) ? 'YES' : 'NO'));
+            error_log("Upload directory writable: " . (is_writable($uploadsDir) ? 'YES' : 'NO'));
             return ['success' => false, 'message' => 'Failed to save file'];
         }
 
-        // Insert into database
-        $fileSql = "INSERT INTO auction_files (auction_id, file_type, original_name, file_name, file_path, file_size, mime_type) VALUES (:auction_id, 'image', :original_name, :file_name, :file_path, :file_size, :mime_type)";
-        $fileStmt = $db->prepare($fileSql);
-        $fileStmt->execute([
+        // Verify file was saved successfully
+        if (!file_exists($fullPath)) {
+            error_log("File was moved but doesn't exist at '$fullPath'");
+            return ['success' => false, 'message' => 'File save verification failed'];
+        }
+
+        // Check if this auction has any images yet (to determine if this should be primary)
+        $existingImagesStmt = $db->prepare("SELECT COUNT(*) FROM auction_images WHERE auction_id = :auction_id AND is_active = TRUE");
+        $existingImagesStmt->execute([':auction_id' => $auctionId]);
+        $existingImageCount = $existingImagesStmt->fetchColumn();
+
+        // If this is the first image, make it primary
+        $isPrimary = ($existingImageCount == 0);
+
+        // Get next sort order
+        $sortOrderStmt = $db->prepare("SELECT COALESCE(MAX(sort_order), 0) + 1 FROM auction_images WHERE auction_id = :auction_id");
+        $sortOrderStmt->execute([':auction_id' => $auctionId]);
+        $nextSortOrder = $sortOrderStmt->fetchColumn();
+
+        // Insert into auction_images table
+        $imageSql = "INSERT INTO auction_images (auction_id, image_url, alt_text, is_primary, sort_order, file_name, file_size, mime_type, uploaded_by) 
+                     VALUES (:auction_id, :image_url, :alt_text, :is_primary, :sort_order, :file_name, :file_size, :mime_type, :uploaded_by)";
+        $imageStmt = $db->prepare($imageSql);
+        $imageStmt->execute([
             ':auction_id' => $auctionId,
-            ':original_name' => $fileName,
+            ':image_url' => $uploadPath,
+            ':alt_text' => pathinfo($fileName, PATHINFO_FILENAME),
+            ':is_primary' => $isPrimary ? 'TRUE' : 'FALSE',
+            ':sort_order' => $nextSortOrder,
             ':file_name' => $newFileName,
-            ':file_path' => $uploadPath,
             ':file_size' => $fileSize,
-            ':mime_type' => $fileType
+            ':mime_type' => $fileType,
+            ':uploaded_by' => $uploadedBy
         ]);
 
-        return ['success' => true, 'file_path' => $uploadPath];
+        return ['success' => true, 'file_path' => $uploadPath, 'is_primary' => $isPrimary];
     } catch (Exception $e) {
         return ['success' => false, 'message' => $e->getMessage()];
     }
@@ -267,29 +288,57 @@ try {
 
     // Handle image operations for POST requests (FormData)
     if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-        // Handle image removal
-        if (isset($input['remove_images']) && is_array($input['remove_images'])) {
-            foreach ($input['remove_images'] as $imageToRemove) {
-                // Remove from database
-                $removeStmt = $db->prepare("DELETE FROM auction_files WHERE auction_id = :auction_id AND (file_path = :file_path OR file_name = :file_name)");
-                $removeStmt->execute([
-                    ':auction_id' => $auctionId,
-                    ':file_path' => $imageToRemove,
-                    ':file_name' => basename($imageToRemove)
-                ]);
+        // Debug: Log what we received
+        error_log('POST request - $_POST: ' . json_encode($_POST));
+        error_log('POST request - $_FILES: ' . json_encode($_FILES));
 
-                // Remove physical file if it exists
-                $filePath = '';
-                if (strpos($imageToRemove, 'http://localhost:8000/') === 0) {
-                    $filePath = __DIR__ . '/../../' . str_replace('http://localhost:8000/', '', $imageToRemove);
-                } else if (strpos($imageToRemove, '/') === 0) {
-                    $filePath = __DIR__ . '/../../' . ltrim($imageToRemove, '/');
-                } else {
-                    $filePath = __DIR__ . '/../../uploads/' . basename($imageToRemove);
+        // Handle image removal
+        if (isset($input['remove_images']) && is_array($input['remove_images']) && count($input['remove_images']) > 0) {
+            error_log('Removing ' . count($input['remove_images']) . ' images: ' . json_encode($input['remove_images']));
+            foreach ($input['remove_images'] as $imageToRemove) {
+                // Clean up the image URL for comparison
+                $cleanImageUrl = $imageToRemove;
+                if (strpos($cleanImageUrl, 'http://localhost:8000') === 0) {
+                    $cleanImageUrl = str_replace('http://localhost:8000', '', $cleanImageUrl);
                 }
 
-                if (file_exists($filePath)) {
-                    unlink($filePath);
+                // Find and remove from database (auction_images table)
+                $removeStmt = $db->prepare("DELETE FROM auction_images WHERE auction_id = :auction_id AND image_url = :image_url");
+                $result = $removeStmt->execute([
+                    ':auction_id' => $auctionId,
+                    ':image_url' => $cleanImageUrl
+                ]);
+
+                if ($result && $removeStmt->rowCount() > 0) {
+                    error_log('Successfully removed image from database: ' . $cleanImageUrl);
+
+                    // Remove physical file if it exists
+                    $filePath = __DIR__ . '/../../' . ltrim($cleanImageUrl, '/');
+                    if (file_exists($filePath)) {
+                        if (unlink($filePath)) {
+                            error_log('Successfully removed physical file: ' . $filePath);
+                        } else {
+                            error_log('Failed to remove physical file: ' . $filePath);
+                        }
+                    } else {
+                        error_log('Physical file not found: ' . $filePath);
+                    }
+                } else {
+                    error_log('Failed to remove image from database: ' . $cleanImageUrl);
+                }
+            }
+
+            // After removing images, check if we need to set a new primary image
+            $primaryCheckStmt = $db->prepare("SELECT COUNT(*) FROM auction_images WHERE auction_id = :auction_id AND is_primary = TRUE AND is_active = TRUE");
+            $primaryCheckStmt->execute([':auction_id' => $auctionId]);
+            $primaryCount = $primaryCheckStmt->fetchColumn();
+
+            // If no primary image exists, make the first remaining image primary
+            if ($primaryCount == 0) {
+                $newPrimaryStmt = $db->prepare("UPDATE auction_images SET is_primary = TRUE WHERE auction_id = :auction_id AND is_active = TRUE ORDER BY sort_order ASC LIMIT 1");
+                $newPrimaryStmt->execute([':auction_id' => $auctionId]);
+                if ($newPrimaryStmt->rowCount() > 0) {
+                    error_log('Set new primary image for auction: ' . $auctionId);
                 }
             }
         }
@@ -303,18 +352,22 @@ try {
                 $fileCount = count($uploadedFiles['name']);
                 for ($i = 0; $i < $fileCount; $i++) {
                     if ($uploadedFiles['error'][$i] === UPLOAD_ERR_OK) {
-                        $result = handleImageUpload($uploadedFiles, $i, $auctionId, $db);
+                        $result = handleImageUpload($uploadedFiles, $i, $auctionId, $db, $userId);
                         if (!$result['success']) {
                             error_log('Image upload failed: ' . $result['message']);
+                        } else {
+                            error_log('Image uploaded successfully: ' . $result['file_path'] . ($result['is_primary'] ? ' (PRIMARY)' : ''));
                         }
                     }
                 }
             } else {
                 // Single file
                 if ($uploadedFiles['error'] === UPLOAD_ERR_OK) {
-                    $result = handleImageUpload($uploadedFiles, null, $auctionId, $db);
+                    $result = handleImageUpload($uploadedFiles, null, $auctionId, $db, $userId);
                     if (!$result['success']) {
                         error_log('Image upload failed: ' . $result['message']);
+                    } else {
+                        error_log('Image uploaded successfully: ' . $result['file_path'] . ($result['is_primary'] ? ' (PRIMARY)' : ''));
                     }
                 }
             }

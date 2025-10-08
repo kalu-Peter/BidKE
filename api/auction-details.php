@@ -94,8 +94,8 @@ try {
         $tblStmt->execute();
         $tbls = $tblStmt->fetchAll(PDO::FETCH_COLUMN);
 
-        $useFiles = in_array('auction_files', $tbls);
-        $useImages = in_array('auction_images', $tbls) && !$useFiles;
+        $useImages = in_array('auction_images', $tbls);
+        $useFiles = in_array('auction_files', $tbls) && !$useImages;
 
         if ($useFiles) {
             $fstmt = $db->prepare("SELECT file_path, file_type FROM auction_files WHERE auction_id = :auction_id ORDER BY id ASC");

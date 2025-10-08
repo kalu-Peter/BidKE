@@ -102,13 +102,24 @@ const ListingModal: React.FC<ListingModalProps> = ({
 
     setLoading(true);
     try {
-      // You can extend this to fetch more detailed information
-      // For now, we'll use the basic auction data
-      setDetailedAuction({
-        ...auction,
-        bids: [], // This would come from an API call
-        watchers: [], // This would come from an API call
-      });
+      // Fetch detailed auction information from API
+      const response = await apiService.getAuctionDetails(auction.id);
+
+      if (response.success && response.data) {
+        setDetailedAuction({
+          ...response.data,
+          bids: response.data.bids || [],
+          watchers: response.data.watchers || [],
+        });
+      } else {
+        // Fallback to basic auction data if API call fails
+        console.warn("Failed to fetch detailed auction data, using basic data");
+        setDetailedAuction({
+          ...auction,
+          bids: [],
+          watchers: [],
+        });
+      }
     } catch (error) {
       console.error("Error fetching auction details:", error);
       // Fallback to basic auction data
@@ -226,18 +237,35 @@ const ListingModal: React.FC<ListingModalProps> = ({
         formData.append(`new_images[]`, file);
       });
 
-      // Add images to remove
-      imagesToRemove.forEach((imageUrl, index) => {
-        formData.append(`remove_images[]`, imageUrl);
-      });
+      // Add images to remove (only if there are any)
+      if (imagesToRemove.length > 0) {
+        imagesToRemove.forEach((imageUrl, index) => {
+          formData.append(`remove_images[]`, imageUrl);
+        });
+      }
 
       // Make API call to update auction
+      console.log("Making API request to update auction:", detailedAuction.id);
+      console.log(
+        "New images to upload:",
+        newImages.map((f) => f.name)
+      );
+      console.log("Images to remove:", imagesToRemove);
+      // Get session token for authorization
+      const sessionToken = localStorage.getItem("bidlode_session_token");
+      const headers: Record<string, string> = {};
+
+      if (sessionToken) {
+        headers["Authorization"] = `Bearer ${sessionToken}`;
+      }
+
       const response = await fetch(
-        "http://localhost:8000/api/auctions/update.php",
+        "http://localhost:8000/auctions/update.php",
         {
           method: "POST",
           body: formData,
           credentials: "include",
+          headers,
         }
       );
 
@@ -266,6 +294,12 @@ const ListingModal: React.FC<ListingModalProps> = ({
       }
     } catch (error) {
       console.error("Error updating auction:", error);
+      console.error("Error details:", {
+        message: error instanceof Error ? error.message : "Unknown error",
+        stack: error instanceof Error ? error.stack : "No stack trace",
+        type: typeof error,
+      });
+
       toast({
         title: "Error",
         description:
@@ -280,6 +314,10 @@ const ListingModal: React.FC<ListingModalProps> = ({
   // Prepare images array (filtered for removed images)
   const images = React.useMemo(() => {
     if (!detailedAuction) return [];
+
+    console.log("📷 Processing images for auction:", detailedAuction.id);
+    console.log("📷 Raw images data:", detailedAuction.images);
+    console.log("📷 Images to remove:", imagesToRemove);
 
     const imageList = [];
 
@@ -313,7 +351,14 @@ const ListingModal: React.FC<ListingModalProps> = ({
 
     // Add images from images array (filter out removed ones)
     if (detailedAuction.images && Array.isArray(detailedAuction.images)) {
-      detailedAuction.images.forEach((img: any) => {
+      console.log(
+        "📷 Processing",
+        detailedAuction.images.length,
+        "images from array"
+      );
+
+      detailedAuction.images.forEach((img: any, index: number) => {
+        console.log(`📷 Processing image ${index}:`, img, typeof img);
         let imageUrl = "";
         let originalPath = "";
 
@@ -322,6 +367,9 @@ const ListingModal: React.FC<ListingModalProps> = ({
           imageUrl = img.startsWith("http")
             ? img
             : `http://localhost:8000${img.startsWith("/") ? "" : "/"}${img}`;
+          console.log(
+            `📷 String image ${index}: ${originalPath} -> ${imageUrl}`
+          );
         } else if (typeof img === "object" && img !== null) {
           const url =
             img.image_url || img.image_path || img.file_path || img.url;
@@ -331,19 +379,50 @@ const ListingModal: React.FC<ListingModalProps> = ({
               ? url
               : `http://localhost:8000${url.startsWith("/") ? "" : "/"}${url}`;
           }
+          console.log(
+            `📷 Object image ${index}: ${originalPath} -> ${imageUrl}`
+          );
         }
+
+        // Check removal conditions
+        const inOriginalRemoveList = imagesToRemove.includes(originalPath);
+        const inImageUrlRemoveList = imagesToRemove.includes(imageUrl);
+        const alreadyInList = imageList.includes(imageUrl);
+
+        console.log(`📷 Image ${index} checks:`, {
+          imageUrl,
+          originalPath,
+          inOriginalRemoveList,
+          inImageUrlRemoveList,
+          alreadyInList,
+          willAdd:
+            imageUrl &&
+            !inOriginalRemoveList &&
+            !inImageUrlRemoveList &&
+            !alreadyInList,
+        });
 
         // Only add if not in removed list and not already in imageList
         if (
           imageUrl &&
-          !imagesToRemove.includes(originalPath) &&
-          !imagesToRemove.includes(imageUrl) &&
-          !imageList.includes(imageUrl)
+          !inOriginalRemoveList &&
+          !inImageUrlRemoveList &&
+          !alreadyInList
         ) {
           imageList.push(imageUrl);
+          console.log(`📷 Added image ${index} to list:`, imageUrl);
+        } else {
+          console.log(`📷 Skipped image ${index}:`, {
+            imageUrl,
+            inOriginalRemoveList,
+            inImageUrlRemoveList,
+            alreadyInList,
+          });
         }
       });
     }
+
+    console.log("📷 Final image list:", imageList);
 
     return imageList.length > 0 ? imageList : ["/placeholder.svg"];
   }, [detailedAuction, imagesToRemove]);
@@ -355,7 +434,12 @@ const ListingModal: React.FC<ListingModalProps> = ({
 
   // Combined images for display (existing + new)
   const allImages = React.useMemo(() => {
-    return [...images, ...newImagePreviews];
+    console.log("🖼️ Creating combined images array:");
+    console.log("🖼️ Existing images:", images);
+    console.log("🖼️ New image previews:", newImagePreviews);
+    const combined = [...images, ...newImagePreviews];
+    console.log("🖼️ Combined array:", combined);
+    return combined;
   }, [images, newImagePreviews]);
 
   if (!auction || !detailedAuction) return null;
@@ -414,11 +498,21 @@ const ListingModal: React.FC<ListingModalProps> = ({
             <div className="space-y-4">
               <div className="relative aspect-video bg-gray-100 rounded-lg overflow-hidden">
                 <img
-                  src={allImages[selectedImageIndex] || "/placeholder.svg"}
+                  src={(() => {
+                    const src =
+                      allImages[selectedImageIndex] || "/placeholder.svg";
+                    console.log("🖼️ Displaying image:", {
+                      selectedImageIndex,
+                      src,
+                      allImagesLength: allImages.length,
+                    });
+                    return src;
+                  })()}
                   alt={detailedAuction.title}
                   className="w-full h-full object-cover"
                   onError={(e) => {
                     const target = e.target as HTMLImageElement;
+                    console.log("🚨 Image load error for:", target.src);
                     target.src = "/placeholder.svg";
                   }}
                 />
@@ -430,18 +524,44 @@ const ListingModal: React.FC<ListingModalProps> = ({
                       variant="destructive"
                       size="sm"
                       className="absolute top-2 right-2"
-                      onClick={() => {
+                      onClick={(e) => {
+                        e.stopPropagation(); // Prevent event bubbling
+                        console.log(
+                          "🗑️ Remove button clicked for image:",
+                          allImages[selectedImageIndex]
+                        );
+
+                        // Double confirmation for removing existing images
                         const currentImage = allImages[selectedImageIndex];
+                        if (!currentImage.startsWith("blob:")) {
+                          if (
+                            !window.confirm(
+                              "Are you sure you want to remove this image? This action cannot be undone."
+                            )
+                          ) {
+                            console.log("🗑️ User cancelled image removal");
+                            return;
+                          }
+                        }
+
                         // Check if it's a new image (blob URL) or existing image
                         if (currentImage.startsWith("blob:")) {
                           // Remove from new images
                           const newImageIndex =
                             selectedImageIndex - images.length;
                           if (newImageIndex >= 0) {
+                            console.log(
+                              "🗑️ Removing new image at index:",
+                              newImageIndex
+                            );
                             handleRemoveNewImage(newImageIndex);
                           }
                         } else {
                           // Remove existing image
+                          console.log(
+                            "🗑️ Removing existing image:",
+                            currentImage
+                          );
                           handleRemoveExistingImage(currentImage);
                         }
                         // Adjust selected index if necessary
