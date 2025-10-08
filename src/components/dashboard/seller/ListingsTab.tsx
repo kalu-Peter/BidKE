@@ -18,6 +18,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { apiService } from "@/services/api";
 import { Auction } from "../../../services/api";
 import { toast } from "@/hooks/use-toast";
+import ListingModal from "./ListingModal";
 
 const ListingsTab: React.FC = () => {
   const { user } = useAuth();
@@ -30,6 +31,8 @@ const ListingsTab: React.FC = () => {
   const [statusFilter, setStatusFilter] = useState(
     searchParams.get("status") || "all"
   );
+  const [selectedListing, setSelectedListing] = useState<Auction | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   // Fetch seller's listings
   useEffect(() => {
@@ -142,8 +145,16 @@ const ListingsTab: React.FC = () => {
   };
 
   const handleViewListing = (id: number) => {
-    // Navigate to auction details page
-    window.open(`/auction/${id}`, "_blank");
+    const listing = listings.find((l) => l.id === id);
+    if (listing) {
+      setSelectedListing(listing);
+      setIsModalOpen(true);
+    }
+  };
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setSelectedListing(null);
   };
 
   const handleEditListing = (id: number) => {
@@ -488,6 +499,13 @@ const ListingsTab: React.FC = () => {
           </div>
         )}
       </CardContent>
+
+      {/* Listing Details Modal */}
+      <ListingModal
+        auction={selectedListing}
+        open={isModalOpen}
+        onClose={handleCloseModal}
+      />
     </Card>
   );
 };
