@@ -73,7 +73,8 @@ interface Auction {
   seller_name: string;
   image_url: string | null;
   image_path?: string; // From auction_files
-  images?: Array<{ image_url: string; image_path?: string }>; // For seller listings
+  primary_image?: string; // Primary image URL from auction_images
+  images?: Array<string | { image_url: string; image_path?: string }>; // Updated to support string array
   bid_count: number;
   watcher_count: number;
   is_featured: boolean;
