@@ -58,8 +58,8 @@ try {
             // Live = active auctions
             $whereClause .= " AND status = 'active'";
         } elseif ($status === 'sold') {
-            // Sold = ended auctions with winner
-            $whereClause .= " AND status = 'ended' AND EXISTS (SELECT 1 FROM auction_winners aw WHERE aw.auction_id = a.id)";
+            // Sold = auctions with 'sold' status OR 'ended' status with winner
+            $whereClause .= " AND (status = 'sold' OR (status = 'ended' AND EXISTS (SELECT 1 FROM auction_winners aw WHERE aw.auction_id = a.id)))";
         } elseif ($status === 'ended') {
             // Ended = ended auctions without winner
             $whereClause .= " AND status = 'ended' AND NOT EXISTS (SELECT 1 FROM auction_winners aw WHERE aw.auction_id = a.id)";
@@ -81,6 +81,7 @@ try {
             SELECT a.*, 
                    CASE 
                        WHEN a.status = 'active' THEN 'live'
+                       WHEN a.status = 'sold' THEN 'sold'
                        WHEN a.status = 'ended' AND aw.auction_id IS NOT NULL THEN 'sold'
                        WHEN a.status = 'ended' AND aw.auction_id IS NULL THEN 'ended'
                        ELSE a.status 
