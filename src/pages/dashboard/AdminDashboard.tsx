@@ -7,7 +7,7 @@ import ListingsControlTab from "@/components/dashboard/admin/ListingsControlTab"
 import TransactionsTab from "@/components/dashboard/admin/TransactionsTab";
 import ReportsTab from "@/components/dashboard/admin/ReportsTab";
 import AdminSignUpTab from "@/components/dashboard/admin/AdminSignUpTab";
-import SellerVerificationsTab from "@/components/dashboard/admin/SellerVerificationsTab";
+import VerificationsTab from "@/components/dashboard/admin/VerificationsTab";
 
 const AdminDashboard = () => {
   const { pathname } = useLocation();
@@ -21,7 +21,7 @@ const AdminDashboard = () => {
       return <TransactionsTab />;
     if (pathname.startsWith("/dashboard/reports")) return <ReportsTab />;
     if (pathname.startsWith("/dashboard/verifications"))
-      return <SellerVerificationsTab />;
+      return <VerificationsTab />;
     if (
       pathname.startsWith("/dashboard/admin-signup") ||
       pathname.startsWith("/admin-signup")

@@ -747,6 +747,42 @@ class ApiService {
   }
 
   /**
+   * Admin: get users with verification management data
+   */
+  async getUsersVerificationManagement(params: { 
+    limit?: number; 
+    offset?: number; 
+    search?: string; 
+    user_status?: string; 
+    verification_status?: string; 
+  } = {}): Promise<ApiResponse<{users: any[], total: number, limit: number, offset: number}>> {
+    const q = new URLSearchParams();
+    if (params.limit) q.append('limit', params.limit.toString());
+    if (params.offset) q.append('offset', params.offset.toString());
+    if (params.search) q.append('search', params.search);
+    if (params.user_status) q.append('user_status', params.user_status);
+    if (params.verification_status) q.append('verification_status', params.verification_status);
+    return this.makeRequest(`/admin/user-verification-management.php?${q.toString()}`);
+  }
+
+  /**
+   * Admin: update user verification status
+   */
+  async updateUserVerificationStatus(userId: number, updateData: {
+    user_status?: string;
+    is_verified?: boolean;
+    verification_status?: string;
+    verified_by?: number;
+    seller_status?: string;
+    rejection_reason?: string;
+  }): Promise<ApiResponse> {
+    return this.makeRequest('/admin/user-verification-management.php', {
+      method: 'PUT',
+      body: JSON.stringify({ user_id: userId, ...updateData })
+    });
+  }
+
+  /**
    * Admin: fetch overview/dashboard metrics
    */
   async getAdminOverview(): Promise<ApiResponse<any>> {
