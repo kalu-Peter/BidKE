@@ -36,6 +36,7 @@ interface Auction {
   end_time: string;
   images: string[];
   seller_name: string;
+  location?: string;
   bid_count: number;
   category_name: string;
   make?: string;
@@ -269,7 +270,9 @@ const CategorySection = ({
                         <Eye className="w-3 h-3" />
                         <span>{auction.bid_count} bids</span>
                       </div>
-                      <span>by {auction.seller_name}</span>
+                      <span>
+                        {auction.location || "Location not specified"}
+                      </span>
                     </div>
                   </CardContent>
                 </Card>
