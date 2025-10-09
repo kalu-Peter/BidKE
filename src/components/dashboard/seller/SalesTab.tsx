@@ -9,15 +9,19 @@ import {
   TrendingUp,
   Package,
   Calculator,
+  MessageCircle,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { apiService } from "@/services/api";
+import MessagingModal from "@/components/messaging/MessagingModal";
 
 interface Sale {
   id: number;
   item: string;
   buyer: string;
   buyer_email?: string;
+  buyer_id?: number;
+  auction_id?: number;
   soldPrice: number;
   commission: number;
   payout: number;
@@ -63,6 +67,12 @@ const SalesTab: React.FC = () => {
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
   const limit = 10;
+  const [messagingModalOpen, setMessagingModalOpen] = useState(false);
+  const [selectedSaleForMessaging, setSelectedSaleForMessaging] =
+    useState<Sale | null>(null);
+  const [unreadMessageCounts, setUnreadMessageCounts] = useState<
+    Record<number, number>
+  >({});
 
   const fetchSales = async () => {
     if (!user?.id) {
@@ -120,6 +130,68 @@ const SalesTab: React.FC = () => {
         return "bg-gray-100 text-gray-800";
     }
   };
+
+  // Handle contact buyer functionality
+  const handleContactBuyer = (sale: Sale) => {
+    if (sale.buyer_id && sale.auction_id && user) {
+      setSelectedSaleForMessaging(sale);
+      setMessagingModalOpen(true);
+    }
+  };
+
+  // Fetch unread message counts for sales
+  const fetchUnreadCounts = React.useCallback(async () => {
+    if (!user?.id || sales.length === 0) return;
+
+    try {
+      const promises = sales
+        .filter((sale) => sale.auction_id && sale.buyer_id)
+        .map(async (sale) => {
+          try {
+            const response = await fetch(
+              `http://localhost:8000/messages.php?auction_id=${sale.auction_id}&user_id=${user.id}`,
+              {
+                method: "GET",
+                headers: {
+                  "Content-Type": "application/json",
+                },
+                credentials: "include",
+              }
+            );
+
+            if (response.ok) {
+              const data = await response.json();
+              if (data.success) {
+                return {
+                  auctionId: sale.auction_id!,
+                  unreadCount: data.data.unread_count || 0,
+                };
+              }
+            }
+          } catch (error) {
+            console.error(
+              `Error fetching unread count for sale ${sale.id}:`,
+              error
+            );
+          }
+          return { auctionId: sale.auction_id!, unreadCount: 0 };
+        });
+
+      const results = await Promise.all(promises);
+      const counts: Record<number, number> = {};
+      results.forEach(({ auctionId, unreadCount }) => {
+        counts[auctionId] = unreadCount;
+      });
+      setUnreadMessageCounts(counts);
+    } catch (error) {
+      console.error("Error fetching unread message counts:", error);
+    }
+  }, [user?.id, sales]);
+
+  // Fetch unread counts when sales are loaded
+  React.useEffect(() => {
+    fetchUnreadCounts();
+  }, [fetchUnreadCounts]);
 
   const payoutMethods = [
     {
@@ -330,11 +402,36 @@ const SalesTab: React.FC = () => {
                         </Badge>
                       </td>
                       <td className="p-4">
-                        <Button variant="outline" size="sm">
-                          {sale.status === "completed" || sale.status === "paid"
-                            ? "View Receipt"
-                            : "Track Payment"}
-                        </Button>
+                        <div className="flex space-x-2">
+                          <Button variant="outline" size="sm">
+                            {sale.status === "completed" ||
+                            sale.status === "paid"
+                              ? "View Receipt"
+                              : "Track Payment"}
+                          </Button>
+                          {(sale.status === "completed" ||
+                            sale.status === "paid") &&
+                            sale.buyer_id &&
+                            sale.auction_id && (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleContactBuyer(sale)}
+                                className="relative"
+                              >
+                                <MessageCircle className="w-4 h-4 mr-1" />
+                                Contact Buyer
+                                {unreadMessageCounts[sale.auction_id] > 0 && (
+                                  <Badge
+                                    variant="destructive"
+                                    className="absolute -top-2 -right-2 h-5 w-5 rounded-full p-0 flex items-center justify-center text-xs"
+                                  >
+                                    {unreadMessageCounts[sale.auction_id]}
+                                  </Badge>
+                                )}
+                              </Button>
+                            )}
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -540,6 +637,22 @@ const SalesTab: React.FC = () => {
           </div>
         </CardContent>
       </Card>
+
+      {/* Messaging Modal */}
+      {selectedSaleForMessaging && (
+        <MessagingModal
+          isOpen={messagingModalOpen}
+          onClose={() => {
+            setMessagingModalOpen(false);
+            setSelectedSaleForMessaging(null);
+            // Refresh unread counts after closing messaging
+            fetchUnreadCounts();
+          }}
+          auctionId={selectedSaleForMessaging.auction_id!}
+          recipientId={selectedSaleForMessaging.buyer_id!}
+          auctionTitle={selectedSaleForMessaging.item}
+        />
+      )}
     </div>
   );
 };

@@ -2,13 +2,22 @@ import React from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Trophy, Receipt, Eye } from "lucide-react";
+import { Trophy, Receipt, Eye, MessageCircle } from "lucide-react";
+import MessagingModal from "@/components/messaging/MessagingModal";
+import { useAuth } from "@/contexts/AuthContext";
 
 const WonAuctionsTab: React.FC = () => {
+  const { user } = useAuth();
   const [wonAuctions, setWonAuctions] = React.useState<any[]>([]);
   const [loading, setLoading] = React.useState(false);
   const [detailAuction, setDetailAuction] = React.useState<any | null>(null);
   const [modalImage, setModalImage] = React.useState<string | null>(null);
+  const [messagingModalOpen, setMessagingModalOpen] = React.useState(false);
+  const [selectedAuctionForMessaging, setSelectedAuctionForMessaging] =
+    React.useState<any | null>(null);
+  const [unreadMessageCounts, setUnreadMessageCounts] = React.useState<
+    Record<number, number>
+  >({});
 
   const normalizeUrl = (url: string | null) => {
     if (!url) return null;
@@ -100,6 +109,59 @@ const WonAuctionsTab: React.FC = () => {
       mounted = false;
     };
   }, []);
+
+  // Fetch unread message counts for auctions
+  const fetchUnreadCounts = React.useCallback(async () => {
+    if (!user?.id || wonAuctions.length === 0) return;
+
+    try {
+      // Fetch unread counts for all auctions
+      const promises = wonAuctions.map(async (auction) => {
+        try {
+          const response = await fetch(
+            `http://localhost:8000/messages.php?auction_id=${auction.id}&user_id=${user.id}`,
+            {
+              method: "GET",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              credentials: "include",
+            }
+          );
+
+          if (response.ok) {
+            const data = await response.json();
+            if (data.success) {
+              return {
+                auctionId: auction.id,
+                unreadCount: data.data.unread_count || 0,
+              };
+            }
+          }
+        } catch (error) {
+          console.error(
+            `Error fetching unread count for auction ${auction.id}:`,
+            error
+          );
+        }
+        return { auctionId: auction.id, unreadCount: 0 };
+      });
+
+      const results = await Promise.all(promises);
+      const counts: Record<number, number> = {};
+      results.forEach(({ auctionId, unreadCount }) => {
+        counts[auctionId] = unreadCount;
+      });
+      setUnreadMessageCounts(counts);
+    } catch (error) {
+      console.error("Error fetching unread message counts:", error);
+    }
+  }, [user?.id, wonAuctions]);
+
+  // Fetch unread counts when auctions are loaded
+  React.useEffect(() => {
+    fetchUnreadCounts();
+  }, [fetchUnreadCounts]);
 
   // Listen for global payment processed events (dispatched by admin/process endpoints)
   React.useEffect(() => {
@@ -405,8 +467,11 @@ const WonAuctionsTab: React.FC = () => {
   };
 
   const handleContactSeller = (auctionId: number) => {
-    console.log("Contact seller for auction:", auctionId);
-    // Handle contact seller logic
+    const auction = wonAuctions.find((a) => a.id === auctionId);
+    if (auction && user) {
+      setSelectedAuctionForMessaging(auction);
+      setMessagingModalOpen(true);
+    }
   };
 
   // Calculate statistics
@@ -569,8 +634,18 @@ const WonAuctionsTab: React.FC = () => {
                           size="sm"
                           variant="outline"
                           onClick={() => handleContactSeller(auction.id)}
+                          className="relative"
                         >
+                          <MessageCircle className="w-4 h-4 mr-1" />
                           Contact Seller
+                          {unreadMessageCounts[auction.id] > 0 && (
+                            <Badge
+                              variant="destructive"
+                              className="absolute -top-2 -right-2 h-5 w-5 rounded-full p-0 flex items-center justify-center text-xs"
+                            >
+                              {unreadMessageCounts[auction.id]}
+                            </Badge>
+                          )}
                         </Button>
                       </>
                     )}
@@ -588,8 +663,18 @@ const WonAuctionsTab: React.FC = () => {
                           size="sm"
                           variant="outline"
                           onClick={() => handleContactSeller(auction.id)}
+                          className="relative"
                         >
+                          <MessageCircle className="w-4 h-4 mr-1" />
                           Contact Seller
+                          {unreadMessageCounts[auction.id] > 0 && (
+                            <Badge
+                              variant="destructive"
+                              className="absolute -top-2 -right-2 h-5 w-5 rounded-full p-0 flex items-center justify-center text-xs"
+                            >
+                              {unreadMessageCounts[auction.id]}
+                            </Badge>
+                          )}
                         </Button>
                       </>
                     )}
@@ -736,6 +821,22 @@ const WonAuctionsTab: React.FC = () => {
           </CardContent>
         </Card>
       </CardContent>
+
+      {/* Messaging Modal */}
+      {selectedAuctionForMessaging && (
+        <MessagingModal
+          isOpen={messagingModalOpen}
+          onClose={() => {
+            setMessagingModalOpen(false);
+            setSelectedAuctionForMessaging(null);
+            // Refresh unread counts after closing messaging
+            fetchUnreadCounts();
+          }}
+          auctionId={selectedAuctionForMessaging.id}
+          recipientId={selectedAuctionForMessaging.seller_id}
+          auctionTitle={selectedAuctionForMessaging.title}
+        />
+      )}
     </Card>
   );
 };
