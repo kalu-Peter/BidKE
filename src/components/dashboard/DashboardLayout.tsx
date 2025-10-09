@@ -56,12 +56,13 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({
     {
       icon: Home,
       label: "Browse Auctions",
-      path: "/dashboard/browse",
+      path: "/dashboard/seller-browse",
       active: true,
     },
-    { icon: Gavel, label: "My Bids", path: "/dashboard/bids" },
-    { icon: Heart, label: "Watchlist", path: "/dashboard/watchlist" },
-    { icon: Trophy, label: "Won Auctions", path: "/dashboard/won" },
+    { icon: Gavel, label: "My Bids", path: "/dashboard/seller-bids" },
+    { icon: Heart, label: "Watchlist", path: "/dashboard/seller-watchlist" },
+    { icon: Trophy, label: "Won Auctions", path: "/dashboard/seller-won" },
+    { icon: Bell, label: "Notifications", path: "/dashboard/notifications" },
     { icon: User, label: "Profile & Verification", path: "/dashboard/profile" },
   ];
 
@@ -93,6 +94,12 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({
       section: "selling",
     },
     {
+      icon: Bell,
+      label: "Notifications",
+      path: "/dashboard/notifications",
+      section: "selling",
+    },
+    {
       icon: User,
       label: "Profile & Verification",
       path: "/dashboard/company",
@@ -121,6 +128,12 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({
       icon: Trophy,
       label: "Won Auctions",
       path: "/dashboard/seller-won",
+      section: "buying",
+    },
+    {
+      icon: Bell,
+      label: "Notifications",
+      path: "/dashboard/notifications",
       section: "buying",
     },
   ];
@@ -340,6 +353,12 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({
                       Verifications
                     </Link>
                     <Link
+                      to="/dashboard/notifications"
+                      className="px-3 py-2 rounded-md text-sm font-medium text-primary/90 hover:bg-primary/5 hover:text-primary"
+                    >
+                      Notifications
+                    </Link>
+                    <Link
                       to="/dashboard/admin-signup"
                       className="px-3 py-2 rounded-md text-sm font-medium text-primary/90 hover:bg-primary/5 hover:text-primary"
                     >
@@ -446,6 +465,11 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({
                         <DropdownMenuItem asChild>
                           <Link to="/dashboard/verifications">
                             Verifications
+                          </Link>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem asChild>
+                          <Link to="/dashboard/notifications">
+                            Notifications
                           </Link>
                         </DropdownMenuItem>
                         <DropdownMenuItem asChild>

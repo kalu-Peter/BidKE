@@ -14,8 +14,9 @@ import MyBidsTab from "@/components/dashboard/seller/MyBidsTab";
 import WatchlistTab from "@/components/dashboard/seller/WatchlistTab";
 import WonAuctionsTab from "@/components/dashboard/seller/WonAuctionsTab";
 import BrowseAuctionsContent from "@/components/dashboard/BrowseAuctionsContent";
+import NotificationsTab from "@/components/dashboard/admin/NotificationsTab";
 
-const SellerDashboard = () => {
+const UserDashboard = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -27,6 +28,7 @@ const SellerDashboard = () => {
     if (path.includes("/dashboard/listings")) return "listings";
     if (path.includes("/dashboard/sales")) return "sales";
     if (path.includes("/dashboard/payouts")) return "sales"; // Payouts is part of sales tab
+    if (path.includes("/dashboard/notifications")) return "notifications";
     // Company profile moved to dedicated seller profile page
     if (path.includes("/dashboard/seller-browse")) return "browse";
     if (path.includes("/dashboard/seller-bids")) return "my-bids";
@@ -54,6 +56,9 @@ const SellerDashboard = () => {
         break;
       case "sales":
         newPath = "/dashboard/sales";
+        break;
+      case "notifications":
+        newPath = "/dashboard/notifications";
         break;
       case "browse":
         newPath = "/dashboard/seller-browse";
@@ -91,10 +96,11 @@ const SellerDashboard = () => {
       <div className="space-y-8">
         {/* Main Tabs */}
         <Tabs value={activeTab} onValueChange={handleTabChange}>
-          <TabsList className="grid w-full grid-cols-7">
+          <TabsList className="grid w-full grid-cols-8">
             <TabsTrigger value="post-item">Post Item</TabsTrigger>
             <TabsTrigger value="listings">My Listings</TabsTrigger>
             <TabsTrigger value="sales">Sales</TabsTrigger>
+            <TabsTrigger value="notifications">Notifications</TabsTrigger>
             <TabsTrigger value="browse">Auctions</TabsTrigger>
             <TabsTrigger value="my-bids">My Bids</TabsTrigger>
             <TabsTrigger value="watchlist">Watchlist</TabsTrigger>
@@ -111,6 +117,10 @@ const SellerDashboard = () => {
 
           <TabsContent value="sales">
             <SalesTab />
+          </TabsContent>
+
+          <TabsContent value="notifications">
+            <NotificationsTab />
           </TabsContent>
 
           <TabsContent value="browse">
@@ -134,4 +144,4 @@ const SellerDashboard = () => {
   );
 };
 
-export default SellerDashboard;
+export default UserDashboard;

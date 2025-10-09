@@ -13,8 +13,9 @@ import Electronics from "./pages/Electronics";
 import SignUp from "./pages/auth/SignUp";
 import Login from "./pages/auth/Login";
 import AdminSignUp from "./pages/auth/AdminSignUp";
-import SellerDashboard from "./pages/dashboard/SellerDashboard";
+import UserDashboard from "./pages/dashboard/UserDashboard";
 import AdminDashboard from "./pages/dashboard/AdminDashboard";
+import NotificationsDashboard from "./pages/dashboard/NotificationsDashboard";
 import BrowseAuctions from "./pages/BrowseAuctions";
 import AuctionDetails from "./pages/AuctionDetails";
 import Checkout from "./pages/Checkout";
@@ -85,15 +86,15 @@ const App = () => (
             />
             <Route
               path="/dashboard/bids"
-              element={<Navigate to="/dashboard/seller-browse" replace />}
+              element={<Navigate to="/dashboard/seller-bids" replace />}
             />
             <Route
               path="/dashboard/watchlist"
-              element={<Navigate to="/dashboard/seller-browse" replace />}
+              element={<Navigate to="/dashboard/seller-watchlist" replace />}
             />
             <Route
               path="/dashboard/won"
-              element={<Navigate to="/dashboard/seller-browse" replace />}
+              element={<Navigate to="/dashboard/seller-won" replace />}
             />
             <Route
               path="/dashboard/profile"
@@ -125,7 +126,7 @@ const App = () => (
               path="/dashboard/post-item"
               element={
                 <ProtectedRoute requiredRole="seller">
-                  <SellerDashboard />
+                  <UserDashboard />
                 </ProtectedRoute>
               }
             />
@@ -134,7 +135,7 @@ const App = () => (
               path="/dashboard/listings"
               element={
                 <ProtectedRoute requiredRole="seller">
-                  <SellerDashboard />
+                  <UserDashboard />
                 </ProtectedRoute>
               }
             />
@@ -142,7 +143,7 @@ const App = () => (
               path="/dashboard/sales"
               element={
                 <ProtectedRoute requiredRole="seller">
-                  <SellerDashboard />
+                  <UserDashboard />
                 </ProtectedRoute>
               }
             />
@@ -150,7 +151,7 @@ const App = () => (
               path="/dashboard/payouts"
               element={
                 <ProtectedRoute requiredRole="seller">
-                  <SellerDashboard />
+                  <UserDashboard />
                 </ProtectedRoute>
               }
             />
@@ -166,7 +167,7 @@ const App = () => (
               path="/dashboard/seller-browse"
               element={
                 <ProtectedRoute requiredRole="seller">
-                  <SellerDashboard />
+                  <UserDashboard />
                 </ProtectedRoute>
               }
             />
@@ -174,7 +175,7 @@ const App = () => (
               path="/dashboard/seller-bids"
               element={
                 <ProtectedRoute requiredRole="seller">
-                  <SellerDashboard />
+                  <UserDashboard />
                 </ProtectedRoute>
               }
             />
@@ -182,7 +183,7 @@ const App = () => (
               path="/dashboard/seller-watchlist"
               element={
                 <ProtectedRoute requiredRole="seller">
-                  <SellerDashboard />
+                  <UserDashboard />
                 </ProtectedRoute>
               }
             />
@@ -190,7 +191,7 @@ const App = () => (
               path="/dashboard/seller-won"
               element={
                 <ProtectedRoute requiredRole="seller">
-                  <SellerDashboard />
+                  <UserDashboard />
                 </ProtectedRoute>
               }
             />
@@ -261,8 +262,8 @@ const App = () => (
             <Route
               path="/dashboard/notifications"
               element={
-                <ProtectedRoute requiredRole="admin">
-                  <AdminDashboard />
+                <ProtectedRoute>
+                  <NotificationsDashboard />
                 </ProtectedRoute>
               }
             />

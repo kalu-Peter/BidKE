@@ -291,7 +291,7 @@ const NotificationBell: React.FC = () => {
               className="w-full text-xs"
               onClick={() => {
                 setIsOpen(false);
-                navigate("/notifications");
+                navigate("/dashboard/notifications");
               }}
             >
               View all notifications
