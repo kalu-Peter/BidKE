@@ -3,6 +3,7 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import NotificationBell from "@/components/NotificationBell";
 import {
   Home,
   Gavel,
@@ -350,6 +351,9 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({
             </div>
 
             <div className="flex items-center space-x-4">
+              {/* Notification Bell */}
+              <NotificationBell />
+
               <div className="text-sm hidden sm:block">
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>

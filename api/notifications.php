@@ -19,7 +19,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 }
 
 // Database connection
-function getDBConnection() {
+function getDBConnection()
+{
     try {
         $dsn = "pgsql:host=localhost;port=5054;dbname=bidlode";
         $connection = new PDO($dsn, 'postgres', 'webwiz', [
@@ -41,54 +42,66 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         $isRead = $_GET['is_read'] ?? null; // null for all, 'true'/'false' for filtered
         $limit = (int)($_GET['limit'] ?? 20);
         $offset = (int)($_GET['offset'] ?? 0);
-        
+
         if (!$userId) {
             http_response_code(400);
             echo json_encode(['success' => false, 'message' => 'User ID is required']);
             exit();
         }
-        
+
         $pdo = getDBConnection();
-        
+
         $query = "SELECT * FROM notifications WHERE user_id = :user_id";
         $params = ['user_id' => $userId];
-        
+
         if ($isRead !== null) {
             $query .= " AND is_read = :is_read";
             $params['is_read'] = $isRead === 'true' ? true : false;
         }
-        
+
         $query .= " ORDER BY created_at DESC LIMIT :limit OFFSET :offset";
-        
+
         $stmt = $pdo->prepare($query);
         foreach ($params as $key => $value) {
             $stmt->bindValue(":$key", $value);
         }
         $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
         $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
-        
+
         $stmt->execute();
         $notifications = $stmt->fetchAll();
-        
-        // Format data field
+
+        // Format data field and add required fields for frontend
         foreach ($notifications as &$notification) {
             if ($notification['data']) {
-                $notification['data'] = json_decode($notification['data'], true);
+                $data = json_decode($notification['data'], true);
+                $notification['data'] = $data;
+
+                // Extract common fields from data for easier frontend access
+                if (isset($data['auction_id'])) {
+                    $notification['auction_id'] = $data['auction_id'];
+                }
+                if (isset($data['auction_title'])) {
+                    $notification['auction_title'] = $data['auction_title'];
+                }
+                if (isset($data['amount'])) {
+                    $notification['amount'] = $data['amount'];
+                }
             }
+            $notification['read'] = (bool)$notification['is_read']; // Add 'read' field for frontend
             $notification['is_read'] = (bool)$notification['is_read'];
         }
-        
+
         // Get unread count
         $unreadStmt = $pdo->prepare("SELECT COUNT(*) as count FROM notifications WHERE user_id = :user_id AND is_read = false");
         $unreadStmt->execute(['user_id' => $userId]);
         $unreadCount = $unreadStmt->fetch()['count'];
-        
+
         echo json_encode([
             'success' => true,
             'data' => $notifications,
             'unread_count' => (int)$unreadCount
         ]);
-        
     } catch (Exception $e) {
         error_log("Get notifications error: " . $e->getMessage());
         http_response_code(500);
@@ -100,17 +113,26 @@ elseif ($_SERVER['REQUEST_METHOD'] === 'PUT') {
     try {
         $input = json_decode(file_get_contents('php://input'), true);
         $userId = $input['user_id'] ?? null;
+        $notificationId = $input['notification_id'] ?? null; // Single notification ID
         $notificationIds = $input['notification_ids'] ?? []; // Array of IDs to mark as read
-        $markAll = $input['mark_all'] ?? false; // Mark all as read
-        
-        if (!$userId) {
+        $action = $input['action'] ?? null; // 'mark_read', 'mark_all_read'
+        $markAll = $input['mark_all'] ?? false; // Mark all as read (legacy)
+
+        // Support both action-based and legacy formats
+        if ($action === 'mark_all_read' || $markAll) {
+            $markAll = true;
+        } elseif ($action === 'mark_read' && $notificationId) {
+            $notificationIds = [$notificationId];
+        }
+
+        if (!$userId && !$notificationId) {
             http_response_code(400);
-            echo json_encode(['success' => false, 'message' => 'User ID is required']);
+            echo json_encode(['success' => false, 'message' => 'User ID or notification ID is required']);
             exit();
         }
-        
+
         $pdo = getDBConnection();
-        
+
         if ($markAll) {
             // Mark all notifications as read for this user
             $stmt = $pdo->prepare("UPDATE notifications SET is_read = true WHERE user_id = :user_id AND is_read = false");
@@ -123,22 +145,21 @@ elseif ($_SERVER['REQUEST_METHOD'] === 'PUT') {
                 echo json_encode(['success' => false, 'message' => 'No notification IDs provided']);
                 exit();
             }
-            
+
             $placeholders = str_repeat('?,', count($notificationIds) - 1) . '?';
             $query = "UPDATE notifications SET is_read = true WHERE user_id = ? AND id IN ($placeholders) AND is_read = false";
-            
+
             $stmt = $pdo->prepare($query);
             $params = array_merge([$userId], $notificationIds);
             $stmt->execute($params);
             $updated = $stmt->rowCount();
         }
-        
+
         echo json_encode([
             'success' => true,
             'message' => "$updated notifications marked as read",
             'updated_count' => $updated
         ]);
-        
     } catch (Exception $e) {
         error_log("Mark notifications read error: " . $e->getMessage());
         http_response_code(500);
@@ -154,21 +175,21 @@ elseif ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $title = $input['title'] ?? 'Notification';
         $message = $input['message'] ?? '';
         $data = $input['data'] ?? null;
-        
+
         if (!$userId || !$message) {
             http_response_code(400);
             echo json_encode(['success' => false, 'message' => 'User ID and message are required']);
             exit();
         }
-        
+
         $pdo = getDBConnection();
-        
+
         $stmt = $pdo->prepare("
             INSERT INTO notifications (user_id, type, title, message, data)
             VALUES (:user_id, :type, :title, :message, :data)
             RETURNING id
         ");
-        
+
         $stmt->execute([
             'user_id' => $userId,
             'type' => $type,
@@ -176,23 +197,20 @@ elseif ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'message' => $message,
             'data' => $data ? json_encode($data) : null
         ]);
-        
+
         $notificationId = $stmt->fetchColumn();
-        
+
         echo json_encode([
             'success' => true,
             'message' => 'Notification sent successfully',
             'notification_id' => $notificationId
         ]);
-        
     } catch (Exception $e) {
         error_log("Send notification error: " . $e->getMessage());
         http_response_code(500);
         echo json_encode(['success' => false, 'message' => 'Failed to send notification']);
     }
-}
-else {
+} else {
     http_response_code(405);
     echo json_encode(['success' => false, 'message' => 'Method not allowed']);
 }
-?>

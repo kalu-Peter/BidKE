@@ -24,6 +24,7 @@ import Contact from "./pages/Contact";
 import SellerProfile from "./pages/profile/SellerProfile";
 import ForgotPassword from "./pages/auth/ForgotPassword";
 import ResetPassword from "./pages/auth/ResetPassword";
+import NotificationsPage from "./pages/NotificationsPage";
 
 const queryClient = new QueryClient();
 
@@ -50,6 +51,14 @@ const App = () => (
             <Route path="/how-it-works" element={<HowItWorks />} />
             <Route path="/trust-security" element={<TrustSecurity />} />
             <Route path="/contact" element={<Contact />} />
+            <Route
+              path="/notifications"
+              element={
+                <ProtectedRoute>
+                  <NotificationsPage />
+                </ProtectedRoute>
+              }
+            />
             <Route path="/signup" element={<SignUp />} />
             <Route path="/admin-signup" element={<AdminSignUp />} />
             {/* Redirect old signup routes to new unified signup */}
