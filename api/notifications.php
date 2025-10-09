@@ -56,14 +56,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
 
         if ($isRead !== null) {
             $query .= " AND is_read = :is_read";
-            $params['is_read'] = $isRead === 'true' ? true : false;
+            // Convert string values to proper boolean
+            if ($isRead === 'true' || $isRead === '1' || $isRead === 1 || $isRead === true) {
+                $params['is_read'] = true;
+            } else if ($isRead === 'false' || $isRead === '0' || $isRead === 0 || $isRead === false) {
+                $params['is_read'] = false;
+            } else {
+                // If it's not a valid boolean string, treat as null (show all)
+                $isRead = null;
+            }
         }
 
         $query .= " ORDER BY created_at DESC LIMIT :limit OFFSET :offset";
 
         $stmt = $pdo->prepare($query);
         foreach ($params as $key => $value) {
-            $stmt->bindValue(":$key", $value);
+            if ($key === 'is_read') {
+                $stmt->bindValue(":$key", $value, PDO::PARAM_BOOL);
+            } else {
+                $stmt->bindValue(":$key", $value);
+            }
         }
         $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
         $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
@@ -125,9 +137,9 @@ elseif ($_SERVER['REQUEST_METHOD'] === 'PUT') {
             $notificationIds = [$notificationId];
         }
 
-        if (!$userId && !$notificationId) {
+        if (!$userId) {
             http_response_code(400);
-            echo json_encode(['success' => false, 'message' => 'User ID or notification ID is required']);
+            echo json_encode(['success' => false, 'message' => 'User ID is required']);
             exit();
         }
 
