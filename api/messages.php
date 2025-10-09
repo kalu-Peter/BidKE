@@ -222,7 +222,7 @@ function handleSendMessage($pdo)
     $recipientId = $input['recipient_id'] ?? null;
     $message = trim($input['message'] ?? '');
 
-    if (!$auctionId || !$senderId || !recipientId || !$message) {
+    if (!$auctionId || !$senderId || !$recipientId || !$message) {
         http_response_code(400);
         echo json_encode(['success' => false, 'error' => 'Missing required fields']);
         return;
