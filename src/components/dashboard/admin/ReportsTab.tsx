@@ -27,6 +27,9 @@ import {
   User,
 } from "lucide-react";
 const WonAuctionsAdmin = React.lazy(() => import("./WonAuctionsAdmin"));
+const AdminMessagingMonitor = React.lazy(
+  () => import("../../messaging/AdminMessagingMonitor")
+);
 
 const ReportsTab: React.FC = () => {
   const [selectedReport, setSelectedReport] = useState("overview");
@@ -368,6 +371,9 @@ const ReportsTab: React.FC = () => {
                 <SelectItem value="won_auctions">
                   Won Auctions (Admin)
                 </SelectItem>
+                <SelectItem value="messaging_monitor">
+                  Messaging Monitor
+                </SelectItem>
               </SelectContent>
             </Select>
 
@@ -603,6 +609,16 @@ const ReportsTab: React.FC = () => {
             {/* Lazy-load admin component */}
             <React.Suspense fallback={<div>Loading...</div>}>
               <WonAuctionsAdmin />
+            </React.Suspense>
+          </div>
+        )}
+
+        {/* Messaging Monitor */}
+        {selectedReport === "messaging_monitor" && (
+          <div className="space-y-6">
+            {/* Lazy-load messaging monitor component */}
+            <React.Suspense fallback={<div>Loading messaging monitor...</div>}>
+              <AdminMessagingMonitor />
             </React.Suspense>
           </div>
         )}
