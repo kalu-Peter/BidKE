@@ -836,22 +836,24 @@ const ListingsControlTab: React.FC = () => {
         {/* Details Modal */}
         {selectedListing && (
           <div
-            className={`fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50`}
+            className={`fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center p-4 z-50`}
           >
-            <div className="bg-white rounded-lg p-6 w-full max-w-4xl overflow-auto">
-              <div className="flex items-start justify-between mb-4">
+            <div className="bg-white rounded-xl shadow-2xl p-6 w-full max-w-4xl overflow-auto border border-gray-200">
+              <div className="flex items-start justify-between mb-6 pb-4 border-b border-gray-100">
                 <div>
-                  <h3 className="text-xl font-semibold">
+                  <h3 className="text-2xl font-bold text-gray-900 mb-2">
                     {selectedListing.title}
                   </h3>
-                  <p className="text-sm text-gray-600">
+                  <p className="text-sm text-gray-700 mb-3">
                     {selectedListing.description}
                   </p>
-                  <div className="text-sm text-gray-500 mt-2">
-                    <span className="mr-4">
+                  <div className="text-sm text-gray-600 mt-2">
+                    <span className="mr-4 bg-blue-50 px-3 py-1 rounded-full text-blue-700 font-medium">
                       Seller: {selectedListing.seller_name || "N/A"}
                     </span>
-                    <span>Email: {selectedListing.seller_email || "N/A"}</span>
+                    <span className="bg-green-50 px-3 py-1 rounded-full text-green-700 font-medium">
+                      Email: {selectedListing.seller_email || "N/A"}
+                    </span>
                   </div>
                 </div>
                 <div className="flex items-center space-x-2">
@@ -859,6 +861,7 @@ const ListingsControlTab: React.FC = () => {
                     variant="outline"
                     size="sm"
                     onClick={() => setSelectedListing(null)}
+                    className="hover:bg-gray-100 border-gray-300"
                   >
                     Close
                   </Button>
@@ -918,16 +921,20 @@ const ListingsControlTab: React.FC = () => {
                 </div>
 
                 <aside className="col-span-1">
-                  <div className="mb-4 p-4 bg-gray-50 rounded">
-                    <p className="text-sm text-gray-500">Category</p>
-                    <p className="font-medium">
+                  <div className="mb-4 p-4 bg-gradient-to-r from-blue-50 to-blue-100 rounded-lg border border-blue-200">
+                    <p className="text-sm font-medium text-blue-600">
+                      Category
+                    </p>
+                    <p className="font-semibold text-blue-900">
                       {selectedListing.category_name}
                     </p>
                   </div>
 
-                  <div className="mb-4 p-4 bg-gray-50 rounded">
-                    <p className="text-sm text-gray-500">Make / Model</p>
-                    <p className="font-medium">
+                  <div className="mb-4 p-4 bg-gradient-to-r from-purple-50 to-purple-100 rounded-lg border border-purple-200">
+                    <p className="text-sm font-medium text-purple-600">
+                      Make / Model
+                    </p>
+                    <p className="font-semibold text-purple-900">
                       {selectedListing.item_make || selectedListing.item_model
                         ? `${selectedListing.item_make || ""} ${
                             selectedListing.item_model ||
@@ -936,33 +943,37 @@ const ListingsControlTab: React.FC = () => {
                           }`.trim()
                         : "N/A"}
                     </p>
-                    <p className="text-sm text-gray-500 mt-2">
+                    <p className="text-sm text-purple-600 mt-2">
                       Condition:{" "}
-                      <span className="font-medium">
+                      <span className="font-semibold text-purple-800">
                         {selectedListing.item_condition || "N/A"}
                       </span>
                     </p>
                   </div>
 
-                  <div className="mb-4 p-4 bg-gray-50 rounded">
-                    <p className="text-sm text-gray-500">Times</p>
-                    <p className="font-medium">
+                  <div className="mb-4 p-4 bg-gradient-to-r from-orange-50 to-orange-100 rounded-lg border border-orange-200">
+                    <p className="text-sm font-medium text-orange-600">
+                      Auction Schedule
+                    </p>
+                    <p className="font-semibold text-orange-900 text-sm">
                       Starts:{" "}
                       {new Date(selectedListing.start_time).toLocaleString()}
                     </p>
-                    <p className="font-medium">
+                    <p className="font-semibold text-orange-900 text-sm">
                       Ends:{" "}
                       {new Date(selectedListing.end_time).toLocaleString()}
                     </p>
                   </div>
 
-                  <div className="mb-4 p-4 bg-gray-50 rounded">
-                    <p className="text-sm text-gray-500">Pricing</p>
-                    <p className="font-medium">
+                  <div className="mb-4 p-4 bg-gradient-to-r from-green-50 to-green-100 rounded-lg border border-green-200">
+                    <p className="text-sm font-medium text-green-600">
+                      Pricing
+                    </p>
+                    <p className="font-semibold text-green-900">
                       Starting: Ksh{" "}
                       {selectedListing.starting_price.toLocaleString()}
                     </p>
-                    <p className="font-medium">
+                    <p className="font-semibold text-green-900">
                       Reserve:{" "}
                       {selectedListing.reserve_price
                         ? `Ksh ${selectedListing.reserve_price.toLocaleString()}`
