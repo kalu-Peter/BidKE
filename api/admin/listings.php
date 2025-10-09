@@ -23,6 +23,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 }
 
 require_once __DIR__ . '/../config/connect.php';
+require_once __DIR__ . '/../utils/notification_helper.php';
 
 function send_json($data, $status = 200)
 {
@@ -300,6 +301,16 @@ try {
                 $updateQuery = "UPDATE auctions SET status = :status, start_time = :start_time, end_time = :end_time, updated_at = CURRENT_TIMESTAMP WHERE id = :id";
                 $updateStmt = $pdo->prepare($updateQuery);
                 $updateStmt->execute([':status' => $newStatus, ':start_time' => $newStart, ':end_time' => $newEnd, ':id' => $auction_id]);
+
+                // Send notification to seller about auction approval and going live
+                $sellerId = (int)$auction['seller_id'];
+                $auctionTitle = $auction['title'];
+
+                NotificationHelper::sendAuctionApprovedNotification(
+                    $sellerId,
+                    $auction_id,
+                    $auctionTitle
+                );
             } elseif ($action === 'make_live') {
                 // Only allow make_live if currently pending or draft
                 if (!in_array($currentStatus, ['pending', 'draft'])) {
@@ -329,18 +340,54 @@ try {
                 $updateQuery = "UPDATE auctions SET status = :status, start_time = :start_time, end_time = :end_time, updated_at = CURRENT_TIMESTAMP WHERE id = :id";
                 $updateStmt = $pdo->prepare($updateQuery);
                 $updateStmt->execute([':status' => $newStatus, ':start_time' => $newStart, ':end_time' => $newEnd, ':id' => $auction_id]);
+
+                // Send notification to seller about auction going live
+                $sellerId = (int)$auction['seller_id'];
+                $auctionTitle = $auction['title'];
+
+                NotificationHelper::sendAuctionApprovedNotification(
+                    $sellerId,
+                    $auction_id,
+                    $auctionTitle
+                );
             } elseif ($action === 'reject') {
                 // Map UI 'reject' to DB 'cancelled'
                 $newStatus = 'cancelled';
                 $updateQuery = "UPDATE auctions SET status = :status, updated_at = CURRENT_TIMESTAMP WHERE id = :id";
                 $updateStmt = $pdo->prepare($updateQuery);
                 $updateStmt->execute([':status' => $newStatus, ':id' => $auction_id]);
+
+                // Send notification to seller about auction rejection
+                if ($reason && trim($reason)) {
+                    $sellerId = (int)$auction['seller_id'];
+                    $auctionTitle = $auction['title'];
+
+                    NotificationHelper::sendAuctionRejectedNotification(
+                        $sellerId,
+                        $auction_id,
+                        $auctionTitle,
+                        trim($reason)
+                    );
+                }
             } elseif ($action === 'request_info') {
                 // Map UI 'request_info' to DB 'draft' so seller can update
                 $newStatus = 'draft';
                 $updateQuery = "UPDATE auctions SET status = :status, updated_at = CURRENT_TIMESTAMP WHERE id = :id";
                 $updateStmt = $pdo->prepare($updateQuery);
                 $updateStmt->execute([':status' => $newStatus, ':id' => $auction_id]);
+
+                // Send notification to seller about the information request
+                if ($message && trim($message)) {
+                    $sellerId = (int)$auction['seller_id'];
+                    $auctionTitle = $auction['title'];
+
+                    NotificationHelper::sendInfoRequestNotification(
+                        $sellerId,
+                        $auction_id,
+                        $auctionTitle,
+                        trim($message)
+                    );
+                }
             } elseif ($action === 'toggle_feature') {
                 // Toggle the featured status of the auction
                 $currentFeatured = (bool)($auction['featured'] ?? false);
