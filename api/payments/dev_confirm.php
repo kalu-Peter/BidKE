@@ -17,6 +17,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 
 require_once __DIR__ . '/../config/connect.php';
 require_once __DIR__ . '/../config/config.php';
+require_once __DIR__ . '/../utils/payout_helper.php';
 
 // Guard: only allow this endpoint in development mode.
 // Enable by setting environment variable DEV_MODE=1 or defining DEV_MODE constant in config.
@@ -134,6 +135,13 @@ try {
     if (!$pExists) {
         $gross = $amountPaid;
         $net = $gross !== null ? round($gross - $platformFee, 2) : 0;
+
+        // Get seller's default payout method
+        $defaultPayoutMethod = getUserDefaultPayoutMethod($db, $sellerId);
+        if (!$defaultPayoutMethod) {
+            $defaultPayoutMethod = 'not_configured'; // Fallback if no method is set up
+        }
+
         $payoutStmt = $db->prepare('INSERT INTO payouts (seller_id, auction_id, payment_id, gross_amount, platform_fee, net_amount, status, payout_method, transaction_ref, created_at, updated_at) VALUES (:seller_id, :auction_id, :payment_id, :gross_amount, :platform_fee, :net_amount, :status, :payout_method, :transaction_ref, NOW(), NOW()) RETURNING payout_id');
         $payoutStmt->execute([
             'seller_id' => $sellerId,
@@ -143,7 +151,7 @@ try {
             'platform_fee' => $platformFee,
             'net_amount' => $net,
             'status' => 'pending',
-            'payout_method' => 'mpesa',
+            'payout_method' => $defaultPayoutMethod,
             'transaction_ref' => $payment['transaction_ref'] ?? null
         ]);
         $payoutRow = $payoutStmt->fetch(PDO::FETCH_ASSOC);

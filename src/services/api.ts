@@ -895,6 +895,70 @@ class ApiService {
   async getSellerSales(sellerId: number, page: number = 1, limit: number = 10): Promise<ApiResponse> {
     return this.makeRequest(`/sales/seller_sales.php?seller_id=${sellerId}&page=${page}&limit=${limit}`);
   }
+
+  /**
+   * Payout Methods Management
+   */
+
+  async getPayoutMethods(): Promise<ApiResponse<Array<{
+    id: number;
+    method_type: 'bank_transfer' | 'mpesa' | 'paypal';
+    bank_name?: string;
+    account_number_masked?: string;
+    account_name?: string;
+    branch_code?: string;
+    phone_number_masked?: string;
+    paypal_email?: string;
+    is_default: boolean;
+    is_verified: boolean;
+    status: string;
+    created_at: string;
+    updated_at: string;
+  }>>> {
+    return this.makeRequest('/payout-methods.php');
+  }
+
+  async createPayoutMethod(data: {
+    method_type: 'bank_transfer' | 'mpesa' | 'paypal';
+    bank_name?: string;
+    account_number?: string;
+    account_name?: string;
+    branch_code?: string;
+    phone_number?: string;
+    paypal_email?: string;
+    is_default?: boolean;
+  }): Promise<ApiResponse<{ id: number }>> {
+    return this.makeRequest('/payout-methods.php', {
+      method: 'POST',
+      body: JSON.stringify(data)
+    });
+  }
+
+  async updatePayoutMethod(id: number, data: {
+    bank_name?: string;
+    account_number?: string;
+    account_name?: string;
+    branch_code?: string;
+    phone_number?: string;
+    paypal_email?: string;
+  }): Promise<ApiResponse> {
+    return this.makeRequest(`/payout-methods.php?id=${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data)
+    });
+  }
+
+  async setDefaultPayoutMethod(id: number): Promise<ApiResponse> {
+    return this.makeRequest(`/payout-methods.php?id=${id}&action=set_default`, {
+      method: 'PUT'
+    });
+  }
+
+  async deletePayoutMethod(id: number): Promise<ApiResponse> {
+    return this.makeRequest(`/payout-methods.php?id=${id}`, {
+      method: 'DELETE'
+    });
+  }
 }
 
 // Create and export singleton instance

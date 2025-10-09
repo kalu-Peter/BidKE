@@ -14,6 +14,7 @@ import {
 import { useAuth } from "@/contexts/AuthContext";
 import { apiService } from "@/services/api";
 import MessagingModal from "@/components/messaging/MessagingModal";
+import PayoutMethodsManager from "@/components/payout/PayoutMethodsManager";
 
 interface Sale {
   id: number;
@@ -192,22 +193,6 @@ const SalesTab: React.FC = () => {
   React.useEffect(() => {
     fetchUnreadCounts();
   }, [fetchUnreadCounts]);
-
-  const payoutMethods = [
-    {
-      id: 1,
-      type: "Bank Transfer",
-      bank: "Standard Chartered Bank",
-      account: "****1234",
-      isDefault: true,
-    },
-    {
-      id: 2,
-      type: "M-Pesa",
-      number: "****0789",
-      isDefault: false,
-    },
-  ];
 
   // Loading state while authenticating
   if (authLoading) {
@@ -461,58 +446,7 @@ const SalesTab: React.FC = () => {
       </Card>
 
       {/* Payout Settings */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Payout Settings</CardTitle>
-          <p className="text-sm text-gray-600">
-            Manage how you receive payments from successful sales
-          </p>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {payoutMethods.map((method) => (
-            <div
-              key={method.id}
-              className={`p-4 rounded-lg border ${
-                method.isDefault
-                  ? "bg-green-500/10 border-green-200"
-                  : "bg-muted/20"
-              }`}
-            >
-              <div className="flex justify-between items-center">
-                <div>
-                  <h4 className="font-medium flex items-center space-x-2">
-                    <span>{method.type}</span>
-                    {method.isDefault && (
-                      <Badge className="bg-green-100 text-green-800">
-                        Default
-                      </Badge>
-                    )}
-                  </h4>
-                  <p className="text-sm text-gray-600 mt-1">
-                    {method.type === "Bank Transfer"
-                      ? `${method.bank} - Account: ${method.account}`
-                      : `Mobile: ${method.number}`}
-                  </p>
-                </div>
-                <div className="flex space-x-2">
-                  {!method.isDefault && (
-                    <Button variant="outline" size="sm">
-                      Set as Default
-                    </Button>
-                  )}
-                  <Button variant="outline" size="sm">
-                    Edit
-                  </Button>
-                </div>
-              </div>
-            </div>
-          ))}
-
-          <Button variant="outline" className="w-full">
-            Add New Payout Method
-          </Button>
-        </CardContent>
-      </Card>
+      <PayoutMethodsManager onMethodsChange={fetchUnreadCounts} />
 
       {/* Payout Schedule */}
       <Card>
