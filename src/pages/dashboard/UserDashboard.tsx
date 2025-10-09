@@ -3,8 +3,18 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import StatsCard from "@/components/dashboard/StatsCard";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { FileText, BarChart3, DollarSign } from "lucide-react";
+import { cn } from "@/lib/utils";
+import {
+  FileText,
+  BarChart3,
+  DollarSign,
+  Bell,
+  Search,
+  Eye,
+  Heart,
+  Trophy,
+  Plus,
+} from "lucide-react";
 
 // Import individual tab components
 import PostItemTab from "@/components/dashboard/seller/PostItemTab";
@@ -87,58 +97,171 @@ const UserDashboard = () => {
     thisMonthRevenue: 520000,
   };
 
+  // Sidebar navigation items
+  const navigationItems = [
+    {
+      id: "post-item",
+      label: "Post Item",
+      icon: Plus,
+      description: "Create new auction listing",
+    },
+    {
+      id: "listings",
+      label: "My Listings",
+      icon: FileText,
+      description: "Manage your auctions",
+    },
+    {
+      id: "sales",
+      label: "Sales",
+      icon: DollarSign,
+      description: "View sales and payouts",
+    },
+    {
+      id: "notifications",
+      label: "Notifications",
+      icon: Bell,
+      description: "Recent notifications",
+    },
+    {
+      id: "browse",
+      label: "Auctions",
+      icon: Search,
+      description: "Browse all auctions",
+    },
+    {
+      id: "my-bids",
+      label: "My Bids",
+      icon: BarChart3,
+      description: "Track your bids",
+    },
+    {
+      id: "watchlist",
+      label: "Watchlist",
+      icon: Heart,
+      description: "Saved items",
+    },
+    {
+      id: "won",
+      label: "Won Auctions",
+      icon: Trophy,
+      description: "Auctions you've won",
+    },
+  ];
+
+  // Render the active content
+  const renderActiveContent = () => {
+    switch (activeTab) {
+      case "post-item":
+        return <PostItemTab />;
+      case "listings":
+        return <ListingsTab />;
+      case "sales":
+        return <SalesTab />;
+      case "notifications":
+        return <NotificationsTab />;
+      case "browse":
+        return <BrowseAuctionsContent />;
+      case "my-bids":
+        return <MyBidsTab />;
+      case "watchlist":
+        return <WatchlistTab />;
+      case "won":
+        return <WonAuctionsTab />;
+      default:
+        return <BrowseAuctionsContent />;
+    }
+  };
+
   return (
     <DashboardLayout
       userRole={user?.role as "seller" | "admin"}
       userStatus={user?.status as "email_verified" | "approved"}
       userName={user?.name || user?.username || "User"}
     >
-      <div className="space-y-8">
-        {/* Main Tabs */}
-        <Tabs value={activeTab} onValueChange={handleTabChange}>
-          <TabsList className="grid w-full grid-cols-8">
-            <TabsTrigger value="post-item">Post Item</TabsTrigger>
-            <TabsTrigger value="listings">My Listings</TabsTrigger>
-            <TabsTrigger value="sales">Sales</TabsTrigger>
-            <TabsTrigger value="notifications">Notifications</TabsTrigger>
-            <TabsTrigger value="browse">Auctions</TabsTrigger>
-            <TabsTrigger value="my-bids">My Bids</TabsTrigger>
-            <TabsTrigger value="watchlist">Watchlist</TabsTrigger>
-            <TabsTrigger value="won">Won Auctions</TabsTrigger>
-          </TabsList>
+      <div className="flex h-full">
+        {/* Sidebar Navigation */}
+        <div className="w-64 bg-gradient-to-b from-primary to-primary/95 flex-shrink-0 shadow-lg">
+          <nav className="p-6 space-y-3">
+            {/* Header */}
+            <div className="mb-8">
+              <div className="flex items-center space-x-2 mb-2">
+                <img
+                  src="/logo.png"
+                  alt="BidLode Logo"
+                  className="w-6 h-6 object-contain brightness-0 invert"
+                />
+                <h2 className="text-lg font-bold text-white">Dashboard</h2>
+              </div>
+              <div className="h-px bg-white/20"></div>
+            </div>
 
-          <TabsContent value="post-item">
-            <PostItemTab />
-          </TabsContent>
+            {/* Navigation Items */}
+            {navigationItems.map((item) => {
+              const IconComponent = item.icon;
+              const isActive = activeTab === item.id;
 
-          <TabsContent value="listings">
-            <ListingsTab />
-          </TabsContent>
+              return (
+                <button
+                  key={item.id}
+                  onClick={() => handleTabChange(item.id)}
+                  className={cn(
+                    "w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left transition-all duration-200 group",
+                    isActive
+                      ? "bg-white text-primary shadow-md scale-[1.02] transform"
+                      : "text-white/90 hover:bg-white/10 hover:text-white hover:scale-[1.01] transform"
+                  )}
+                >
+                  <IconComponent
+                    className={cn(
+                      "h-5 w-5 transition-colors",
+                      isActive
+                        ? "text-primary"
+                        : "text-white/80 group-hover:text-white"
+                    )}
+                  />
+                  <div className="flex-1 min-w-0">
+                    <div
+                      className={cn(
+                        "text-sm font-medium transition-colors",
+                        isActive
+                          ? "text-primary"
+                          : "text-white/90 group-hover:text-white"
+                      )}
+                    >
+                      {item.label}
+                    </div>
+                    <div
+                      className={cn(
+                        "text-xs truncate transition-colors",
+                        isActive
+                          ? "text-primary/70"
+                          : "text-white/60 group-hover:text-white/80"
+                      )}
+                    >
+                      {item.description}
+                    </div>
+                  </div>
+                  {isActive && (
+                    <div className="w-1 h-8 bg-secondary rounded-full"></div>
+                  )}
+                </button>
+              );
+            })}
 
-          <TabsContent value="sales">
-            <SalesTab />
-          </TabsContent>
+            {/* Bottom Section */}
+            <div className="mt-8 pt-6 border-t border-white/20">
+              <div className="text-xs text-white/60 text-center">
+                BidLode Platform
+              </div>
+            </div>
+          </nav>
+        </div>
 
-          <TabsContent value="notifications">
-            <NotificationsTab />
-          </TabsContent>
-
-          <TabsContent value="browse">
-            <BrowseAuctionsContent />
-          </TabsContent>
-
-          <TabsContent value="my-bids">
-            <MyBidsTab />
-          </TabsContent>
-
-          <TabsContent value="watchlist">
-            <WatchlistTab />
-          </TabsContent>
-
-          <TabsContent value="won">
-            <WonAuctionsTab />
-          </TabsContent>
-        </Tabs>
+        {/* Main Content Area */}
+        <div className="flex-1 overflow-auto">
+          <div className="p-6">{renderActiveContent()}</div>
+        </div>
       </div>
     </DashboardLayout>
   );
