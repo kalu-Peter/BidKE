@@ -379,14 +379,6 @@ export default function Motorbikes() {
                           KSh {bike.current_bid.toLocaleString()}
                         </span>
                       </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm text-muted-foreground">
-                          Bids
-                        </span>
-                        <span className="text-sm font-medium">
-                          {bike.bid_count}
-                        </span>
-                      </div>
                     </div>
 
                     <div className="flex gap-2">

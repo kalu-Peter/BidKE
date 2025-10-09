@@ -266,10 +266,7 @@ const CategorySection = ({
                     </div>
 
                     <div className="flex justify-between items-center text-sm text-muted-foreground">
-                      <div className="flex items-center gap-1">
-                        <Eye className="w-3 h-3" />
-                        <span>{auction.bid_count} bids</span>
-                      </div>
+                      <span></span>
                       <span>
                         {auction.location || "Location not specified"}
                       </span>

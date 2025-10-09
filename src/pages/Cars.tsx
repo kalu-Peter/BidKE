@@ -495,10 +495,7 @@ const CarsPage = () => {
                         )}
                       </div>
                       <div className="flex justify-between items-center text-sm text-gray-500 mb-3">
-                        <div className="flex items-center space-x-1">
-                          <Eye className="w-4 h-4" />
-                          <span>{car.bid_count} bids</span>
-                        </div>
+                        <span></span>
                         <span
                           className={
                             car.timeLeft.includes("h") &&
