@@ -14,6 +14,7 @@ import {
   Heart,
   Trophy,
   Plus,
+  User,
 } from "lucide-react";
 
 // Import individual tab components
@@ -23,6 +24,7 @@ import SalesTab from "@/components/dashboard/seller/SalesTab";
 import MyBidsTab from "@/components/dashboard/seller/MyBidsTab";
 import WatchlistTab from "@/components/dashboard/seller/WatchlistTab";
 import WonAuctionsTab from "@/components/dashboard/seller/WonAuctionsTab";
+import ProfileTab from "@/components/dashboard/seller/ProfileTab";
 import BrowseAuctionsContent from "@/components/dashboard/BrowseAuctionsContent";
 import NotificationsTab from "@/components/dashboard/admin/NotificationsTab";
 
@@ -44,6 +46,7 @@ const UserDashboard = () => {
     if (path.includes("/dashboard/seller-bids")) return "my-bids";
     if (path.includes("/dashboard/seller-watchlist")) return "watchlist";
     if (path.includes("/dashboard/seller-won")) return "won";
+    if (path.includes("/dashboard/profile")) return "profile";
     return "browse"; // Default to auctions
   };
 
@@ -81,6 +84,9 @@ const UserDashboard = () => {
         break;
       case "won":
         newPath = "/dashboard/seller-won";
+        break;
+      case "profile":
+        newPath = "/dashboard/profile";
         break;
       default:
         newPath = "/dashboard/seller-browse";
@@ -147,6 +153,12 @@ const UserDashboard = () => {
       icon: Trophy,
       description: "Auctions you've won",
     },
+    {
+      id: "profile",
+      label: "Profile",
+      icon: User,
+      description: "Manage your account",
+    },
   ];
 
   // Render the active content
@@ -168,6 +180,8 @@ const UserDashboard = () => {
         return <WatchlistTab />;
       case "won":
         return <WonAuctionsTab />;
+      case "profile":
+        return <ProfileTab />;
       default:
         return <BrowseAuctionsContent />;
     }
@@ -181,7 +195,10 @@ const UserDashboard = () => {
     >
       <div className="flex h-full">
         {/* Sidebar Navigation */}
-        <div className="w-64 bg-gradient-to-b from-primary to-primary/95 flex-shrink-0 shadow-lg">
+        <div
+          className="w-64 flex-shrink-0 shadow-lg"
+          style={{ background: "linear-gradient(to bottom, #084597, #06377a)" }}
+        >
           <nav className="p-6 space-y-3">
             {/* Header */}
             <div className="mb-8">
