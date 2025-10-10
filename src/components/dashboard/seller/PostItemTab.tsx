@@ -71,6 +71,17 @@ const PostItemTab: React.FC = () => {
     electronicsModel: "",
     electronicsYear: "",
     electronicsCondition: "",
+    electronicsSerialNumber: "",
+    electronicsHasWarranty: false,
+    electronicsWarrantyPeriod: "",
+    electronicsWarrantyProvider: "",
+    electronicsWarrantyDocument: null as File | null,
+    electronicsWarrantyDocumentUrl: "",
+    electronicsIncludesAccessories: "",
+    electronicsReceiptAvailable: false,
+    electronicsManualAvailable: false,
+    electronicsReceiptDocument: null as File | null,
+    electronicsReceiptUrl: "",
 
     // Images
     images: [] as Array<{ url: string; alt_text?: string; file?: File }>,
@@ -184,6 +195,70 @@ const PostItemTab: React.FC = () => {
         ...prev,
         vehicleInsuranceDocument: null,
         vehicleInsuranceDocumentUrl: "",
+      }));
+    }
+  };
+
+  const handleElectronicsDocumentUpload = async (
+    e: React.ChangeEvent<HTMLInputElement>,
+    documentType: "warranty" | "receipt"
+  ) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type (allow PDF, JPG, PNG)
+    const allowedTypes = [
+      "application/pdf",
+      "image/jpeg",
+      "image/png",
+      "image/jpg",
+    ];
+    if (!allowedTypes.includes(file.type)) {
+      alert("Please upload a PDF, JPG, or PNG file");
+      return;
+    }
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      alert("File size must be less than 5MB");
+      return;
+    }
+
+    try {
+      const response = await apiService.uploadFile(file, "document");
+      if (response.success && response.data) {
+        if (documentType === "warranty") {
+          setFormData((prev) => ({
+            ...prev,
+            electronicsWarrantyDocument: file,
+            electronicsWarrantyDocumentUrl: response.data.url,
+          }));
+        } else {
+          setFormData((prev) => ({
+            ...prev,
+            electronicsReceiptDocument: file,
+            electronicsReceiptUrl: response.data.url,
+          }));
+        }
+      }
+    } catch (error) {
+      console.error(`Error uploading ${documentType} document:`, error);
+      alert(`Failed to upload ${documentType} document`);
+    }
+  };
+
+  const removeElectronicsDocument = (documentType: "warranty" | "receipt") => {
+    if (documentType === "warranty") {
+      setFormData((prev) => ({
+        ...prev,
+        electronicsWarrantyDocument: null,
+        electronicsWarrantyDocumentUrl: "",
+      }));
+    } else {
+      setFormData((prev) => ({
+        ...prev,
+        electronicsReceiptDocument: null,
+        electronicsReceiptUrl: "",
       }));
     }
   };
@@ -302,6 +377,33 @@ const PostItemTab: React.FC = () => {
       if (!formData.electronicsCondition)
         validationErrors.electronicsCondition =
           "Electronics condition is required";
+      if (!formData.electronicsSerialNumber.trim())
+        validationErrors.electronicsSerialNumber = "Serial number is required";
+
+      // Warranty-specific validation
+      if (formData.electronicsHasWarranty) {
+        if (!formData.electronicsWarrantyPeriod.trim())
+          validationErrors.electronicsWarrantyPeriod =
+            "Warranty period is required when warranty is selected";
+        if (!formData.electronicsWarrantyProvider.trim())
+          validationErrors.electronicsWarrantyProvider =
+            "Warranty provider is required when warranty is selected";
+        if (!formData.electronicsWarrantyDocument)
+          validationErrors.electronicsWarrantyDocument =
+            "Warranty document is required when warranty is selected";
+      }
+
+      if (!formData.electronicsIncludesAccessories.trim())
+        validationErrors.electronicsIncludesAccessories =
+          "Please specify included accessories";
+
+      // Receipt validation
+      if (
+        formData.electronicsReceiptAvailable &&
+        !formData.electronicsReceiptDocument
+      )
+        validationErrors.electronicsReceiptDocument =
+          "Receipt document is required when receipt available is selected";
     }
 
     // Check date/time logic
@@ -378,6 +480,17 @@ const PostItemTab: React.FC = () => {
           electronicsModel: formData.electronicsModel,
           electronicsYear: formData.electronicsYear,
           electronicsCondition: formData.electronicsCondition,
+          electronicsSerialNumber: formData.electronicsSerialNumber,
+          electronicsHasWarranty: formData.electronicsHasWarranty,
+          electronicsWarrantyPeriod: formData.electronicsWarrantyPeriod,
+          electronicsWarrantyProvider: formData.electronicsWarrantyProvider,
+          electronicsWarrantyDocumentUrl:
+            formData.electronicsWarrantyDocumentUrl,
+          electronicsIncludesAccessories:
+            formData.electronicsIncludesAccessories,
+          electronicsReceiptAvailable: formData.electronicsReceiptAvailable,
+          electronicsManualAvailable: formData.electronicsManualAvailable,
+          electronicsReceiptUrl: formData.electronicsReceiptUrl,
         }),
         // Images (uploaded URLs)
         images: formData.images,
@@ -434,6 +547,17 @@ const PostItemTab: React.FC = () => {
           electronicsModel: "",
           electronicsYear: "",
           electronicsCondition: "",
+          electronicsSerialNumber: "",
+          electronicsHasWarranty: false,
+          electronicsWarrantyPeriod: "",
+          electronicsWarrantyProvider: "",
+          electronicsWarrantyDocument: null,
+          electronicsWarrantyDocumentUrl: "",
+          electronicsIncludesAccessories: "",
+          electronicsReceiptAvailable: false,
+          electronicsManualAvailable: false,
+          electronicsReceiptDocument: null,
+          electronicsReceiptUrl: "",
           images: [],
         });
         // If saved as draft, navigate to listings tab with draft filter
@@ -1030,6 +1154,264 @@ const PostItemTab: React.FC = () => {
               <SelectItem value="for-parts">For Parts</SelectItem>
             </SelectContent>
           </Select>
+        </div>
+
+        {/* Serial Number */}
+        <div className="space-y-2">
+          <label className="text-sm font-medium">Serial Number</label>
+          <Input
+            placeholder="e.g., SN123456789"
+            value={formData.electronicsSerialNumber}
+            onChange={(e) =>
+              handleInputChange("electronicsSerialNumber", e.target.value)
+            }
+          />
+        </div>
+      </div>
+
+      {/* Warranty Section */}
+      <div className="space-y-4 border-t pt-4">
+        <h4 className="text-md font-medium text-foreground">
+          Warranty Information
+        </h4>
+        <div className="space-y-4">
+          <div className="flex items-center space-x-2">
+            <input
+              type="radio"
+              id="warranty-yes"
+              name="warranty"
+              checked={formData.electronicsHasWarranty === true}
+              onChange={() => handleInputChange("electronicsHasWarranty", true)}
+              className="h-4 w-4 text-blue-600"
+            />
+            <label htmlFor="warranty-yes" className="text-sm font-medium">
+              Has Warranty
+            </label>
+            <input
+              type="radio"
+              id="warranty-no"
+              name="warranty"
+              checked={formData.electronicsHasWarranty === false}
+              onChange={() =>
+                handleInputChange("electronicsHasWarranty", false)
+              }
+              className="ml-4 h-4 w-4 text-blue-600"
+            />
+            <label htmlFor="warranty-no" className="text-sm font-medium">
+              No Warranty
+            </label>
+          </div>
+
+          {/* Conditional Warranty Fields */}
+          {formData.electronicsHasWarranty && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pl-6 border-l-2 border-blue-200">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Warranty Period *</label>
+                <Input
+                  placeholder="e.g., 12 months, 2 years"
+                  value={formData.electronicsWarrantyPeriod}
+                  onChange={(e) =>
+                    handleInputChange(
+                      "electronicsWarrantyPeriod",
+                      e.target.value
+                    )
+                  }
+                  required
+                />
+                {errors.electronicsWarrantyPeriod && (
+                  <p className="text-red-500 text-sm">
+                    {errors.electronicsWarrantyPeriod}
+                  </p>
+                )}
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">
+                  Warranty Provider *
+                </label>
+                <Input
+                  placeholder="e.g., Apple, Samsung, Local Shop"
+                  value={formData.electronicsWarrantyProvider}
+                  onChange={(e) =>
+                    handleInputChange(
+                      "electronicsWarrantyProvider",
+                      e.target.value
+                    )
+                  }
+                  required
+                />
+                {errors.electronicsWarrantyProvider && (
+                  <p className="text-red-500 text-sm">
+                    {errors.electronicsWarrantyProvider}
+                  </p>
+                )}
+              </div>
+              <div className="space-y-2 md:col-span-2">
+                <label className="text-sm font-medium">Warranty Document</label>
+                <div className="border-2 border-dashed border-gray-300 rounded-lg p-4">
+                  {formData.electronicsWarrantyDocument ? (
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-2">
+                        <div className="w-8 h-8 bg-blue-100 rounded flex items-center justify-center">
+                          📄
+                        </div>
+                        <span className="text-sm text-gray-700">
+                          {formData.electronicsWarrantyDocument.name}
+                        </span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => removeElectronicsDocument("warranty")}
+                        className="text-red-500 hover:text-red-700 text-sm"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="text-center">
+                      <input
+                        type="file"
+                        accept=".pdf,.jpg,.jpeg,.png"
+                        onChange={(e) =>
+                          handleElectronicsDocumentUpload(e, "warranty")
+                        }
+                        className="hidden"
+                        id="warranty-upload"
+                      />
+                      <label
+                        htmlFor="warranty-upload"
+                        className="cursor-pointer"
+                      >
+                        <div className="text-gray-400 mb-1">📄</div>
+                        <p className="text-xs text-gray-600">
+                          Click to upload warranty document
+                        </p>
+                        <p className="text-xs text-gray-400">
+                          PDF, JPG, PNG (max 5MB)
+                        </p>
+                      </label>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Additional Information */}
+      <div className="space-y-4 border-t pt-4">
+        <h4 className="text-md font-medium text-foreground">
+          Additional Information
+        </h4>
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Includes Accessories</label>
+            <textarea
+              placeholder="e.g., Charger, Original Box, Headphones, Manual..."
+              value={formData.electronicsIncludesAccessories}
+              onChange={(e) =>
+                handleInputChange(
+                  "electronicsIncludesAccessories",
+                  e.target.value
+                )
+              }
+              className="w-full p-2 border border-gray-300 rounded-md min-h-[80px] resize-vertical"
+            />
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="receipt-available"
+                  checked={formData.electronicsReceiptAvailable}
+                  onCheckedChange={(checked) =>
+                    handleInputChange(
+                      "electronicsReceiptAvailable",
+                      checked as boolean
+                    )
+                  }
+                />
+                <label
+                  htmlFor="receipt-available"
+                  className="text-sm font-medium"
+                >
+                  Receipt Available
+                </label>
+              </div>
+              {formData.electronicsReceiptAvailable && (
+                <div className="space-y-2 pl-6">
+                  <label className="text-sm font-medium">Upload Receipt</label>
+                  <div className="border-2 border-dashed border-gray-300 rounded-lg p-4">
+                    {formData.electronicsReceiptDocument ? (
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-2">
+                          <div className="w-8 h-8 bg-green-100 rounded flex items-center justify-center">
+                            🧾
+                          </div>
+                          <span className="text-sm text-gray-700">
+                            {formData.electronicsReceiptDocument.name}
+                          </span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => removeElectronicsDocument("receipt")}
+                          className="text-red-500 hover:text-red-700 text-sm"
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="text-center">
+                        <input
+                          type="file"
+                          accept=".pdf,.jpg,.jpeg,.png"
+                          onChange={(e) =>
+                            handleElectronicsDocumentUpload(e, "receipt")
+                          }
+                          className="hidden"
+                          id="receipt-upload"
+                        />
+                        <label
+                          htmlFor="receipt-upload"
+                          className="cursor-pointer"
+                        >
+                          <div className="text-gray-400 mb-1">🧾</div>
+                          <p className="text-xs text-gray-600">
+                            Click to upload receipt
+                          </p>
+                          <p className="text-xs text-gray-400">
+                            PDF, JPG, PNG (max 5MB)
+                          </p>
+                        </label>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="manual-available"
+                  checked={formData.electronicsManualAvailable}
+                  onCheckedChange={(checked) =>
+                    handleInputChange(
+                      "electronicsManualAvailable",
+                      checked as boolean
+                    )
+                  }
+                />
+                <label
+                  htmlFor="manual-available"
+                  className="text-sm font-medium"
+                >
+                  Manual Available
+                </label>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
