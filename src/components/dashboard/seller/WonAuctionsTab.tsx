@@ -630,23 +630,6 @@ const WonAuctionsTab: React.FC = () => {
                         >
                           Process Payment
                         </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => handleContactSeller(auction.id)}
-                          className="relative"
-                        >
-                          <MessageCircle className="w-4 h-4 mr-1" />
-                          Contact Seller
-                          {unreadMessageCounts[auction.id] > 0 && (
-                            <Badge
-                              variant="destructive"
-                              className="absolute -top-2 -right-2 h-5 w-5 rounded-full p-0 flex items-center justify-center text-xs"
-                            >
-                              {unreadMessageCounts[auction.id]}
-                            </Badge>
-                          )}
-                        </Button>
                       </>
                     )}
                     {uiStatus === "paid" && (
@@ -679,14 +662,33 @@ const WonAuctionsTab: React.FC = () => {
                       </>
                     )}
                     {auction.status === "collected" && (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => handleViewReceipt(auction.id)}
-                      >
-                        <Receipt className="w-4 h-4 mr-1" />
-                        View Receipt
-                      </Button>
+                      <>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleViewReceipt(auction.id)}
+                        >
+                          <Receipt className="w-4 h-4 mr-1" />
+                          View Receipt
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleContactSeller(auction.id)}
+                          className="relative"
+                        >
+                          <MessageCircle className="w-4 h-4 mr-1" />
+                          Contact Seller
+                          {unreadMessageCounts[auction.id] > 0 && (
+                            <Badge
+                              variant="destructive"
+                              className="absolute -top-2 -right-2 h-5 w-5 rounded-full p-0 flex items-center justify-center text-xs"
+                            >
+                              {unreadMessageCounts[auction.id]}
+                            </Badge>
+                          )}
+                        </Button>
+                      </>
                     )}
                     <Button
                       size="sm"
