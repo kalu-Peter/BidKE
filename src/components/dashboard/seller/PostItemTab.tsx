@@ -56,6 +56,16 @@ const PostItemTab: React.FC = () => {
     vehicleRegistrationDocumentUrl: "",
     vehicleInsuranceDocumentUrl: "",
 
+    // Additional car-specific fields
+    vehicleFuelType: "",
+    vehicleTransmission: "",
+    vehicleColor: "",
+    vehicleSeats: "",
+    vehicleDoors: "",
+    vehicleVin: "",
+    vehicleEngineNumber: "",
+    vehicleChassisNumber: "",
+
     // Electronics specific fields
     electronicsBrand: "",
     electronicsModel: "",
@@ -257,6 +267,31 @@ const PostItemTab: React.FC = () => {
       if (!formData.vehicleInsuranceDocument)
         validationErrors.vehicleInsuranceDocument =
           "Insurance document is required";
+
+      // Additional validation for car-specific fields
+      if (formData.vehicleCategory === "car") {
+        if (!formData.vehicleFuelType)
+          validationErrors.vehicleFuelType = "Fuel type is required for cars";
+        if (!formData.vehicleTransmission)
+          validationErrors.vehicleTransmission =
+            "Transmission type is required for cars";
+        if (!formData.vehicleColor.trim())
+          validationErrors.vehicleColor = "Vehicle color is required for cars";
+        if (!formData.vehicleSeats)
+          validationErrors.vehicleSeats =
+            "Number of seats is required for cars";
+        if (!formData.vehicleDoors)
+          validationErrors.vehicleDoors =
+            "Number of doors is required for cars";
+        if (!formData.vehicleVin.trim())
+          validationErrors.vehicleVin = "VIN is required for cars";
+        if (!formData.vehicleEngineNumber.trim())
+          validationErrors.vehicleEngineNumber =
+            "Engine number is required for cars";
+        if (!formData.vehicleChassisNumber.trim())
+          validationErrors.vehicleChassisNumber =
+            "Chassis number is required for cars";
+      }
     } else if (formData.itemType === "electronic") {
       if (!formData.electronicsBrand)
         validationErrors.electronicsBrand = "Electronics brand is required";
@@ -325,6 +360,17 @@ const PostItemTab: React.FC = () => {
           vehicleRegistrationDocumentUrl:
             formData.vehicleRegistrationDocumentUrl,
           vehicleInsuranceDocumentUrl: formData.vehicleInsuranceDocumentUrl,
+          // Additional car-specific fields
+          ...(formData.vehicleCategory === "car" && {
+            vehicleFuelType: formData.vehicleFuelType,
+            vehicleTransmission: formData.vehicleTransmission,
+            vehicleColor: formData.vehicleColor,
+            vehicleSeats: formData.vehicleSeats,
+            vehicleDoors: formData.vehicleDoors,
+            vehicleVin: formData.vehicleVin,
+            vehicleEngineNumber: formData.vehicleEngineNumber,
+            vehicleChassisNumber: formData.vehicleChassisNumber,
+          }),
         }),
         // Electronics specific
         ...(formData.itemType === "electronic" && {
@@ -376,6 +422,14 @@ const PostItemTab: React.FC = () => {
           vehicleInsuranceDocument: null,
           vehicleRegistrationDocumentUrl: "",
           vehicleInsuranceDocumentUrl: "",
+          vehicleFuelType: "",
+          vehicleTransmission: "",
+          vehicleColor: "",
+          vehicleSeats: "",
+          vehicleDoors: "",
+          vehicleVin: "",
+          vehicleEngineNumber: "",
+          vehicleChassisNumber: "",
           electronicsBrand: "",
           electronicsModel: "",
           electronicsYear: "",
@@ -711,6 +765,179 @@ const PostItemTab: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* Car-specific Additional Details */}
+      {formData.vehicleCategory === "car" && (
+        <div className="space-y-4 border-t pt-6">
+          <h4 className="text-md font-medium text-foreground">
+            Car-Specific Details
+          </h4>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Fuel Type *</label>
+              <Select
+                value={formData.vehicleFuelType}
+                onValueChange={(value) =>
+                  handleInputChange("vehicleFuelType", value)
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select fuel type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="petrol">Petrol</SelectItem>
+                  <SelectItem value="diesel">Diesel</SelectItem>
+                  <SelectItem value="electric">Electric</SelectItem>
+                  <SelectItem value="hybrid">Hybrid</SelectItem>
+                  <SelectItem value="other">Other</SelectItem>
+                </SelectContent>
+              </Select>
+              {errors.vehicleFuelType && (
+                <p className="text-red-500 text-sm">{errors.vehicleFuelType}</p>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Transmission *</label>
+              <Select
+                value={formData.vehicleTransmission}
+                onValueChange={(value) =>
+                  handleInputChange("vehicleTransmission", value)
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select transmission" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="manual">Manual</SelectItem>
+                  <SelectItem value="automatic">Automatic</SelectItem>
+                  <SelectItem value="cvt">CVT</SelectItem>
+                  <SelectItem value="other">Other</SelectItem>
+                </SelectContent>
+              </Select>
+              {errors.vehicleTransmission && (
+                <p className="text-red-500 text-sm">
+                  {errors.vehicleTransmission}
+                </p>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Color *</label>
+              <Input
+                placeholder="e.g., White, Black, Silver"
+                value={formData.vehicleColor}
+                onChange={(e) =>
+                  handleInputChange("vehicleColor", e.target.value)
+                }
+                required
+              />
+              {errors.vehicleColor && (
+                <p className="text-red-500 text-sm">{errors.vehicleColor}</p>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Number of Seats *</label>
+              <Select
+                value={formData.vehicleSeats}
+                onValueChange={(value) =>
+                  handleInputChange("vehicleSeats", value)
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select seats" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="2">2 Seats</SelectItem>
+                  <SelectItem value="4">4 Seats</SelectItem>
+                  <SelectItem value="5">5 Seats</SelectItem>
+                  <SelectItem value="7">7 Seats</SelectItem>
+                  <SelectItem value="8">8 Seats</SelectItem>
+                  <SelectItem value="other">Other</SelectItem>
+                </SelectContent>
+              </Select>
+              {errors.vehicleSeats && (
+                <p className="text-red-500 text-sm">{errors.vehicleSeats}</p>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Number of Doors *</label>
+              <Select
+                value={formData.vehicleDoors}
+                onValueChange={(value) =>
+                  handleInputChange("vehicleDoors", value)
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select doors" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="2">2 Doors</SelectItem>
+                  <SelectItem value="3">3 Doors</SelectItem>
+                  <SelectItem value="4">4 Doors</SelectItem>
+                  <SelectItem value="5">5 Doors</SelectItem>
+                </SelectContent>
+              </Select>
+              {errors.vehicleDoors && (
+                <p className="text-red-500 text-sm">{errors.vehicleDoors}</p>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">
+                VIN (Vehicle Identification Number) *
+              </label>
+              <Input
+                placeholder="e.g., 1HGBH41JXMN109186"
+                value={formData.vehicleVin}
+                onChange={(e) =>
+                  handleInputChange("vehicleVin", e.target.value)
+                }
+                required
+              />
+              {errors.vehicleVin && (
+                <p className="text-red-500 text-sm">{errors.vehicleVin}</p>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Engine Number *</label>
+              <Input
+                placeholder="e.g., 4A91234567"
+                value={formData.vehicleEngineNumber}
+                onChange={(e) =>
+                  handleInputChange("vehicleEngineNumber", e.target.value)
+                }
+                required
+              />
+              {errors.vehicleEngineNumber && (
+                <p className="text-red-500 text-sm">
+                  {errors.vehicleEngineNumber}
+                </p>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Chassis Number *</label>
+              <Input
+                placeholder="e.g., JH4KA7561PC123456"
+                value={formData.vehicleChassisNumber}
+                onChange={(e) =>
+                  handleInputChange("vehicleChassisNumber", e.target.value)
+                }
+                required
+              />
+              {errors.vehicleChassisNumber && (
+                <p className="text-red-500 text-sm">
+                  {errors.vehicleChassisNumber}
+                </p>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 
