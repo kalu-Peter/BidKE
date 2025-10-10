@@ -1,8 +1,8 @@
 <?php
 header('Content-Type: application/json');
-require_once __DIR__ . '/../../config/connect.php';
+require_once __DIR__ . '/../config/connect.php';
 require_once __DIR__ . '/finalize_helper.php';
-require_once __DIR__ . '/../../models/Auth.php';
+require_once __DIR__ . '/../models/Auth.php';
 
 // This endpoint is designed to be called from CLI or a cron job.
 // If called by a web user, require admin role to avoid abuse.
