@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import { apiService, type Auction } from "@/services/api";
 import { useNavigate } from "react-router-dom";
+import Autoplay from "embla-carousel-autoplay";
 import heroImage from "@/assets/hero-auction.jpg";
 
 const HeroSection = () => {
@@ -176,6 +177,11 @@ const HeroSection = () => {
                     align: "start",
                     loop: true,
                   }}
+                  plugins={[
+                    Autoplay({
+                      delay: 5000,
+                    }),
+                  ]}
                   className="w-full max-w-lg mx-auto"
                 >
                   <CarouselContent>
