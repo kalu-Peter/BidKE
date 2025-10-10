@@ -50,6 +50,11 @@ const PostItemTab: React.FC = () => {
     vehicleYear: "",
     vehicleMileage: "",
     vehicleCondition: "",
+    vehicleRegistrationNumber: "",
+    vehicleRegistrationDocument: null as File | null,
+    vehicleInsuranceDocument: null as File | null,
+    vehicleRegistrationDocumentUrl: "",
+    vehicleInsuranceDocumentUrl: "",
 
     // Electronics specific fields
     electronicsBrand: "",
@@ -107,6 +112,70 @@ const PostItemTab: React.FC = () => {
       ...prev,
       images: prev.images.filter((_, i) => i !== index),
     }));
+  };
+
+  const handleDocumentUpload = async (
+    e: React.ChangeEvent<HTMLInputElement>,
+    documentType: "registration" | "insurance"
+  ) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type (allow PDF, JPG, PNG)
+    const allowedTypes = [
+      "application/pdf",
+      "image/jpeg",
+      "image/png",
+      "image/jpg",
+    ];
+    if (!allowedTypes.includes(file.type)) {
+      alert("Please upload a PDF, JPG, or PNG file");
+      return;
+    }
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      alert("File size must be less than 5MB");
+      return;
+    }
+
+    try {
+      const response = await apiService.uploadFile(file, "document");
+      if (response.success && response.data) {
+        if (documentType === "registration") {
+          setFormData((prev) => ({
+            ...prev,
+            vehicleRegistrationDocument: file,
+            vehicleRegistrationDocumentUrl: response.data.url,
+          }));
+        } else {
+          setFormData((prev) => ({
+            ...prev,
+            vehicleInsuranceDocument: file,
+            vehicleInsuranceDocumentUrl: response.data.url,
+          }));
+        }
+      }
+    } catch (error) {
+      console.error(`Error uploading ${documentType} document:`, error);
+      alert(`Failed to upload ${documentType} document`);
+    }
+  };
+
+  const removeDocument = (documentType: "registration" | "insurance") => {
+    if (documentType === "registration") {
+      setFormData((prev) => ({
+        ...prev,
+        vehicleRegistrationDocument: null,
+        vehicleRegistrationDocumentUrl: "",
+      }));
+    } else {
+      setFormData((prev) => ({
+        ...prev,
+        vehicleInsuranceDocument: null,
+        vehicleInsuranceDocumentUrl: "",
+      }));
+    }
   };
 
   const handleSubmit = async (
@@ -179,6 +248,15 @@ const PostItemTab: React.FC = () => {
         validationErrors.vehicleMileage = "Vehicle mileage is required";
       if (!formData.vehicleCondition)
         validationErrors.vehicleCondition = "Vehicle condition is required";
+      if (!formData.vehicleRegistrationNumber.trim())
+        validationErrors.vehicleRegistrationNumber =
+          "Vehicle registration number is required";
+      if (!formData.vehicleRegistrationDocument)
+        validationErrors.vehicleRegistrationDocument =
+          "Registration document is required";
+      if (!formData.vehicleInsuranceDocument)
+        validationErrors.vehicleInsuranceDocument =
+          "Insurance document is required";
     } else if (formData.itemType === "electronic") {
       if (!formData.electronicsBrand)
         validationErrors.electronicsBrand = "Electronics brand is required";
@@ -243,6 +321,10 @@ const PostItemTab: React.FC = () => {
           vehicleYear: formData.vehicleYear,
           vehicleMileage: formData.vehicleMileage,
           vehicleCondition: formData.vehicleCondition,
+          vehicleRegistrationNumber: formData.vehicleRegistrationNumber,
+          vehicleRegistrationDocumentUrl:
+            formData.vehicleRegistrationDocumentUrl,
+          vehicleInsuranceDocumentUrl: formData.vehicleInsuranceDocumentUrl,
         }),
         // Electronics specific
         ...(formData.itemType === "electronic" && {
@@ -289,6 +371,11 @@ const PostItemTab: React.FC = () => {
           vehicleYear: "",
           vehicleMileage: "",
           vehicleCondition: "",
+          vehicleRegistrationNumber: "",
+          vehicleRegistrationDocument: null,
+          vehicleInsuranceDocument: null,
+          vehicleRegistrationDocumentUrl: "",
+          vehicleInsuranceDocumentUrl: "",
           electronicsBrand: "",
           electronicsModel: "",
           electronicsYear: "",
@@ -423,6 +510,9 @@ const PostItemTab: React.FC = () => {
               <SelectItem value="other">Other</SelectItem>
             </SelectContent>
           </Select>
+          {errors.vehicleMake && (
+            <p className="text-red-500 text-sm">{errors.vehicleMake}</p>
+          )}
         </div>
         <div className="space-y-2">
           <label className="text-sm font-medium">Model *</label>
@@ -432,6 +522,9 @@ const PostItemTab: React.FC = () => {
             onChange={(e) => handleInputChange("vehicleModel", e.target.value)}
             required
           />
+          {errors.vehicleModel && (
+            <p className="text-red-500 text-sm">{errors.vehicleModel}</p>
+          )}
         </div>
         <div className="space-y-2">
           <label className="text-sm font-medium">Year *</label>
@@ -450,6 +543,9 @@ const PostItemTab: React.FC = () => {
               ))}
             </SelectContent>
           </Select>
+          {errors.vehicleYear && (
+            <p className="text-red-500 text-sm">{errors.vehicleYear}</p>
+          )}
         </div>
         <div className="space-y-2">
           <label className="text-sm font-medium">Mileage (KM) *</label>
@@ -462,6 +558,9 @@ const PostItemTab: React.FC = () => {
             }
             required
           />
+          {errors.vehicleMileage && (
+            <p className="text-red-500 text-sm">{errors.vehicleMileage}</p>
+          )}
         </div>
         <div className="space-y-2">
           <label className="text-sm font-medium">Condition *</label>
@@ -483,6 +582,133 @@ const PostItemTab: React.FC = () => {
               <SelectItem value="salvage">Salvage</SelectItem>
             </SelectContent>
           </Select>
+          {errors.vehicleCondition && (
+            <p className="text-red-500 text-sm">{errors.vehicleCondition}</p>
+          )}
+        </div>
+      </div>
+
+      {/* Registration Details */}
+      <div className="space-y-4 border-t pt-6">
+        <h4 className="text-md font-medium text-foreground">
+          Registration & Documentation
+        </h4>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Registration Number *</label>
+            <Input
+              placeholder="e.g., KCB 123A"
+              value={formData.vehicleRegistrationNumber}
+              onChange={(e) =>
+                handleInputChange("vehicleRegistrationNumber", e.target.value)
+              }
+              required
+            />
+            {errors.vehicleRegistrationNumber && (
+              <p className="text-red-500 text-sm">
+                {errors.vehicleRegistrationNumber}
+              </p>
+            )}
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-sm font-medium">
+              Registration Document *
+            </label>
+            <div className="border-2 border-dashed border-gray-300 rounded-lg p-4">
+              {formData.vehicleRegistrationDocument ? (
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-2">
+                    <div className="w-8 h-8 bg-blue-100 rounded flex items-center justify-center">
+                      📄
+                    </div>
+                    <span className="text-sm text-gray-700">
+                      {formData.vehicleRegistrationDocument.name}
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => removeDocument("registration")}
+                    className="text-red-500 hover:text-red-700 text-sm"
+                  >
+                    Remove
+                  </button>
+                </div>
+              ) : (
+                <div className="text-center">
+                  <input
+                    type="file"
+                    accept=".pdf,.jpg,.jpeg,.png"
+                    onChange={(e) => handleDocumentUpload(e, "registration")}
+                    className="hidden"
+                    id="registration-upload"
+                  />
+                  <label
+                    htmlFor="registration-upload"
+                    className="cursor-pointer"
+                  >
+                    <div className="text-gray-400 mb-1">📄</div>
+                    <p className="text-xs text-gray-600">Click to upload</p>
+                    <p className="text-xs text-gray-400">
+                      PDF, JPG, PNG (max 5MB)
+                    </p>
+                  </label>
+                </div>
+              )}
+            </div>
+            {errors.vehicleRegistrationDocument && (
+              <p className="text-red-500 text-sm">
+                {errors.vehicleRegistrationDocument}
+              </p>
+            )}
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Insurance Document *</label>
+            <div className="border-2 border-dashed border-gray-300 rounded-lg p-4">
+              {formData.vehicleInsuranceDocument ? (
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-2">
+                    <div className="w-8 h-8 bg-green-100 rounded flex items-center justify-center">
+                      🛡️
+                    </div>
+                    <span className="text-sm text-gray-700">
+                      {formData.vehicleInsuranceDocument.name}
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => removeDocument("insurance")}
+                    className="text-red-500 hover:text-red-700 text-sm"
+                  >
+                    Remove
+                  </button>
+                </div>
+              ) : (
+                <div className="text-center">
+                  <input
+                    type="file"
+                    accept=".pdf,.jpg,.jpeg,.png"
+                    onChange={(e) => handleDocumentUpload(e, "insurance")}
+                    className="hidden"
+                    id="insurance-upload"
+                  />
+                  <label htmlFor="insurance-upload" className="cursor-pointer">
+                    <div className="text-gray-400 mb-1">🛡️</div>
+                    <p className="text-xs text-gray-600">Click to upload</p>
+                    <p className="text-xs text-gray-400">
+                      PDF, JPG, PNG (max 5MB)
+                    </p>
+                  </label>
+                </div>
+              )}
+            </div>
+            {errors.vehicleInsuranceDocument && (
+              <p className="text-red-500 text-sm">
+                {errors.vehicleInsuranceDocument}
+              </p>
+            )}
+          </div>
         </div>
       </div>
     </div>
