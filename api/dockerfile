@@ -1,0 +1,11 @@
+# Use an official PHP image
+FROM php:8.2-apache
+
+# Copy your app files into the web root
+COPY . /var/www/html/
+
+# Expose the web server port
+EXPOSE 80
+
+# Start Apache
+CMD ["apache2-foreground"]
