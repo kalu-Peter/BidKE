@@ -425,10 +425,7 @@ const AuctionDetailsModal: React.FC<AuctionDetailsModalProps> = ({
     <>
       {/* Modal Backdrop */}
       <div className="fixed inset-0 z-50 bg-black bg-opacity-60 flex items-center justify-center p-4">
-        <div
-          className="rounded-xl shadow-2xl w-full max-w-6xl max-h-[90vh] overflow-auto border border-gray-200"
-          style={{ backgroundColor: "#00072d" }}
-        >
+        <div className="rounded-xl shadow-2xl w-full max-w-6xl max-h-[90vh] overflow-auto bg-muted border border-gray-200">
           {/* Modal Header */}
           <div className="flex items-center justify-between p-6 border-b border-gray-100">
             <h2 className="text-2xl font-bold text-white">
@@ -490,7 +487,7 @@ const AuctionDetailsModal: React.FC<AuctionDetailsModalProps> = ({
                   {/* Image Carousel */}
                   <Card>
                     <CardContent className="p-0">
-                      <div className="relative aspect-video bg-muted rounded-lg overflow-hidden">
+                      <div className="relative min-h-[400px] max-h-[500px] bg-muted rounded-lg overflow-hidden flex items-center justify-center">
                         {(auction.images && auction.images.length > 0) ||
                         auction.primary_image ? (
                           <img
@@ -510,7 +507,7 @@ const AuctionDetailsModal: React.FC<AuctionDetailsModalProps> = ({
                                 : `http://localhost:8000/${auction.primary_image}`
                             }
                             alt={auction.title}
-                            className="w-full h-full object-cover"
+                            className="w-full h-full object-contain"
                             onError={(e) => {
                               const target = e.target as HTMLImageElement;
                               if (auction.category_name === "Cars") {
@@ -598,7 +595,7 @@ const AuctionDetailsModal: React.FC<AuctionDetailsModalProps> = ({
                             {auction.images.map((img, idx) => (
                               <div
                                 key={idx}
-                                className="w-16 h-16 rounded border-2 overflow-hidden bg-gray-50 flex-shrink-0 cursor-pointer"
+                                className="w-16 h-16 rounded border-2 overflow-hidden bg-gray-700 flex-shrink-0 cursor-pointer hover:border-blue-400 flex items-center justify-center"
                                 onClick={() => setCurrentImageIndex(idx)}
                               >
                                 <img
@@ -609,7 +606,7 @@ const AuctionDetailsModal: React.FC<AuctionDetailsModalProps> = ({
                                       : `http://localhost:8000/${img}`
                                   }
                                   alt={`Thumbnail ${idx + 1}`}
-                                  className="w-full h-full object-cover"
+                                  className="w-full h-full object-contain"
                                   onError={(e) => {
                                     const target = e.target as HTMLImageElement;
                                     if (auction.category_name === "Cars") {
