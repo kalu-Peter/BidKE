@@ -893,7 +893,7 @@ class ApiService {
    * Get seller's sales data
    */
   async getSellerSales(sellerId: number, page: number = 1, limit: number = 10): Promise<ApiResponse> {
-    return this.makeRequest(`/sales/seller_sales.php?seller_id=${sellerId}&page=${page}&limit=${limit}`);
+    return this.makeRequest(`/seller_sales.php?seller_id=${sellerId}&page=${page}&limit=${limit}`);
   }
 
   /**
