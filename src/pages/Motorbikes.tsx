@@ -8,6 +8,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Alert } from "@/components/ui/alert";
+import AuctionDetailsModal from "@/components/modals/AuctionDetailsModal";
 import {
   Select,
   SelectContent,
@@ -53,6 +54,12 @@ export default function Motorbikes() {
   const [allBikes, setAllBikes] = useState<MotorbikeAuction[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Modal state
+  const [selectedAuctionId, setSelectedAuctionId] = useState<number | null>(
+    null
+  );
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   const brands = ["Honda", "Yamaha", "TVS", "Bajaj"];
 
@@ -305,7 +312,10 @@ export default function Motorbikes() {
                 <Card
                   key={bike.id}
                   className="group hover:shadow-lg transition-all duration-300 cursor-pointer overflow-hidden"
-                  onClick={() => navigate(`/auction/${bike.id}`)}
+                  onClick={() => {
+                    setSelectedAuctionId(bike.id);
+                    setIsModalOpen(true);
+                  }}
                 >
                   <div className="relative">
                     <img
@@ -388,7 +398,8 @@ export default function Motorbikes() {
                         className="flex-1"
                         onClick={(e) => {
                           e.stopPropagation();
-                          navigate(`/auction/${bike.id}`);
+                          setSelectedAuctionId(bike.id);
+                          setIsModalOpen(true);
                         }}
                       >
                         View Details
@@ -422,6 +433,18 @@ export default function Motorbikes() {
         )}
       </div>
       <Footer />
+
+      {/* Auction Details Modal */}
+      {selectedAuctionId && (
+        <AuctionDetailsModal
+          auctionId={selectedAuctionId}
+          isOpen={isModalOpen}
+          onClose={() => {
+            setIsModalOpen(false);
+            setSelectedAuctionId(null);
+          }}
+        />
+      )}
     </>
   );
 }

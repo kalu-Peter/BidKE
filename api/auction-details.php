@@ -20,6 +20,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 require_once 'config/connect.php';
 require_once __DIR__ . '/auctions/finalize_helper.php';
 
+// Compute base URL dynamically so returned image URLs are absolute and portable
+$scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+$host = $_SERVER['HTTP_HOST'] ?? 'localhost:8000';
+$base = $scheme . '://' . $host;
+
 try {
     $database = Database::getInstance();
     $db = $database->getConnection();
@@ -94,31 +99,13 @@ try {
         $tblStmt->execute();
         $tbls = $tblStmt->fetchAll(PDO::FETCH_COLUMN);
 
-        $useImages = in_array('auction_images', $tbls);
-        $useFiles = in_array('auction_files', $tbls) && !$useImages;
+        $hasImagesTable = in_array('auction_images', $tbls);
+        $hasFilesTable = in_array('auction_files', $tbls);
 
-        if ($useFiles) {
-            $fstmt = $db->prepare("SELECT file_path, file_type FROM auction_files WHERE auction_id = :auction_id ORDER BY id ASC");
-            $fstmt->execute([':auction_id' => $auctionId]);
-            $rows = $fstmt->fetchAll(PDO::FETCH_ASSOC);
-            foreach ($rows as $r) {
-                $path = $r['file_path'] ?? '';
-                if (!$path) continue;
-                if (preg_match('#^https?://#i', $path)) {
-                    $url = $path;
-                } elseif (strpos($path, '/') === 0) {
-                    $url = 'http://localhost:8000' . $path;
-                } else {
-                    $url = 'http://localhost:8000/' . $path;
-                }
-                if (strtolower($r['file_type'] ?? '') === 'image') {
-                    $auction['images'][] = $url;
-                    if ($auction['primary_image'] === null) $auction['primary_image'] = $url;
-                } else {
-                    $auction['documents'][] = $url;
-                }
-            }
-        } elseif ($useImages) {
+
+
+        // Try auction_images first if table exists
+        if ($hasImagesTable) {
             $istmt = $db->prepare("SELECT image_url, is_primary FROM auction_images WHERE auction_id = :auction_id AND is_active = TRUE ORDER BY sort_order ASC, is_primary DESC");
             $istmt->execute([':auction_id' => $auctionId]);
             $rows = $istmt->fetchAll(PDO::FETCH_ASSOC);
@@ -128,13 +115,45 @@ try {
                 if (preg_match('#^https?://#i', $path)) {
                     $url = $path;
                 } elseif (strpos($path, '/') === 0) {
-                    $url = 'http://localhost:8000' . $path;
+                    $url = $base . $path;
                 } else {
-                    $url = 'http://localhost:8000/' . $path;
+                    $url = $base . '/' . $path;
                 }
                 $auction['images'][] = $url;
                 if (!empty($r['is_primary']) && $auction['primary_image'] === null) {
                     $auction['primary_image'] = $url;
+                }
+            }
+        }
+
+        // If no images found in auction_images and auction_files table exists, try auction_files
+        if (empty($auction['images']) && $hasFilesTable) {
+            $fstmt = $db->prepare("SELECT file_path, file_type FROM auction_files WHERE auction_id = :auction_id ORDER BY id ASC");
+            $fstmt->execute([':auction_id' => $auctionId]);
+            $rows = $fstmt->fetchAll(PDO::FETCH_ASSOC);
+            foreach ($rows as $r) {
+                $path = $r['file_path'] ?? '';
+                $fileType = $r['file_type'] ?? '';
+
+                if (!$path) continue;
+
+                // Handle both relative paths and full URLs stored in database
+                if (preg_match('#^https?://#i', $path)) {
+                    // Already a full URL - use as is
+                    $url = $path;
+                } elseif (strpos($path, '/') === 0) {
+                    // Absolute path - prepend base URL
+                    $url = $base . $path;
+                } else {
+                    // Relative path - prepend base URL with slash
+                    $url = $base . '/' . $path;
+                }
+
+                if (strtolower($fileType) === 'image') {
+                    $auction['images'][] = $url;
+                    if ($auction['primary_image'] === null) $auction['primary_image'] = $url;
+                } else {
+                    $auction['documents'][] = $url;
                 }
             }
         }

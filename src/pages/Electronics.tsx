@@ -8,6 +8,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Alert } from "@/components/ui/alert";
+import AuctionDetailsModal from "@/components/modals/AuctionDetailsModal";
 import {
   Select,
   SelectContent,
@@ -88,6 +89,12 @@ const ElectronicsPage = () => {
   );
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Modal state
+  const [selectedAuctionId, setSelectedAuctionId] = useState<number | null>(
+    null
+  );
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   // Calculate time left for auction
   const calculateTimeLeft = (endTime: string) => {
@@ -258,11 +265,13 @@ const ElectronicsPage = () => {
       navigate("/login");
       return;
     }
-    navigate(`/auction/${itemId}`);
+    setSelectedAuctionId(itemId);
+    setIsModalOpen(true);
   };
 
   const handleViewDetails = (itemId: number) => {
-    navigate(`/auction/${itemId}`);
+    setSelectedAuctionId(itemId);
+    setIsModalOpen(true);
   };
 
   return (
@@ -589,6 +598,18 @@ const ElectronicsPage = () => {
         )}
       </div>
       <Footer />
+
+      {/* Auction Details Modal */}
+      {selectedAuctionId && (
+        <AuctionDetailsModal
+          auctionId={selectedAuctionId}
+          isOpen={isModalOpen}
+          onClose={() => {
+            setIsModalOpen(false);
+            setSelectedAuctionId(null);
+          }}
+        />
+      )}
     </>
   );
 };

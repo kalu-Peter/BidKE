@@ -106,16 +106,28 @@ const ListingModal: React.FC<ListingModalProps> = ({
       const response = await apiService.getAuctionDetails(auction.id);
 
       if (response.success && response.data) {
-        setDetailedAuction({
+        // Ensure images is always an array
+        const auctionData = {
           ...response.data,
+          images: response.data.images || [],
           bids: response.data.bids || [],
           watchers: response.data.watchers || [],
+        };
+
+        console.log("📷 Fetched auction details with images:", {
+          id: auctionData.id,
+          primary_image: auctionData.primary_image,
+          images: auctionData.images,
+          imagesCount: auctionData.images.length,
         });
+
+        setDetailedAuction(auctionData);
       } else {
         // Fallback to basic auction data if API call fails
         console.warn("Failed to fetch detailed auction data, using basic data");
         setDetailedAuction({
           ...auction,
+          images: auction.images || [],
           bids: [],
           watchers: [],
         });
@@ -123,7 +135,12 @@ const ListingModal: React.FC<ListingModalProps> = ({
     } catch (error) {
       console.error("Error fetching auction details:", error);
       // Fallback to basic auction data
-      setDetailedAuction(auction as AuctionDetails);
+      setDetailedAuction({
+        ...auction,
+        images: auction.images || [],
+        bids: [],
+        watchers: [],
+      } as AuctionDetails);
     } finally {
       setLoading(false);
     }
@@ -315,114 +332,60 @@ const ListingModal: React.FC<ListingModalProps> = ({
   const images = React.useMemo(() => {
     if (!detailedAuction) return [];
 
-    console.log("📷 Processing images for auction:", detailedAuction.id);
-    console.log("📷 Raw images data:", detailedAuction.images);
-    console.log("📷 Images to remove:", imagesToRemove);
+    const imageList: string[] = [];
 
-    const imageList = [];
-
-    // Add image_path if available
+    // First, add primary_image if available
     if (
-      detailedAuction.image_path &&
-      !imagesToRemove.includes(detailedAuction.image_path)
+      detailedAuction.primary_image &&
+      !imagesToRemove.includes(detailedAuction.primary_image)
     ) {
-      const imageUrl = detailedAuction.image_path.startsWith("http")
-        ? detailedAuction.image_path
-        : `http://localhost:8000${
-            detailedAuction.image_path.startsWith("/") ? "" : "/"
-          }${detailedAuction.image_path}`;
-      imageList.push(imageUrl);
+      imageList.push(detailedAuction.primary_image);
     }
 
-    // Add image_url if available
-    if (
-      detailedAuction.image_url &&
-      !imagesToRemove.includes(detailedAuction.image_url)
-    ) {
-      const imageUrl = detailedAuction.image_url.startsWith("http")
-        ? detailedAuction.image_url
-        : `http://localhost:8000${
-            detailedAuction.image_url.startsWith("/") ? "" : "/"
-          }${detailedAuction.image_url}`;
-      if (!imageList.includes(imageUrl)) {
-        imageList.push(imageUrl);
-      }
-    }
-
-    // Add images from images array (filter out removed ones)
+    // Then add images from images array
     if (detailedAuction.images && Array.isArray(detailedAuction.images)) {
-      console.log(
-        "📷 Processing",
-        detailedAuction.images.length,
-        "images from array"
-      );
-
-      detailedAuction.images.forEach((img: any, index: number) => {
-        console.log(`📷 Processing image ${index}:`, img, typeof img);
+      detailedAuction.images.forEach((img: any) => {
         let imageUrl = "";
-        let originalPath = "";
 
         if (typeof img === "string") {
-          originalPath = img;
-          imageUrl = img.startsWith("http")
-            ? img
-            : `http://localhost:8000${img.startsWith("/") ? "" : "/"}${img}`;
-          console.log(
-            `📷 String image ${index}: ${originalPath} -> ${imageUrl}`
-          );
+          imageUrl = img;
         } else if (typeof img === "object" && img !== null) {
-          const url =
-            img.image_url || img.image_path || img.file_path || img.url;
-          originalPath = url || "";
-          if (url) {
-            imageUrl = url.startsWith("http")
-              ? url
-              : `http://localhost:8000${url.startsWith("/") ? "" : "/"}${url}`;
-          }
-          console.log(
-            `📷 Object image ${index}: ${originalPath} -> ${imageUrl}`
-          );
+          imageUrl =
+            img.image_url || img.image_path || img.file_path || img.url || "";
         }
 
-        // Check removal conditions
-        const inOriginalRemoveList = imagesToRemove.includes(originalPath);
-        const inImageUrlRemoveList = imagesToRemove.includes(imageUrl);
-        const alreadyInList = imageList.includes(imageUrl);
-
-        console.log(`📷 Image ${index} checks:`, {
-          imageUrl,
-          originalPath,
-          inOriginalRemoveList,
-          inImageUrlRemoveList,
-          alreadyInList,
-          willAdd:
-            imageUrl &&
-            !inOriginalRemoveList &&
-            !inImageUrlRemoveList &&
-            !alreadyInList,
-        });
-
-        // Only add if not in removed list and not already in imageList
+        // Only add if it's a valid URL, not already in the list, and not marked for removal
         if (
           imageUrl &&
-          !inOriginalRemoveList &&
-          !inImageUrlRemoveList &&
-          !alreadyInList
+          !imageList.includes(imageUrl) &&
+          !imagesToRemove.includes(imageUrl)
         ) {
           imageList.push(imageUrl);
-          console.log(`📷 Added image ${index} to list:`, imageUrl);
-        } else {
-          console.log(`📷 Skipped image ${index}:`, {
-            imageUrl,
-            inOriginalRemoveList,
-            inImageUrlRemoveList,
-            alreadyInList,
-          });
         }
       });
     }
 
-    console.log("📷 Final image list:", imageList);
+    // Add fallback fields if no images found yet
+    if (imageList.length === 0) {
+      const fallbackFields = [
+        detailedAuction.image_path,
+        detailedAuction.image_url,
+      ];
+
+      for (const field of fallbackFields) {
+        if (field && !imagesToRemove.includes(field)) {
+          const imageUrl = field.startsWith("http")
+            ? field
+            : `http://localhost:8000${
+                field.startsWith("/") ? "" : "/"
+              }${field}`;
+          if (!imageList.includes(imageUrl)) {
+            imageList.push(imageUrl);
+            break; // Only add the first fallback found
+          }
+        }
+      }
+    }
 
     return imageList.length > 0 ? imageList : ["/placeholder.svg"];
   }, [detailedAuction, imagesToRemove]);
@@ -434,12 +397,7 @@ const ListingModal: React.FC<ListingModalProps> = ({
 
   // Combined images for display (existing + new)
   const allImages = React.useMemo(() => {
-    console.log("🖼️ Creating combined images array:");
-    console.log("🖼️ Existing images:", images);
-    console.log("🖼️ New image previews:", newImagePreviews);
-    const combined = [...images, ...newImagePreviews];
-    console.log("🖼️ Combined array:", combined);
-    return combined;
+    return [...images, ...newImagePreviews];
   }, [images, newImagePreviews]);
 
   if (!auction || !detailedAuction) return null;
@@ -498,21 +456,11 @@ const ListingModal: React.FC<ListingModalProps> = ({
             <div className="space-y-4">
               <div className="relative aspect-video bg-gray-100 rounded-lg overflow-hidden">
                 <img
-                  src={(() => {
-                    const src =
-                      allImages[selectedImageIndex] || "/placeholder.svg";
-                    console.log("🖼️ Displaying image:", {
-                      selectedImageIndex,
-                      src,
-                      allImagesLength: allImages.length,
-                    });
-                    return src;
-                  })()}
+                  src={allImages[selectedImageIndex] || "/placeholder.svg"}
                   alt={detailedAuction.title}
                   className="w-full h-full object-cover"
                   onError={(e) => {
                     const target = e.target as HTMLImageElement;
-                    console.log("🚨 Image load error for:", target.src);
                     target.src = "/placeholder.svg";
                   }}
                 />
@@ -853,9 +801,7 @@ const ListingModal: React.FC<ListingModalProps> = ({
                 </Button>
                 {!isEditing && (
                   <Button
-                    onClick={() =>
-                      window.open(`/auction/${detailedAuction.id}`, "_blank")
-                    }
+                    onClick={() => window.open(`/browse-auctions`, "_blank")}
                     className="flex items-center gap-2"
                   >
                     <Eye className="w-4 h-4" />

@@ -26,6 +26,7 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { apiService } from "@/services/api";
 import { useNotifications } from "@/components/notifications/BidNotification";
+import AuctionDetailsModal from "@/components/modals/AuctionDetailsModal";
 // Swiper carousel
 import { Swiper, SwiperSlide } from "swiper/react";
 // Import modules directly from their module files to avoid runtime named-export issues
@@ -95,6 +96,12 @@ const BrowseAuctionsContent = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalAuctions, setTotalAuctions] = useState(0);
+
+  // Modal state
+  const [selectedAuctionId, setSelectedAuctionId] = useState<number | null>(
+    null
+  );
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   // Fetch auctions from API
   const fetchAuctions = async (
@@ -417,16 +424,23 @@ const BrowseAuctionsContent = () => {
     }
   };
 
-  const handlePlaceBid = (auctionId: number) => {
+  const handleBidNow = (auctionId: number) => {
     if (!user) {
       navigate("/login");
       return;
     }
-    navigate(`/auction/${auctionId}#place-bid`);
+    setSelectedAuctionId(auctionId);
+    setIsModalOpen(true);
   };
 
   const handleViewDetails = (auctionId: number) => {
-    navigate(`/auction/${auctionId}`);
+    setSelectedAuctionId(auctionId);
+    setIsModalOpen(true);
+  };
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setSelectedAuctionId(null);
   };
 
   const handlePageChange = (page: number) => {
@@ -444,7 +458,7 @@ const BrowseAuctionsContent = () => {
         <HeroSwiper
           slides={auctions.filter((a) => a.featured).slice(0, 6)}
           onView={(id) => handleViewDetails(id)}
-          onBid={(id) => handlePlaceBid(id)}
+          onBid={(id) => handleBidNow(id)}
         />
       </div>
       {/* Search and Filters */}
@@ -676,7 +690,7 @@ const BrowseAuctionsContent = () => {
                   <div className="flex space-x-2">
                     <Button
                       className="flex-1"
-                      onClick={() => handlePlaceBid(auction.id)}
+                      onClick={() => handleBidNow(auction.id)}
                       disabled={timeLeft === "Ended"}
                     >
                       {timeLeft === "Ended"
@@ -779,6 +793,15 @@ const BrowseAuctionsContent = () => {
           </ul>
         </div>
       </div>
+
+      {/* Auction Details Modal */}
+      {selectedAuctionId && (
+        <AuctionDetailsModal
+          auctionId={selectedAuctionId}
+          isOpen={isModalOpen}
+          onClose={handleCloseModal}
+        />
+      )}
     </div>
   );
 };

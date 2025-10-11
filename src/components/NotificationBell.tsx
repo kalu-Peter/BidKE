@@ -241,9 +241,9 @@ const NotificationBell: React.FC = () => {
                   if (!notification.read) {
                     markAsRead(notification.id);
                   }
-                  // Optionally navigate to related auction
+                  // Navigate to browse auctions instead of specific auction
                   if (notification.auction_id) {
-                    navigate(`/auction/${notification.auction_id}`);
+                    navigate(`/browse-auctions`);
                   }
                 }}
               >

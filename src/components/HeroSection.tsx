@@ -18,12 +18,18 @@ import {
   Star,
 } from "lucide-react";
 import { apiService, type Auction } from "@/services/api";
-import { useNavigate } from "react-router-dom";
 import Autoplay from "embla-carousel-autoplay";
 import heroImage from "@/assets/hero-auction.jpg";
 
-const HeroSection = () => {
-  const navigate = useNavigate();
+interface HeroSectionProps {
+  onViewAuction: (auctionId: number) => void;
+  onViewAllAuctions: () => void;
+}
+
+const HeroSection = ({
+  onViewAuction,
+  onViewAllAuctions,
+}: HeroSectionProps) => {
   const [featuredAuctions, setFeaturedAuctions] = useState<Auction[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -87,7 +93,7 @@ const HeroSection = () => {
   };
 
   const handleViewAuction = (auctionId: number) => {
-    navigate(`/auction/${auctionId}`);
+    onViewAuction(auctionId);
   };
 
   return (
@@ -278,7 +284,7 @@ const HeroSection = () => {
                 <div className="text-center">
                   <Button
                     variant="outline"
-                    onClick={() => navigate("/auctions")}
+                    onClick={onViewAllAuctions}
                     className="border-primary-foreground/20 text-primary-foreground hover:bg-primary-foreground/10"
                   >
                     View All Auctions

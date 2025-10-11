@@ -163,9 +163,9 @@ const NotificationsTab: React.FC = () => {
       markAsRead(notification.id);
     }
 
-    // Navigate to related auction if available
+    // Navigate to browse auctions instead of specific auction
     if (notification.auction_id) {
-      navigate(`/auction/${notification.auction_id}`);
+      navigate(`/browse-auctions`);
     }
   };
 

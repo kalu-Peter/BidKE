@@ -17,7 +17,6 @@ import UserDashboard from "./pages/dashboard/UserDashboard";
 import AdminDashboard from "./pages/dashboard/AdminDashboard";
 import NotificationsDashboard from "./pages/dashboard/NotificationsDashboard";
 import BrowseAuctions from "./pages/BrowseAuctions";
-import AuctionDetails from "./pages/AuctionDetails";
 import Checkout from "./pages/Checkout";
 import HowItWorks from "./pages/HowItWorks";
 import TrustSecurity from "./pages/TrustSecurity";
@@ -42,7 +41,6 @@ const App = () => (
             <Route path="/cars" element={<Cars />} />
             <Route path="/electronics" element={<Electronics />} />
             <Route path="/browse-auctions" element={<BrowseAuctions />} />
-            <Route path="/auction/:id" element={<AuctionDetails />} />
             <Route path="/checkout" element={<Checkout />} />
             {/* Redirect old browse-categories route to new browse-auctions route */}
             <Route

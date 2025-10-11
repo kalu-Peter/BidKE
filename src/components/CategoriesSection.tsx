@@ -19,6 +19,7 @@ import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import type { Swiper as SwiperType } from "swiper";
 import { apiService } from "@/services/api";
+import AuctionDetailsModal from "@/components/modals/AuctionDetailsModal";
 
 // Import Swiper styles
 import "swiper/css";
@@ -98,10 +99,12 @@ const CategorySection = ({
   category,
   auctions,
   loading,
+  onViewDetails,
 }: {
   category: CategorySection;
   auctions: Auction[];
   loading: boolean;
+  onViewDetails: (auctionId: number) => void;
 }) => {
   const navigate = useNavigate();
   const swiperRef = useRef<SwiperType>();
@@ -226,7 +229,7 @@ const CategorySection = ({
               <SwiperSlide key={auction.id}>
                 <Card
                   className="group hover:shadow-xl transition-all duration-300 cursor-pointer bg-card/95 backdrop-blur-sm border border-border overflow-hidden"
-                  onClick={() => navigate(`/auction/${auction.id}`)}
+                  onClick={() => onViewDetails(auction.id)}
                 >
                   <div className="aspect-video relative overflow-hidden">
                     <img
@@ -314,6 +317,12 @@ const CategoriesSection = () => {
     electronics: true,
   });
 
+  // Modal state
+  const [selectedAuctionId, setSelectedAuctionId] = useState<number | null>(
+    null
+  );
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
   // Fetch auctions for each category
   useEffect(() => {
     const fetchCategoryAuctions = async (
@@ -344,6 +353,11 @@ const CategoriesSection = () => {
     fetchCategoryAuctions("electronics", setElectronicsAuctions, "electronics");
   }, []);
 
+  const handleViewDetails = (auctionId: number) => {
+    setSelectedAuctionId(auctionId);
+    setIsModalOpen(true);
+  };
+
   return (
     <section className="bg-background">
       {/* Cars Section (Top) */}
@@ -351,6 +365,7 @@ const CategoriesSection = () => {
         category={categoryConfigs[0]}
         auctions={carsAuctions}
         loading={loading.cars}
+        onViewDetails={handleViewDetails}
       />
 
       {/* Motorbikes Section (Middle) */}
@@ -358,6 +373,7 @@ const CategoriesSection = () => {
         category={categoryConfigs[1]}
         auctions={motorbikesAuctions}
         loading={loading.motorbikes}
+        onViewDetails={handleViewDetails}
       />
 
       {/* Electronics Section (Bottom) */}
@@ -365,7 +381,20 @@ const CategoriesSection = () => {
         category={categoryConfigs[2]}
         auctions={electronicsAuctions}
         loading={loading.electronics}
+        onViewDetails={handleViewDetails}
       />
+
+      {/* Auction Details Modal */}
+      {selectedAuctionId && (
+        <AuctionDetailsModal
+          auctionId={selectedAuctionId}
+          isOpen={isModalOpen}
+          onClose={() => {
+            setIsModalOpen(false);
+            setSelectedAuctionId(null);
+          }}
+        />
+      )}
     </section>
   );
 };

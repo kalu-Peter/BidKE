@@ -15,6 +15,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import AuctionDetailsModal from "@/components/modals/AuctionDetailsModal";
 import {
   Search,
   Grid3X3,
@@ -65,6 +66,12 @@ const CarsPage = () => {
   const [allCars, setAllCars] = useState<CarAuction[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Modal state
+  const [selectedAuctionId, setSelectedAuctionId] = useState<number | null>(
+    null
+  );
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   // Calculate time left for auction
   const calculateTimeLeft = (endTime: string) => {
@@ -231,16 +238,18 @@ const CarsPage = () => {
     }
   };
 
-  const handlePlaceBid = (carId: number) => {
+  const handleBidNow = (carId: number) => {
     if (!user) {
       navigate("/login");
       return;
     }
-    navigate(`/auction/${carId}`);
+    setSelectedAuctionId(carId);
+    setIsModalOpen(true);
   };
 
   const handleViewDetails = (carId: number) => {
-    navigate(`/auction/${carId}`);
+    setSelectedAuctionId(carId);
+    setIsModalOpen(true);
   };
 
   return (
@@ -514,7 +523,7 @@ const CarsPage = () => {
                       <div className="flex space-x-2">
                         <Button
                           className="flex-1"
-                          onClick={() => handlePlaceBid(car.id)}
+                          onClick={() => handleBidNow(car.id)}
                         >
                           {user ? "Place Bid" : "Login to Bid"}
                         </Button>
@@ -560,6 +569,18 @@ const CarsPage = () => {
         )}
       </div>
       <Footer />
+
+      {/* Auction Details Modal */}
+      {selectedAuctionId && (
+        <AuctionDetailsModal
+          auctionId={selectedAuctionId}
+          isOpen={isModalOpen}
+          onClose={() => {
+            setIsModalOpen(false);
+            setSelectedAuctionId(null);
+          }}
+        />
+      )}
     </>
   );
 };

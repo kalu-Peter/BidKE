@@ -172,9 +172,9 @@ const NotificationsPage: React.FC = () => {
       markAsRead(notification.id);
     }
 
-    // Navigate to related auction if available
+    // Navigate to browse auctions instead of specific auction
     if (notification.auction_id) {
-      navigate(`/auction/${notification.auction_id}`);
+      navigate(`/browse-auctions`);
     }
   };
 
@@ -310,7 +310,7 @@ const NotificationsPage: React.FC = () => {
                               className="p-0 h-auto text-xs text-blue-600"
                               onClick={(e) => {
                                 e.stopPropagation();
-                                navigate(`/auction/${notification.auction_id}`);
+                                navigate(`/browse-auctions`);
                               }}
                             >
                               <Eye className="w-3 h-3 mr-1" />
