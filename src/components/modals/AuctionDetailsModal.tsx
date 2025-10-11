@@ -425,17 +425,20 @@ const AuctionDetailsModal: React.FC<AuctionDetailsModalProps> = ({
     <>
       {/* Modal Backdrop */}
       <div className="fixed inset-0 z-50 bg-black bg-opacity-60 flex items-center justify-center p-4">
-        <div className="bg-white rounded-xl shadow-2xl w-full max-w-6xl max-h-[90vh] overflow-auto border border-gray-200">
+        <div
+          className="rounded-xl shadow-2xl w-full max-w-6xl max-h-[90vh] overflow-auto border border-gray-200"
+          style={{ backgroundColor: "#00072d" }}
+        >
           {/* Modal Header */}
           <div className="flex items-center justify-between p-6 border-b border-gray-100">
-            <h2 className="text-2xl font-bold text-gray-900">
+            <h2 className="text-2xl font-bold text-white">
               {loading ? "Loading..." : auction?.title || "Auction Details"}
             </h2>
             <Button
               variant="ghost"
               size="sm"
               onClick={onClose}
-              className="hover:bg-gray-100"
+              className="bg-red-600 hover:bg-red-700 text-white"
             >
               <X className="w-5 h-5" />
             </Button>
@@ -458,10 +461,10 @@ const AuctionDetailsModal: React.FC<AuctionDetailsModalProps> = ({
             {loading && (
               <div className="text-center py-12">
                 <Loader2 className="w-12 h-12 animate-spin mx-auto mb-4 text-primary" />
-                <h3 className="text-xl font-semibold text-foreground mb-2">
+                <h3 className="text-xl font-semibold text-white mb-2">
                   Loading Auction Details
                 </h3>
-                <p className="text-muted-foreground">
+                <p className="text-gray-300">
                   Please wait while we fetch the auction information...
                 </p>
               </div>
@@ -470,10 +473,10 @@ const AuctionDetailsModal: React.FC<AuctionDetailsModalProps> = ({
             {error && (
               <div className="text-center py-12">
                 <AlertTriangle className="w-16 h-16 text-red-500 mx-auto mb-4" />
-                <h3 className="text-xl font-semibold text-foreground mb-2">
+                <h3 className="text-xl font-semibold text-white mb-2">
                   Error Loading Auction
                 </h3>
-                <p className="text-muted-foreground mb-4">{error}</p>
+                <p className="text-gray-300 mb-4">{error}</p>
                 <Button onClick={onClose} variant="outline">
                   Close
                 </Button>
