@@ -3,14 +3,22 @@
 /**
  * PostgreSQL Database Connection
  * BidKE Auction Platform
+ * define('DB_HOST', 'localhost');
+ * define('DB_PORT', '5054');
+ *define('DB_NAME', 'bidlode');
+ *define('DB_USER', 'postgres');
+ *define('DB_PASS', 'webwiz');
  */
 
 // Database configuration
-define('DB_HOST', 'localhost');
-define('DB_PORT', '5054');
-define('DB_NAME', 'bidlode');
-define('DB_USER', 'postgres');
-define('DB_PASS', 'webwiz');
+// Use environment variables if available, fallback to local for dev
+define('DB_HOST', getenv('DB_HOST') ?: 'localhost');
+define('DB_PORT', getenv('DB_PORT') ?: '5432');
+define('DB_NAME', getenv('DB_NAME') ?: 'bidlode');
+define('DB_USER', getenv('DB_USER') ?: 'postgres');
+define('DB_PASS', getenv('DB_PASS') ?: 'webwiz');
+define('DB_SSLMODE', getenv('DB_SSLMODE') ?: 'require');
+
 
 // Error reporting
 error_reporting(E_ALL);
@@ -77,7 +85,7 @@ class Database
     private function connect()
     {
         try {
-            $dsn = "pgsql:host=" . DB_HOST . ";port=" . DB_PORT . ";dbname=" . DB_NAME;
+            $dsn = "pgsql:host=" . DB_HOST . ";port=" . DB_PORT . ";dbname=" . DB_NAME . ";sslmode=" . DB_SSLMODE;
             $this->connection = new PDO($dsn, DB_USER, DB_PASS, [
                 PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
                 PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
