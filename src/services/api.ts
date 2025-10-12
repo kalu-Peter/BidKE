@@ -98,12 +98,14 @@ class ApiService {
   private sessionToken: string | null;
 
   constructor() {
-    this.baseUrl = 'http://localhost:8000';
+    this.baseUrl = 'https://bidke-php.onrender.com/api'; // Change to your actual API base URL
     this.sessionToken = localStorage.getItem('bidlode_session_token');
   }
 
   /**
    * Make HTTP request with proper headers
+   * https://bidke-php.onrender.com
+   * http://localhost:8000
    */
   private async makeRequest<T>(
     endpoint: string,
