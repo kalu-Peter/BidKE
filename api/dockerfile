@@ -1,24 +1,31 @@
-# Use official PHP + Apache image
+# Use official PHP image with Apache
 FROM php:8.2-apache
 
-# Install system dependencies needed for PostgreSQL extensions
-RUN apt-get update && apt-get install -y \
-    libpq-dev \
-    && docker-php-ext-install pdo pdo_pgsql pgsql
+# Install PostgreSQL extensions
+RUN apt-get update && apt-get install -y libpq-dev && docker-php-ext-install pdo pdo_pgsql pgsql
 
-# Copy application files
-COPY . /var/www/html/
-
-# Change Apache DocumentRoot to /var/www/html/api
-RUN sed -i 's|/var/www/html|/var/www/html/api|g' /etc/apache2/sites-available/000-default.conf
-
-# Enable Apache mod_rewrite (for clean URLs if needed)
+# Enable Apache mod_rewrite
 RUN a2enmod rewrite
 
-# Set proper permissions (optional but good practice)
-RUN chown -R www-data:www-data /var/www/html
+# Copy app files
+COPY . /var/www/html/
 
-# Expose the web server port
+# Set working directory to /var/www/html/api
+WORKDIR /var/www/html/api
+
+# Configure Apache to use /var/www/html/api as document root
+RUN echo '<VirtualHost *:80>\n\
+    DocumentRoot /var/www/html/api\n\
+    <Directory /var/www/html/api>\n\
+    Options Indexes FollowSymLinks\n\
+    AllowOverride All\n\
+    Require all granted\n\
+    </Directory>\n\
+    ErrorLog ${APACHE_LOG_DIR}/error.log\n\
+    CustomLog ${APACHE_LOG_DIR}/access.log combined\n\
+    </VirtualHost>' > /etc/apache2/sites-available/000-default.conf
+
+# Expose web server port
 EXPOSE 80
 
 # Start Apache
