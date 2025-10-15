@@ -10,14 +10,37 @@
  *define('DB_PASS', 'webwiz');
  */
 
-// Database configuration
-// Use environment variables if available, fallback to local for dev
-define('DB_HOST', getenv('DB_HOST') ?: 'localhost');
-define('DB_PORT', getenv('DB_PORT') ?: '5432');
-define('DB_NAME', getenv('DB_NAME') ?: 'bidlode');
-define('DB_USER', getenv('DB_USER') ?: 'postgres');
-define('DB_PASS', getenv('DB_PASS') ?: 'webwiz');
-define('DB_SSLMODE', getenv('DB_SSLMODE') ?: 'require');
+// Database configuration - Multi-environment support
+// Detect environment based on host or environment variables
+$isProduction = (
+    isset($_SERVER['HTTP_HOST']) &&
+    (strpos($_SERVER['HTTP_HOST'], 'onrender.com') !== false ||
+        strpos($_SERVER['HTTP_HOST'], 'herokuapp.com') !== false)
+) || getenv('ENVIRONMENT') === 'production';
+
+if ($isProduction) {
+    // Production environment (Render)
+    define('DB_HOST', getenv('DB_HOST') ?: 'localhost');
+    define('DB_PORT', getenv('DB_PORT') ?: '5432');
+    define('DB_NAME', getenv('DB_NAME') ?: 'bidlode');
+    define('DB_USER', getenv('DB_USER') ?: 'postgres');
+    define('DB_PASS', getenv('DB_PASS') ?: '');
+    define('DB_SSLMODE', getenv('DB_SSLMODE') ?: 'require');
+} else {
+    // Development environment (Local)
+    define('DB_HOST', getenv('DB_HOST') ?: 'localhost');
+    define('DB_PORT', getenv('DB_PORT') ?: '5054');
+    define('DB_NAME', getenv('DB_NAME') ?: 'bidlode');
+    define('DB_USER', getenv('DB_USER') ?: 'postgres');
+    define('DB_PASS', getenv('DB_PASS') ?: 'webwiz');
+    define('DB_SSLMODE', getenv('DB_SSLMODE') ?: 'disable');
+}
+
+// Log environment for debugging (remove in production)
+if (!$isProduction) {
+    error_log("Database Config - Environment: " . ($isProduction ? 'Production' : 'Development') .
+        ", Host: " . DB_HOST . ":" . DB_PORT . ", Database: " . DB_NAME);
+}
 
 
 // Error reporting
@@ -35,18 +58,31 @@ if (file_exists($jsonErrorPath)) {
 // Note: CORS headers are set per endpoint for better control
 // This allows each endpoint to set specific CORS policies
 
-// Apply a safe development-friendly CORS policy by mirroring Origin and
-// allowing credentials. Endpoints may still override or tighten these rules.
-// This mirrors the requesting Origin (not '*') and sets Vary: Origin so
-// caches don't serve the same response to different origins.
+// Enhanced CORS policy for multi-environment support
 if (php_sapi_name() !== 'cli' && isset($_SERVER['REQUEST_METHOD'])) {
-    if (isset($_SERVER['HTTP_ORIGIN'])) {
-        // Mirror the origin back, don't allow wildcard when credentials are used
-        header('Access-Control-Allow-Origin: ' . $_SERVER['HTTP_ORIGIN']);
+    $allowedOrigins = [
+        'http://localhost:8080',
+        'http://localhost:8082',
+        'https://localhost:8080',
+        'https://localhost:8082',
+        'https://bidke.onrender.com', // Add your frontend production URL here
+        'https://your-frontend-domain.com' // Replace with your actual frontend domain
+    ];
+
+    $origin = $_SERVER['HTTP_ORIGIN'] ?? '';
+
+    if (
+        in_array($origin, $allowedOrigins) ||
+        // Allow any localhost origin in development
+        (!$isProduction && (strpos($origin, 'http://localhost:') === 0 || strpos($origin, 'http://127.0.0.1:') === 0))
+    ) {
+        header('Access-Control-Allow-Origin: ' . $origin);
         header('Vary: Origin');
     } else {
-        // Fallback - no origin present (server-to-server), allow localhost for dev
-        header('Access-Control-Allow-Origin: http://localhost:8080');
+        // Fallback for development
+        if (!$isProduction) {
+            header('Access-Control-Allow-Origin: http://localhost:8082');
+        }
     }
 
     // Allow cookies/authorization headers in cross-site requests
@@ -54,11 +90,11 @@ if (php_sapi_name() !== 'cli' && isset($_SERVER['REQUEST_METHOD'])) {
 
     // CORS preflight response settings
     header('Access-Control-Allow-Methods: GET, POST, PUT, PATCH, DELETE, OPTIONS');
-    header('Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With');
+    header('Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With, X-CSRF-Token');
+    header('Access-Control-Max-Age: 86400'); // Cache preflight for 24 hours
 
     // Respond to OPTIONS (preflight) and exit early
     if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
-        // short-circuit for preflight
         http_response_code(204);
         exit();
     }

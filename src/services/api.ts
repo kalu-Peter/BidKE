@@ -1,7 +1,9 @@
 /**
- * API Service for BidLode
- * Handles all HTTP requests to the backend API
+ * API Service for BidKE
+ * Handles all HTTP requests to the backend API with multi-environment support
  */
+
+import { environmentManager } from '@/lib/environment';
 
 interface ApiResponse<T = any> {
   success: boolean;
@@ -98,8 +100,12 @@ class ApiService {
   private sessionToken: string | null;
 
   constructor() {
-    this.baseUrl = 'https://bidke-php.onrender.com/api'; // Change to your actual API base URL
+    // Use environment manager for configuration
+    this.baseUrl = environmentManager.getApiUrl();
     this.sessionToken = localStorage.getItem('bidlode_session_token');
+    
+    // Log environment configuration
+    environmentManager.logEnvironment();
   }
 
   /**
