@@ -1,8 +1,14 @@
-# Use an official PHP image
+# Use an official PHP image 
 FROM php:8.2-apache
 
 # Copy your app files into the web root
 COPY . /var/www/html/
+
+# Change Apache DocumentRoot to /var/www/html/api
+RUN sed -i 's|/var/www/html|/var/www/html/api|g' /etc/apache2/sites-available/000-default.conf
+
+# Enable commonly used Apache and PHP extensions
+RUN docker-php-ext-install pdo pdo_pgsql pgsql
 
 # Expose the web server port
 EXPOSE 80
