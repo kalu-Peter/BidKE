@@ -1,14 +1,22 @@
-# Use an official PHP image 
+# Use official PHP + Apache image
 FROM php:8.2-apache
 
-# Copy your app files into the web root
+# Install system dependencies needed for PostgreSQL extensions
+RUN apt-get update && apt-get install -y \
+    libpq-dev \
+    && docker-php-ext-install pdo pdo_pgsql pgsql
+
+# Copy application files
 COPY . /var/www/html/
 
 # Change Apache DocumentRoot to /var/www/html/api
 RUN sed -i 's|/var/www/html|/var/www/html/api|g' /etc/apache2/sites-available/000-default.conf
 
-# Enable commonly used Apache and PHP extensions
-RUN docker-php-ext-install pdo pdo_pgsql pgsql
+# Enable Apache mod_rewrite (for clean URLs if needed)
+RUN a2enmod rewrite
+
+# Set proper permissions (optional but good practice)
+RUN chown -R www-data:www-data /var/www/html
 
 # Expose the web server port
 EXPOSE 80
