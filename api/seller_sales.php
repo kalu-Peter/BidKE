@@ -1,6 +1,14 @@
 <?php
 // CORS Headers
-header('Access-Control-Allow-Origin: http://localhost:8080');
+$allowed_origins = ['http://localhost:8080', 'http://localhost:8081', 'http://localhost:8082'];
+$origin = $_SERVER['HTTP_ORIGIN'] ?? '';
+
+if (in_array($origin, $allowed_origins)) {
+    header('Access-Control-Allow-Origin: ' . $origin);
+} else {
+    header('Access-Control-Allow-Origin: http://localhost:8082'); // Default fallback
+}
+
 header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
 header('Access-Control-Allow-Headers: Content-Type, Authorization');
 header('Access-Control-Allow-Credentials: true');

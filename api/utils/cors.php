@@ -19,8 +19,8 @@ function setCORSHeaders()
         header('Access-Control-Allow-Origin: ' . $_SERVER['HTTP_ORIGIN']);
         header('Vary: Origin');
     } else {
-        // Default to 8080 for development
-        header('Access-Control-Allow-Origin: http://localhost:8080');
+        // Default to 8082 for development (current frontend port)
+        header('Access-Control-Allow-Origin: http://localhost:8082');
     }
 
     header('Access-Control-Allow-Credentials: true');
