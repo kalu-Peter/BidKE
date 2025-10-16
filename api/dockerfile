@@ -4,16 +4,16 @@ FROM php:8.2-apache
 # Install PostgreSQL extensions
 RUN apt-get update && apt-get install -y libpq-dev && docker-php-ext-install pdo pdo_pgsql pgsql
 
-# Enable Apache mod_rewrite
+# Enable Apache mod_rewrite (useful for flexible routing)
 RUN a2enmod rewrite
 
-# Copy app files
+# Copy application files
 COPY . /var/www/html/
 
-# Set working directory to /var/www/html/api
+# Set working directory to API directory
 WORKDIR /var/www/html/api
 
-# Configure Apache to use /var/www/html/api as document root
+# Configure Apache to serve the API folder as the web root
 RUN echo '<VirtualHost *:80>\n\
     DocumentRoot /var/www/html/api\n\
     <Directory /var/www/html/api>\n\
@@ -25,7 +25,7 @@ RUN echo '<VirtualHost *:80>\n\
     CustomLog ${APACHE_LOG_DIR}/access.log combined\n\
     </VirtualHost>' > /etc/apache2/sites-available/000-default.conf
 
-# Expose web server port
+# Expose the default web server port
 EXPOSE 80
 
 # Start Apache
