@@ -28,6 +28,7 @@ import {
   Loader2,
   RefreshCw,
 } from "lucide-react";
+import { apiService } from "@/services/api";
 
 // Types
 interface Listing {
@@ -120,35 +121,19 @@ const ListingsControlTab: React.FC = () => {
       // map UI status to backend-friendly values
       const effectiveStatus =
         statusFilter === "pending_review" ? "pending" : statusFilter;
-      const params = new URLSearchParams({
-        page: page.toString(),
-        limit: pagination.limit.toString(),
+
+      const result = await apiService.getAdminListings({
+        page,
+        limit: pagination.limit,
         status: effectiveStatus,
         category: categoryFilter,
         search: searchTerm,
       });
 
-      const response = await fetch(
-        `http://localhost:8000/admin/listings.php?${params}`,
-        {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          credentials: "include",
-        }
-      );
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const data = await response.json();
-
-      if (data.success) {
-        setListings(data.data || []);
+      if (result.success) {
+        setListings(result.data?.data || []);
         // normalize stats back to UI-friendly keys if backend used 'pending'->'pending_review'
-        const s = data.stats || {};
+        const s = result.data?.stats || {};
         const normalizedStats = {
           total: s.total || 0,
           draft: s.draft || 0,
@@ -160,9 +145,11 @@ const ListingsControlTab: React.FC = () => {
           rejected: s.rejected || 0,
         };
         setStats(normalizedStats);
-        setPagination(data.pagination || pagination);
+        setPagination(result.data?.pagination || pagination);
       } else {
-        throw new Error(data.message || "Failed to fetch listings");
+        throw new Error(
+          result.error || result.message || "Failed to fetch listings",
+        );
       }
     } catch (err) {
       console.error("Error fetching listings:", err);
@@ -177,35 +164,24 @@ const ListingsControlTab: React.FC = () => {
     auctionId: number,
     action: string,
     reason?: string,
-    message?: string
+    message?: string,
   ) => {
     try {
-      const response = await fetch("http://localhost:8000/admin/listings.php", {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        credentials: "include",
-        body: JSON.stringify({
-          auction_id: auctionId,
-          action,
-          reason,
-          message,
-        }),
-      });
+      const result = await apiService.updateAuctionStatus(
+        auctionId,
+        action,
+        reason,
+        message,
+      );
 
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const data = await response.json();
-
-      if (data.success) {
+      if (result.success) {
         // Refresh listings
         await fetchListings(pagination.page);
         return true;
       } else {
-        throw new Error(data.message || "Failed to update auction status");
+        throw new Error(
+          result.error || result.message || "Failed to update auction status",
+        );
       }
     } catch (err) {
       console.error("Error updating auction status:", err);
@@ -299,7 +275,7 @@ const ListingsControlTab: React.FC = () => {
     const success = await updateAuctionStatus(
       selectedListing.id,
       "reject",
-      rejectReason
+      rejectReason,
     );
     if (success) {
       setShowRejectModal(false);
@@ -315,7 +291,7 @@ const ListingsControlTab: React.FC = () => {
       selectedListing.id,
       "request_info",
       undefined,
-      infoRequest
+      infoRequest,
     );
     if (success) {
       setShowRequestInfoModal(false);
@@ -326,7 +302,7 @@ const ListingsControlTab: React.FC = () => {
 
   const handleMakeLive = async (listingId: number) => {
     const proceed = window.confirm(
-      "Are you sure you want to make this auction live now? This will set the start time to now and make the auction available for bidding."
+      "Are you sure you want to make this auction live now? This will set the start time to now and make the auction available for bidding.",
     );
     if (!proceed) return;
     const success = await updateAuctionStatus(listingId, "make_live");
@@ -345,7 +321,7 @@ const ListingsControlTab: React.FC = () => {
         listing.featured
           ? "This will remove it from featured listings."
           : "This will make it a featured auction with increased visibility."
-      }`
+      }`,
     );
     if (!proceed) return;
 

@@ -34,7 +34,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     // Redirect to appropriate dashboard if user has wrong role
     const redirectPath = getDashboardPath(
       user?.role || "seller",
-      user?.status || "email_verified"
+      user?.status || "email_verified",
     );
     return <Navigate to={redirectPath} replace />;
   }
@@ -43,7 +43,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     // Redirect to dashboard with limited access
     const redirectPath = getDashboardPath(
       user?.role || "seller",
-      user?.status || "email_verified"
+      user?.status || "email_verified",
     );
     return <Navigate to={redirectPath} replace />;
   }
@@ -53,14 +53,17 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
 
 export const getDashboardPath = (role: string, status: string): string => {
   switch (role) {
-    case "buyer":
-      return "/dashboard/seller-browse"; // Redirect buyers to seller auctions
     case "seller":
-      return "/dashboard/seller-browse"; // Seller auctions tab
+      // Route sellers to their post-item page (List & Sell)
+      return "/dashboard/post-item";
     case "admin":
-      return "/dashboard/admin"; // Admin dashboard
+      // Route admins to the admin dashboard
+      return "/dashboard/admin";
+    case "buyer":
+      // Buyers can browse auctions (for now same as seller browse)
+      return "/dashboard/seller-browse";
     default:
-      return "/dashboard/seller-browse"; // Default to seller auctions
+      return "/dashboard/seller-browse";
   }
 };
 

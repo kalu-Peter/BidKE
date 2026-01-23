@@ -18,7 +18,6 @@ const LoginPage = () => {
   const [formData, setFormData] = useState({
     username: "",
     password: "",
-    selectedRole: "seller", // Role selection for dashboard preference
   });
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
   const [isLoading, setIsLoading] = useState(false);
@@ -26,6 +25,7 @@ const LoginPage = () => {
   const [loginAttempted, setLoginAttempted] = useState(false);
   const [loginSuccess, setLoginSuccess] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
+  const [availableRoles, setAvailableRoles] = useState<any[]>([]);
 
   // Get the intended destination from location state or default to dashboard
   const from = location.state?.from?.pathname || null;
@@ -34,10 +34,6 @@ const LoginPage = () => {
   useEffect(() => {
     if (location.state?.message && location.state?.type === "success") {
       setSuccessMessage(location.state.message);
-      // If coming from admin signup, set default role preference to admin
-      if (location.state.message.includes("Admin account")) {
-        setFormData((prev) => ({ ...prev, selectedRole: "admin" }));
-      }
       // Clear the message from location state
       window.history.replaceState({}, document.title);
 
@@ -79,22 +75,22 @@ const LoginPage = () => {
     setLoginAttempted(true);
 
     try {
-      const result = await login(
-        formData.username,
-        formData.password,
-        formData.selectedRole
-      );
+      const result = await login(formData.username, formData.password);
 
       if (result.success && result.user) {
         setLoginSuccess(true);
 
-        // Determine redirect path based on user preference and permissions
+        // Store available roles for display
+        const roles = (result.user as any).roles || [];
+        setAvailableRoles(roles);
+
+        // Determine redirect path based on user's actual role from server
         let redirectPath: string;
 
         if (from && from !== "/login") {
           redirectPath = from;
         } else {
-          // Use the user's role (already set by AuthContext based on preference)
+          // Use the user's actual role from the server
           redirectPath = getDashboardPath(result.user.role, result.user.status);
         }
 
@@ -297,61 +293,60 @@ const LoginPage = () => {
                 </div>
                 {loginSuccess && user ? (
                   <div>
-                    <div className="text-center mb-4">
-                      <CheckCircle className="w-12 h-12 text-green-500 mx-auto mb-2" />
-                      <h3 className="text-lg font-semibold text-green-800">
-                        Login Successful!
-                      </h3>
-                      <p className="text-sm text-gray-600">
-                        Redirecting you to dashboard...
+                    <div className="space-y-4">
+                      <div className="text-center mb-6">
+                        <CheckCircle className="w-12 h-12 text-green-500 mx-auto mb-3" />
+                        <h3 className="text-xl font-semibold text-green-800 mb-1">
+                          Login Successful!
+                        </h3>
+                        <p className="text-sm text-gray-600">
+                          Welcome back, {user?.username}!
+                        </p>
+                      </div>
+
+                      {/* Show available dashboard options based on user roles */}
+                      <div className="grid gap-3 mb-4">
+                        {user?.role === "seller" && (
+                          <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                            <div className="flex items-start space-x-3">
+                              <span className="text-2xl">🏪</span>
+                              <div>
+                                <h4 className="font-medium text-blue-900">
+                                  Seller Dashboard
+                                </h4>
+                                <p className="text-sm text-blue-700">
+                                  List & sell items on the marketplace
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                        {user?.role === "admin" && (
+                          <div className="p-4 bg-purple-50 border border-purple-200 rounded-lg">
+                            <div className="flex items-start space-x-3">
+                              <span className="text-2xl">🛡️</span>
+                              <div>
+                                <h4 className="font-medium text-purple-900">
+                                  Admin Dashboard
+                                </h4>
+                                <p className="text-sm text-purple-700">
+                                  Manage the BidKE platform
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+
+                      {getStatusDisplay()}
+
+                      <p className="text-sm text-gray-600 text-center mt-4">
+                        Redirecting you to your dashboard...
                       </p>
                     </div>
-                    {getStatusDisplay()}
                   </div>
                 ) : (
                   <form onSubmit={handleSubmit} className="space-y-6">
-                    {/* Dashboard Preference Selection */}
-                    <div className="space-y-3">
-                      <label className="block text-sm font-medium text-foreground">
-                        Preferred Dashboard{" "}
-                        <span className="text-red-500">*</span>
-                      </label>
-                      <p className="text-xs text-muted-foreground mb-2">
-                        Choose which dashboard to access first. You can switch
-                        between buyer and seller features anytime.
-                      </p>
-                      <div className="grid grid-cols-2 gap-2">
-                        <button
-                          type="button"
-                          onClick={() => updateField("selectedRole", "seller")}
-                          className={`p-3 border-2 rounded-lg text-center transition-all ${
-                            formData.selectedRole === "seller"
-                              ? "border-primary bg-primary/5 text-primary"
-                              : "border-border hover:border-border/80 text-muted-foreground"
-                          }`}
-                        >
-                          <div className="font-medium text-sm">🏪 Seller</div>
-                          <div className="text-xs mt-1 opacity-75">
-                            List & sell
-                          </div>
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => updateField("selectedRole", "admin")}
-                          className={`p-3 border-2 rounded-lg text-center transition-all ${
-                            formData.selectedRole === "admin"
-                              ? "border-primary bg-primary/5 text-primary"
-                              : "border-border hover:border-border/80 text-muted-foreground"
-                          }`}
-                        >
-                          <div className="font-medium text-sm">🛡️ Admin</div>
-                          <div className="text-xs mt-1 opacity-75">
-                            Platform admin
-                          </div>
-                        </button>
-                      </div>
-                    </div>
-
                     <FormField
                       label="Username"
                       type="text"
@@ -426,13 +421,7 @@ const LoginPage = () => {
                       size="lg"
                       disabled={isLoading}
                     >
-                      {isLoading
-                        ? "Signing in..."
-                        : `Access ${
-                            formData.selectedRole === "seller"
-                              ? "Seller"
-                              : "Admin"
-                          } Dashboard`}
+                      {isLoading ? "Signing in..." : "Sign In"}
                     </Button>
                   </form>
                 )}

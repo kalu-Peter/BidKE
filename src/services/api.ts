@@ -25,6 +25,7 @@ interface User {
 interface LoginResponse {
   user: User;
   token: string;
+  login_role: string;  // Add login_role to the response type
   roles: Array<{
     role_name: string;
     role_display_name: string;
@@ -32,6 +33,7 @@ interface LoginResponse {
     role_status: string;
     can_login: boolean;
   }>;
+  expires_at?: string;
 }
 
 interface RegisterData {
@@ -803,6 +805,46 @@ class ApiService {
    */
   async getAdminOverview(): Promise<ApiResponse<any>> {
     return this.makeRequest('/admin/overview.php');
+  }
+
+  /**
+   * Admin: fetch listings for control/moderation
+   */
+  async getAdminListings(params: {
+    page?: number;
+    limit?: number;
+    status?: string;
+    category?: string;
+    search?: string;
+  }): Promise<ApiResponse<any>> {
+    const queryParams = new URLSearchParams({
+      page: (params.page || 1).toString(),
+      limit: (params.limit || 20).toString(),
+      status: params.status || 'all',
+      category: params.category || 'all',
+      search: params.search || ''
+    });
+    return this.makeRequest(`/admin/listings.php?${queryParams.toString()}`);
+  }
+
+  /**
+   * Admin: update auction status (approve, reject, make_live, etc.)
+   */
+  async updateAuctionStatus(
+    auctionId: number,
+    action: string,
+    reason?: string,
+    message?: string
+  ): Promise<ApiResponse<any>> {
+    return this.makeRequest('/admin/listings.php', {
+      method: 'PUT',
+      body: JSON.stringify({
+        auction_id: auctionId,
+        action,
+        reason,
+        message
+      })
+    });
   }
 
   /**

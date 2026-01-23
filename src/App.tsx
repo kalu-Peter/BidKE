@@ -164,7 +164,7 @@ const App = () => (
             <Route
               path="/dashboard/seller-browse"
               element={
-                <ProtectedRoute requiredRole="seller">
+                <ProtectedRoute>
                   <UserDashboard />
                 </ProtectedRoute>
               }
@@ -172,7 +172,7 @@ const App = () => (
             <Route
               path="/dashboard/seller-bids"
               element={
-                <ProtectedRoute requiredRole="seller">
+                <ProtectedRoute>
                   <UserDashboard />
                 </ProtectedRoute>
               }
@@ -180,7 +180,7 @@ const App = () => (
             <Route
               path="/dashboard/seller-watchlist"
               element={
-                <ProtectedRoute requiredRole="seller">
+                <ProtectedRoute>
                   <UserDashboard />
                 </ProtectedRoute>
               }
@@ -188,7 +188,7 @@ const App = () => (
             <Route
               path="/dashboard/seller-won"
               element={
-                <ProtectedRoute requiredRole="seller">
+                <ProtectedRoute>
                   <UserDashboard />
                 </ProtectedRoute>
               }

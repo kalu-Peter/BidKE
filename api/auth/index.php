@@ -1,6 +1,14 @@
 <?php
-// Enhanced CORS headers for development
-header("Access-Control-Allow-Origin: http://localhost:8080");
+// Enhanced CORS headers for development - Allow all development ports
+$allowed_origins = ['http://localhost:8080', 'http://localhost:8081', 'http://localhost:8082'];
+$origin = $_SERVER['HTTP_ORIGIN'] ?? 'http://localhost:8082';
+
+if (in_array($origin, $allowed_origins)) {
+    header("Access-Control-Allow-Origin: $origin");
+} else {
+    header("Access-Control-Allow-Origin: http://localhost:8082"); // Default fallback
+}
+
 header("Access-Control-Allow-Methods: POST, GET, OPTIONS, PUT, DELETE");
 header("Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With");
 header("Access-Control-Allow-Credentials: true");
@@ -27,7 +35,7 @@ $endpoints = [
         'description' => 'User registration with automatic buyer role assignment'
     ],
     'login' => [
-        'method' => 'POST', 
+        'method' => 'POST',
         'url' => '/auth/login.php',
         'description' => 'User login with JWT token generation'
     ],
@@ -48,4 +56,3 @@ sendSuccess([
     'version' => '1.0.0',
     'endpoints' => $endpoints
 ], 'Authentication API endpoints');
-?>
