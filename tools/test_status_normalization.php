@@ -26,4 +26,3 @@ echo "All statuses in database:\n";
 foreach ($rows as $row) {
     echo "  {$row['status']}: {$row['cnt']}\n";
 }
-?>

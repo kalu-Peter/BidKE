@@ -25,4 +25,3 @@ echo "\n=== TOTAL AUCTIONS ===\n";
 $stmt = $pdo->query('SELECT COUNT(*) as total FROM auctions');
 $result = $stmt->fetch(PDO::FETCH_ASSOC);
 echo "Total: {$result['total']}\n";
-?>
