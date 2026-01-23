@@ -131,9 +131,10 @@ const ListingsControlTab: React.FC = () => {
       });
 
       if (result.success) {
-        setListings(result.data?.data || []);
+        // API returns { success: true, data: [...listings], pagination: {...}, stats: {...} }
+        setListings(Array.isArray(result.data) ? result.data : []);
         // normalize stats back to UI-friendly keys if backend used 'pending'->'pending_review'
-        const s = result.data?.stats || {};
+        const s = (result as any).stats || {};
         const normalizedStats = {
           total: s.total || 0,
           draft: s.draft || 0,
@@ -145,7 +146,7 @@ const ListingsControlTab: React.FC = () => {
           rejected: s.rejected || 0,
         };
         setStats(normalizedStats);
-        setPagination(result.data?.pagination || pagination);
+        setPagination((result as any).pagination || pagination);
       } else {
         throw new Error(
           result.error || result.message || "Failed to fetch listings",
