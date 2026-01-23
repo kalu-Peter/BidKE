@@ -332,6 +332,21 @@ const ListingsControlTab: React.FC = () => {
     }
   };
 
+  const handleReactivateListing = async (listingId: number) => {
+    const listing = listings.find((l) => l.id === listingId);
+    if (!listing) return;
+
+    const proceed = window.confirm(
+      "Are you sure you want to reactivate this ended auction? This will reset the end time to 90 days from now and make it available for bidding again.",
+    );
+    if (!proceed) return;
+
+    const success = await updateAuctionStatus(listingId, "reactivate");
+    if (success) {
+      console.log("Auction reactivated successfully");
+    }
+  };
+
   return (
     <Card>
       <CardHeader>
@@ -729,6 +744,17 @@ const ListingsControlTab: React.FC = () => {
                         >
                           <CheckCircle className="w-4 h-4 mr-1" />
                           Make Live
+                        </Button>
+                      )}
+
+                      {listing.status === "ended" && (
+                        <Button
+                          size="sm"
+                          onClick={() => handleReactivateListing(listing.id)}
+                          className="bg-green-600 hover:bg-green-700"
+                        >
+                          <RefreshCw className="w-4 h-4 mr-1" />
+                          Reactivate
                         </Button>
                       )}
                     </div>

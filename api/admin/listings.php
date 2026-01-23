@@ -401,6 +401,32 @@ try {
 
                 // Don't change status for this action
                 $newStatus = $currentStatus;
+            } elseif ($action === 'reactivate') {
+                // Reactivate ended auctions that weren't purchased
+                if ($currentStatus !== 'ended') {
+                    $pdo->rollBack();
+                    send_json(['success' => false, 'error' => 'Only ended auctions can be reactivated'], 400);
+                }
+
+                // Set new end time to 90 days from now
+                $newEnd = (new DateTime('@' . ($now->getTimestamp() + 90 * 24 * 3600)))->setTimeZone(new DateTimeZone('UTC'))->format('Y-m-d H:i:s');
+                
+                // Keep the original start time, but update end time
+                $newStatus = 'active';
+                $updateQuery = "UPDATE auctions SET status = :status, end_time = :end_time, updated_at = CURRENT_TIMESTAMP WHERE id = :id";
+                $updateStmt = $pdo->prepare($updateQuery);
+                $updateStmt->execute([':status' => $newStatus, ':end_time' => $newEnd, ':id' => $auction_id]);
+
+                // Send notification to seller about auction reactivation
+                $sellerId = (int)$auction['seller_id'];
+                $auctionTitle = $auction['title'];
+
+                NotificationHelper::sendAuctionApprovedNotification(
+                    $sellerId,
+                    $auction_id,
+                    $auctionTitle,
+                    'Your auction has been reactivated and is now live for bidding again.'
+                );
             } else {
                 $pdo->rollBack();
                 send_json(['success' => false, 'error' => 'Unknown action: ' . $action], 400);
