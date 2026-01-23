@@ -85,14 +85,14 @@ const ElectronicsPage = () => {
   const [condition, setCondition] = useState("all");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [allElectronics, setAllElectronics] = useState<ElectronicsAuction[]>(
-    []
+    [],
   );
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   // Modal state
   const [selectedAuctionId, setSelectedAuctionId] = useState<number | null>(
-    null
+    null,
   );
   const [isModalOpen, setIsModalOpen] = useState(false);
 
@@ -106,7 +106,7 @@ const ElectronicsPage = () => {
 
     const days = Math.floor(timeLeft / (1000 * 60 * 60 * 24));
     const hours = Math.floor(
-      (timeLeft % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)
+      (timeLeft % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60),
     );
     const minutes = Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60));
 
@@ -144,13 +144,13 @@ const ElectronicsPage = () => {
               Array.isArray(watchlistResponse.data)
             ) {
               const watchedIds = watchlistResponse.data.map((item: any) =>
-                Number(item.auction_id)
+                Number(item.auction_id),
               );
               setAllElectronics((prev) =>
                 prev.map((electronics) => ({
                   ...electronics,
                   isWatched: watchedIds.includes(electronics.id),
-                }))
+                })),
               );
             }
           } catch (watchError) {
@@ -184,13 +184,13 @@ const ElectronicsPage = () => {
             Array.isArray(watchlistResponse.data)
           ) {
             const watchedIds = watchlistResponse.data.map((item: any) =>
-              Number(item.auction_id)
+              Number(item.auction_id),
             );
             setAllElectronics((prev) =>
               prev.map((electronics) => ({
                 ...electronics,
                 isWatched: watchedIds.includes(electronics.id),
-              }))
+              })),
             );
           }
         } catch (err) {
@@ -238,7 +238,9 @@ const ElectronicsPage = () => {
 
     // Optimistic update
     setAllElectronics((prev) =>
-      prev.map((e) => (e.id === itemId ? { ...e, isWatched: !e.isWatched } : e))
+      prev.map((e) =>
+        e.id === itemId ? { ...e, isWatched: !e.isWatched } : e,
+      ),
     );
 
     try {
@@ -254,8 +256,8 @@ const ElectronicsPage = () => {
       // Revert optimistic update
       setAllElectronics((prev) =>
         prev.map((e) =>
-          e.id === itemId ? { ...e, isWatched: !e.isWatched } : e
-        )
+          e.id === itemId ? { ...e, isWatched: !e.isWatched } : e,
+        ),
       );
     }
   };
@@ -279,8 +281,16 @@ const ElectronicsPage = () => {
       {user ? <UserHeader /> : <Header />}
       <div className="min-h-screen bg-background pt-20">
         {/* Hero Section */}
-        <section className="bg-gradient-hero text-white py-16">
-          <div className="container mx-auto px-4">
+        <section
+          className="bg-cover bg-center bg-no-repeat relative text-white py-24"
+          style={{
+            backgroundImage: "url(/uploads/electronics.jpg)",
+          }}
+        >
+          {/* Overlay for better text visibility */}
+          <div className="absolute inset-0 bg-black/40"></div>
+
+          <div className="container mx-auto px-4 relative z-10">
             <div className="max-w-4xl mx-auto text-center">
               <h1 className="text-4xl md:text-5xl font-bold mb-6">
                 📱 Electronics Auctions

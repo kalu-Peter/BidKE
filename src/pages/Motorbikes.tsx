@@ -57,7 +57,7 @@ export default function Motorbikes() {
 
   // Modal state
   const [selectedAuctionId, setSelectedAuctionId] = useState<number | null>(
-    null
+    null,
   );
   const [isModalOpen, setIsModalOpen] = useState(false);
 
@@ -73,7 +73,7 @@ export default function Motorbikes() {
 
     const days = Math.floor(timeLeft / (1000 * 60 * 60 * 24));
     const hours = Math.floor(
-      (timeLeft % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)
+      (timeLeft % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60),
     );
     const minutes = Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60));
 
@@ -111,13 +111,13 @@ export default function Motorbikes() {
               Array.isArray(watchlistResponse.data)
             ) {
               const watchedIds = watchlistResponse.data.map((item: any) =>
-                Number(item.auction_id)
+                Number(item.auction_id),
               );
               setAllBikes((prev) =>
                 prev.map((bike) => ({
                   ...bike,
                   isWatched: watchedIds.includes(bike.id),
-                }))
+                })),
               );
             }
           } catch (watchError) {
@@ -151,13 +151,13 @@ export default function Motorbikes() {
             Array.isArray(watchlistResponse.data)
           ) {
             const watchedIds = watchlistResponse.data.map((item: any) =>
-              Number(item.auction_id)
+              Number(item.auction_id),
             );
             setAllBikes((prev) =>
               prev.map((bike) => ({
                 ...bike,
                 isWatched: watchedIds.includes(bike.id),
-              }))
+              })),
             );
           }
         } catch (err) {
@@ -179,7 +179,9 @@ export default function Motorbikes() {
 
     // Optimistic update
     setAllBikes((prev) =>
-      prev.map((b) => (b.id === bikeId ? { ...b, isWatched: !b.isWatched } : b))
+      prev.map((b) =>
+        b.id === bikeId ? { ...b, isWatched: !b.isWatched } : b,
+      ),
     );
 
     try {
@@ -195,8 +197,8 @@ export default function Motorbikes() {
       // Revert optimistic update
       setAllBikes((prev) =>
         prev.map((b) =>
-          b.id === bikeId ? { ...b, isWatched: !b.isWatched } : b
-        )
+          b.id === bikeId ? { ...b, isWatched: !b.isWatched } : b,
+        ),
       );
     }
   };
@@ -218,8 +220,16 @@ export default function Motorbikes() {
       {user ? <UserHeader /> : <Header />}
       <div className="min-h-screen bg-background">
         {/* Hero Section */}
-        <div className="bg-gradient-to-r from-primary via-primary to-secondary text-white py-16">
-          <div className="container mx-auto px-4">
+        <div
+          className="bg-cover bg-center bg-no-repeat relative text-white py-24"
+          style={{
+            backgroundImage: "url(/uploads/motor.jpg)",
+          }}
+        >
+          {/* Overlay for better text visibility */}
+          <div className="absolute inset-0 bg-black/40"></div>
+
+          <div className="container mx-auto px-4 relative z-10">
             <div className="text-center mb-8">
               <h1 className="text-4xl md:text-5xl font-bold mb-4">
                 Motorbikes

@@ -69,7 +69,7 @@ const CarsPage = () => {
 
   // Modal state
   const [selectedAuctionId, setSelectedAuctionId] = useState<number | null>(
-    null
+    null,
   );
   const [isModalOpen, setIsModalOpen] = useState(false);
 
@@ -83,7 +83,7 @@ const CarsPage = () => {
 
     const days = Math.floor(timeLeft / (1000 * 60 * 60 * 24));
     const hours = Math.floor(
-      (timeLeft % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)
+      (timeLeft % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60),
     );
     const minutes = Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60));
 
@@ -121,13 +121,13 @@ const CarsPage = () => {
               Array.isArray(watchlistResponse.data)
             ) {
               const watchedIds = watchlistResponse.data.map((item: any) =>
-                Number(item.auction_id)
+                Number(item.auction_id),
               );
               setAllCars((prev) =>
                 prev.map((car) => ({
                   ...car,
                   isWatched: watchedIds.includes(car.id),
-                }))
+                })),
               );
             }
           } catch (watchError) {
@@ -161,13 +161,13 @@ const CarsPage = () => {
             Array.isArray(watchlistResponse.data)
           ) {
             const watchedIds = watchlistResponse.data.map((item: any) =>
-              Number(item.auction_id)
+              Number(item.auction_id),
             );
             setAllCars((prev) =>
               prev.map((car) => ({
                 ...car,
                 isWatched: watchedIds.includes(car.id),
-              }))
+              })),
             );
           }
         } catch (err) {
@@ -213,8 +213,8 @@ const CarsPage = () => {
     // Optimistic UI: flip watched state locally
     setAllCars((prevList) =>
       prevList.map((car) =>
-        car.id === carId ? { ...car, isWatched: !car.isWatched } : car
-      )
+        car.id === carId ? { ...car, isWatched: !car.isWatched } : car,
+      ),
     );
 
     try {
@@ -226,8 +226,8 @@ const CarsPage = () => {
       if (typeof watched === "boolean") {
         setAllCars((list) =>
           list.map((car) =>
-            car.id === carId ? { ...car, isWatched: watched } : car
-          )
+            car.id === carId ? { ...car, isWatched: watched } : car,
+          ),
         );
       }
       // apiService will dispatch watchlist:changed event for other components
@@ -257,8 +257,16 @@ const CarsPage = () => {
       {user ? <UserHeader /> : <Header />}
       <div className="min-h-screen bg-background pt-20">
         {/* Hero Section */}
-        <section className="bg-gradient-hero text-white py-16">
-          <div className="container mx-auto px-4">
+        <section
+          className="bg-cover bg-center bg-no-repeat relative text-white py-24"
+          style={{
+            backgroundImage: "url(/uploads/cars.jpg)",
+          }}
+        >
+          {/* Overlay for better text visibility */}
+          <div className="absolute inset-0 bg-black/40"></div>
+
+          <div className="container mx-auto px-4 relative z-10">
             <div className="max-w-4xl mx-auto text-center">
               <h1 className="text-4xl md:text-5xl font-bold mb-6">
                 🚗 Car Auctions
