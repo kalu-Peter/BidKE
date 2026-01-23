@@ -34,4 +34,3 @@ echo "Total returned: " . count($rows) . "\n\n";
 foreach ($rows as $row) {
     echo "ID: {$row['id']}, Title: {$row['title']}, Status: {$row['status']}\n";
 }
-?>

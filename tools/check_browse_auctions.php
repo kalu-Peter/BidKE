@@ -47,4 +47,3 @@ echo "Total with status='active': $total_active\n";
 $stmt = $pdo->query("SELECT COUNT(*) as cnt FROM auctions WHERE (status = 'approved' OR status = 'live' OR status = 'active') AND start_time <= NOW() AND end_time > NOW()");
 $live_condition = $stmt->fetch(PDO::FETCH_ASSOC)['cnt'];
 echo "With live condition (start<=now AND end>now): $live_condition\n";
-?>

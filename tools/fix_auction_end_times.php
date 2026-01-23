@@ -43,4 +43,3 @@ foreach ($rows as $row) {
 $stmt = $pdo->query("SELECT COUNT(*) as cnt FROM auctions WHERE (status = 'approved' OR status = 'live' OR status = 'active') AND start_time <= NOW() AND end_time > NOW()");
 $live_count = $stmt->fetch(PDO::FETCH_ASSOC)['cnt'];
 echo "Total auctions that will show in browse: $live_count\n";
-?>
