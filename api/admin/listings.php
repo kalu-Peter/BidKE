@@ -410,7 +410,7 @@ try {
 
                 // Set new end time to 90 days from now
                 $newEnd = (new DateTime('@' . ($now->getTimestamp() + 90 * 24 * 3600)))->setTimeZone(new DateTimeZone('UTC'))->format('Y-m-d H:i:s');
-                
+
                 // Keep the original start time, but update end time
                 $newStatus = 'active';
                 $updateQuery = "UPDATE auctions SET status = :status, end_time = :end_time, updated_at = CURRENT_TIMESTAMP WHERE id = :id";

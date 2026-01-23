@@ -26,20 +26,19 @@ if (!empty($rows)) {
     foreach ($rows as $row) {
         echo "  - ID: {$row['id']}, Title: {$row['title']}, Status: {$row['status']}, End: {$row['end_time']}\n";
     }
-    
+
     // Test the reactivate logic
     $testAuctionId = $rows[0]['id'];
     echo "\n=== TESTING REACTIVATE LOGIC ===\n";
     echo "Testing reactivate for auction ID: $testAuctionId\n";
-    
+
     // Simulate the reactivate action
     $now = new DateTime('now', new DateTimeZone('UTC'));
     $newEnd = (new DateTime('@' . ($now->getTimestamp() + 90 * 24 * 3600)))->setTimeZone(new DateTimeZone('UTC'))->format('Y-m-d H:i:s');
-    
+
     echo "Current time: " . $now->format('Y-m-d H:i:s') . "\n";
     echo "New end time will be: $newEnd\n";
     echo "Duration: 90 days\n";
 } else {
     echo "Could not find or create test ended auction\n";
 }
-?>

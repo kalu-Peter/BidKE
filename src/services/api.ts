@@ -901,7 +901,7 @@ class ApiService {
    */
 
   async getSellerAuctions(params: {
-    sellerId: number;
+    sellerId?: number; // Optional - backend uses authenticated user's ID
     status?: string;
     page?: number;
     limit?: number;
@@ -915,11 +915,11 @@ class ApiService {
     };
   }>> {
     const queryParams = new URLSearchParams({
-      seller_id: params.sellerId.toString(),
       status: params.status || 'all',
       page: (params.page || 1).toString(),
       limit: (params.limit || 10).toString()
     });
+    // Note: sellerId parameter is ignored by backend - it uses authenticated user's ID for security
 
   // seller-auctions endpoint lives under /auctions on the API server
   return this.makeRequest(`/auctions/seller-auctions.php?${queryParams.toString()}`);

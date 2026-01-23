@@ -53,7 +53,6 @@ const ListingsTab: React.FC = () => {
         setError(null);
 
         const response = await apiService.getSellerAuctions({
-          sellerId: user.id,
           status: statusFilter,
           page: currentPage,
           limit: 10,
@@ -251,7 +250,6 @@ const ListingsTab: React.FC = () => {
       try {
         setLoading(true);
         const response = await apiService.getSellerAuctions({
-          sellerId: user.id,
           status: statusFilter,
           page: currentPage,
           limit: 10,
