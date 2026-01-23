@@ -44,9 +44,11 @@ try {
         $search = isset($_GET['search']) ? trim($_GET['search']) : '';
         $category = isset($_GET['category']) ? trim($_GET['category']) : '';
 
-        // Normalize client-side status names
+        // Normalize client-side status names to database values
         if ($status === 'pending_review') {
             $status = 'pending';
+        } elseif ($status === 'live') {
+            $status = 'active';
         }
 
         $baseQuery = "FROM auctions a LEFT JOIN categories c ON a.category_id = c.id LEFT JOIN users u ON a.seller_id = u.id LEFT JOIN vehicles v ON a.id = v.auction_id LEFT JOIN electronics e ON a.id = e.auction_id WHERE 1=1";
