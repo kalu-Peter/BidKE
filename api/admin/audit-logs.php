@@ -2,7 +2,7 @@
 header('Content-Type: application/json');
 
 // Allow development ports
-$allowed_origins = ['http://localhost:3000', 'http://localhost:3001', 'http://localhost:8080', 'http://localhost:8081'];
+$allowed_origins = ['http://localhost:3000', 'http://localhost:3001', 'http://localhost:8080', 'http://localhost:8081', 'http://localhost:8082'];
 $origin = $_SERVER['HTTP_ORIGIN'] ?? '';
 if (in_array($origin, $allowed_origins)) {
     header('Access-Control-Allow-Origin: ' . $origin);
@@ -19,7 +19,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 }
 
 // Database connection
-function getDBConnection() {
+function getDBConnection()
+{
     try {
         $dsn = "pgsql:host=localhost;port=5054;dbname=bidlode";
         $connection = new PDO($dsn, 'postgres', 'webwiz', [
@@ -35,7 +36,8 @@ function getDBConnection() {
 }
 
 // Create audit_logs table if it doesn't exist
-function createAuditLogTable() {
+function createAuditLogTable()
+{
     try {
         $pdo = getDBConnection();
         $sql = "
@@ -55,19 +57,19 @@ function createAuditLogTable() {
             )
         ";
         $pdo->exec($sql);
-        
+
         // Create indexes for better performance
         $pdo->exec("CREATE INDEX IF NOT EXISTS idx_audit_logs_resource ON audit_logs(resource_type, resource_id)");
         $pdo->exec("CREATE INDEX IF NOT EXISTS idx_audit_logs_admin ON audit_logs(admin_id)");
         $pdo->exec("CREATE INDEX IF NOT EXISTS idx_audit_logs_created ON audit_logs(created_at)");
-        
     } catch (Exception $e) {
         error_log("Failed to create audit_logs table: " . $e->getMessage());
     }
 }
 
 // Create notifications table if it doesn't exist
-function createNotificationsTable() {
+function createNotificationsTable()
+{
     try {
         $pdo = getDBConnection();
         $sql = "
@@ -84,27 +86,27 @@ function createNotificationsTable() {
             )
         ";
         $pdo->exec($sql);
-        
+
         // Create indexes
         $pdo->exec("CREATE INDEX IF NOT EXISTS idx_notifications_user ON notifications(user_id)");
         $pdo->exec("CREATE INDEX IF NOT EXISTS idx_notifications_read ON notifications(is_read)");
         $pdo->exec("CREATE INDEX IF NOT EXISTS idx_notifications_created ON notifications(created_at)");
-        
     } catch (Exception $e) {
         error_log("Failed to create notifications table: " . $e->getMessage());
     }
 }
 
 // Log admin action
-function logAdminAction($actionType, $resourceType, $resourceId, $adminId, $adminName, $oldValues = null, $newValues = null, $reason = null) {
+function logAdminAction($actionType, $resourceType, $resourceId, $adminId, $adminName, $oldValues = null, $newValues = null, $reason = null)
+{
     try {
         $pdo = getDBConnection();
-        
+
         $stmt = $pdo->prepare("
             INSERT INTO audit_logs (action_type, resource_type, resource_id, admin_id, admin_name, old_values, new_values, reason, ip_address, user_agent)
             VALUES (:action_type, :resource_type, :resource_id, :admin_id, :admin_name, :old_values, :new_values, :reason, :ip_address, :user_agent)
         ");
-        
+
         $stmt->execute([
             'action_type' => $actionType,
             'resource_type' => $resourceType,
@@ -117,7 +119,7 @@ function logAdminAction($actionType, $resourceType, $resourceId, $adminId, $admi
             'ip_address' => $_SERVER['REMOTE_ADDR'] ?? null,
             'user_agent' => $_SERVER['HTTP_USER_AGENT'] ?? null
         ]);
-        
+
         return true;
     } catch (Exception $e) {
         error_log("Failed to log admin action: " . $e->getMessage());
@@ -126,15 +128,16 @@ function logAdminAction($actionType, $resourceType, $resourceId, $adminId, $admi
 }
 
 // Send notification to user
-function sendNotification($userId, $type, $title, $message, $data = null) {
+function sendNotification($userId, $type, $title, $message, $data = null)
+{
     try {
         $pdo = getDBConnection();
-        
+
         $stmt = $pdo->prepare("
             INSERT INTO notifications (user_id, type, title, message, data)
             VALUES (:user_id, :type, :title, :message, :data)
         ");
-        
+
         $stmt->execute([
             'user_id' => $userId,
             'type' => $type,
@@ -142,7 +145,7 @@ function sendNotification($userId, $type, $title, $message, $data = null) {
             'message' => $message,
             'data' => $data ? json_encode($data) : null
         ]);
-        
+
         return true;
     } catch (Exception $e) {
         error_log("Failed to send notification: " . $e->getMessage());
@@ -162,39 +165,39 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         $adminId = $_GET['admin_id'] ?? null;
         $limit = (int)($_GET['limit'] ?? 50);
         $offset = (int)($_GET['offset'] ?? 0);
-        
+
         $pdo = getDBConnection();
-        
+
         $query = "SELECT * FROM audit_logs WHERE 1=1";
         $params = [];
-        
+
         if ($resourceType) {
             $query .= " AND resource_type = :resource_type";
             $params['resource_type'] = $resourceType;
         }
-        
+
         if ($resourceId) {
             $query .= " AND resource_id = :resource_id";
             $params['resource_id'] = $resourceId;
         }
-        
+
         if ($adminId) {
             $query .= " AND admin_id = :admin_id";
             $params['admin_id'] = $adminId;
         }
-        
+
         $query .= " ORDER BY created_at DESC LIMIT :limit OFFSET :offset";
-        
+
         $stmt = $pdo->prepare($query);
         foreach ($params as $key => $value) {
             $stmt->bindValue(":$key", $value);
         }
         $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
         $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
-        
+
         $stmt->execute();
         $logs = $stmt->fetchAll();
-        
+
         // Format JSON fields
         foreach ($logs as &$log) {
             if ($log['old_values']) {
@@ -204,12 +207,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
                 $log['new_values'] = json_decode($log['new_values'], true);
             }
         }
-        
+
         echo json_encode([
             'success' => true,
             'data' => $logs
         ]);
-        
     } catch (Exception $e) {
         error_log("Get audit logs error: " . $e->getMessage());
         http_response_code(500);
@@ -220,7 +222,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
 elseif ($_SERVER['REQUEST_METHOD'] === 'POST') {
     try {
         $input = json_decode(file_get_contents('php://input'), true);
-        
+
         $actionType = $input['action_type'] ?? null;
         $resourceType = $input['resource_type'] ?? null;
         $resourceId = $input['resource_id'] ?? null;
@@ -229,15 +231,15 @@ elseif ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $oldValues = $input['old_values'] ?? null;
         $newValues = $input['new_values'] ?? null;
         $reason = $input['reason'] ?? null;
-        
+
         if (!$actionType || !$resourceType || !$resourceId) {
             http_response_code(400);
             echo json_encode(['success' => false, 'message' => 'Missing required fields']);
             exit();
         }
-        
+
         $success = logAdminAction($actionType, $resourceType, $resourceId, $adminId, $adminName, $oldValues, $newValues, $reason);
-        
+
         if ($success) {
             echo json_encode([
                 'success' => true,
@@ -246,15 +248,12 @@ elseif ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } else {
             throw new Exception('Failed to create audit log');
         }
-        
     } catch (Exception $e) {
         error_log("Create audit log error: " . $e->getMessage());
         http_response_code(500);
         echo json_encode(['success' => false, 'message' => 'Failed to create audit log']);
     }
-}
-else {
+} else {
     http_response_code(405);
     echo json_encode(['success' => false, 'message' => 'Method not allowed']);
 }
-?>
